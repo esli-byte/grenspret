@@ -2,14 +2,16 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Grensbesparings-app",
+    name: "Grensbesparing",
     short_name: "Grensbesparing",
     description:
       "Bereken of het loont om in Duitsland of België te tanken en boodschappen te doen",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#1e40af",
+    orientation: "portrait",
+    background_color: "#1B4332",
+    theme_color: "#1B4332",
+    categories: ["finance", "shopping"],
     icons: [
       {
         src: "/icons/icon-192x192.png",
@@ -22,7 +24,7 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
       },
       {
-        src: "/icons/icon-512x512.png",
+        src: "/icons/icon-maskable-512x512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

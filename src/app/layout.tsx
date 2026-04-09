@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import {
+  ServiceWorkerRegistration,
+  InstallBanner,
+} from "@/components/ServiceWorkerRegistration";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,16 +23,21 @@ export const metadata: Metadata = {
     "Bereken of het loont om in Duitsland of België te tanken en boodschappen te doen",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Grensbesparing",
+    startupImage: "/icons/splash.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1e40af",
+  themeColor: "#1B4332",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -41,8 +50,13 @@ export default function RootLayout({
       lang="nl"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
+      <body className="min-h-full flex flex-col pb-20 pt-[env(safe-area-inset-top)]">
+        <div className="animate-page flex flex-1 flex-col">{children}</div>
+        <BottomNav />
+        <InstallBanner />
         <ServiceWorkerRegistration />
       </body>
     </html>
