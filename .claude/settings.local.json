@@ -1,7 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx create-next-app@latest:*)"
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(npm cache:*)",
+      "Bash(node -e ':*)",
+      "Bash(node:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:opendata.rdw.nl)",
+      "Bash(curl -s http://localhost:3001/manifest.webmanifest)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001__TRACKED_VAR__)",
+      "Bash(/usr/bin/curl -s -o /dev/null -w '%{http_code}' http://localhost:3001__TRACKED_VAR__)",
+      "Bash(/usr/bin/curl -s http://localhost:3001/api/fuel-prices)",
+      "Bash(python3 -m json.tool)",
+      "Bash(ls /Users/eslivanammers/Projecten/grensbesparings-app/.env*)",
+      "Bash(gh auth:*)",
+      "Bash(brew install:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(/usr/bin/curl -s \"https://creativecommons.tankerkoenig.de/json/list.php?lat=51.37&lng=6.17&rad=10&sort=dist&type=all&apikey=dca8b388-5407-4c14-b37e-4291b863a454\")"
     ]
   }
 }

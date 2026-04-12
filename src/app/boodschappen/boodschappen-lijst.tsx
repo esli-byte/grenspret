@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PRODUCTEN,
   CATEGORIE_LABELS,
+  MERK_LABELS,
   type Categorie,
+  type MerkType,
   type Product,
 } from "./producten";
 import { slaaBoodschappenOp } from "@/lib/opslag";
@@ -14,11 +16,106 @@ function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
 }
 
+// Live prijs data types
+type LivePrijzen = Record<string, {
+  prijsNL: number;
+  prijsDE: number;
+  prijsBE: number;
+  bronNL: string;
+  bronDE: string;
+  bronBE: string;
+}>;
+
+type PrijsStatus = {
+  laden: boolean;
+  bijgewerkt: string | null;
+  bron: "live" | "cache" | "fallback" | null;
+  fout: string | null;
+  aantalLive: number;
+  aantalFallback: number;
+};
+
 const CATEGORIEEN = Object.keys(CATEGORIE_LABELS) as Categorie[];
 
 export function BoodschappenLijst() {
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
   const [postcode, setPostcode] = useState("");
+  const [zoekterm, setZoekterm] = useState("");
+  const [actieveCategorie, setActieveCategorie] = useState<Categorie | "alle">("alle");
+  const [merkFilter, setMerkFilter] = useState<MerkType | "alle">("alle");
+
+  // Live prijzen state
+  const [livePrijzen, setLivePrijzen] = useState<LivePrijzen>({});
+  const [prijsStatus, setPrijsStatus] = useState<PrijsStatus>({
+    laden: true,
+    bijgewerkt: null,
+    bron: null,
+    fout: null,
+    aantalLive: 0,
+    aantalFallback: 0,
+  });
+
+  // Haal live prijzen op van de API
+  const laadPrijzen = useCallback(async () => {
+    setPrijsStatus((s) => ({ ...s, laden: true, fout: null }));
+    try {
+      const res = await fetch("/api/product-prices");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const map: LivePrijzen = {};
+      let live = 0;
+      let fallback = 0;
+
+      for (const p of data.prijzen || []) {
+        map[p.id] = {
+          prijsNL: p.prijsNL,
+          prijsDE: p.prijsDE,
+          prijsBE: p.prijsBE,
+          bronNL: p.bronNL,
+          bronDE: p.bronDE,
+          bronBE: p.bronBE,
+        };
+        // Tel hoeveel bronnen echt live zijn
+        if (p.bronNL !== "fallback" || p.bronDE !== "fallback" || p.bronBE !== "fallback") live++;
+        else fallback++;
+      }
+
+      setLivePrijzen(map);
+      setPrijsStatus({
+        laden: false,
+        bijgewerkt: data.bijgewerkt || null,
+        bron: data.bron || "fallback",
+        fout: data.fout || null,
+        aantalLive: live,
+        aantalFallback: fallback,
+      });
+    } catch (err) {
+      setPrijsStatus((s) => ({
+        ...s,
+        laden: false,
+        fout: err instanceof Error ? err.message : "Kon prijzen niet laden",
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    laadPrijzen();
+  }, [laadPrijzen]);
+
+  // Producten met (eventueel) live prijzen
+  const productenMetPrijzen = useMemo(() => {
+    return PRODUCTEN.map((p) => {
+      const live = livePrijzen[p.id];
+      if (!live) return p;
+      return {
+        ...p,
+        prijsNL: live.prijsNL ?? p.prijsNL,
+        prijsDE: live.prijsDE ?? p.prijsDE,
+        prijsBE: live.prijsBE ?? p.prijsBE,
+      };
+    });
+  }, [livePrijzen]);
 
   function toggle(id: string) {
     setGeselecteerd((prev) => {
@@ -32,20 +129,24 @@ export function BoodschappenLijst() {
     });
   }
 
-  function selecteerAlles() {
-    if (geselecteerd.size === PRODUCTEN.length) {
-      setGeselecteerd(new Set());
-    } else {
-      setGeselecteerd(new Set(PRODUCTEN.map((p) => p.id)));
-    }
-  }
+  const gefilterd = useMemo(() => {
+    return productenMetPrijzen.filter((p) => {
+      const matchCategorie = actieveCategorie === "alle" || p.categorie === actieveCategorie;
+      const matchMerk = merkFilter === "alle" || p.merkType === merkFilter;
+      const matchZoek =
+        zoekterm === "" ||
+        p.naam.toLowerCase().includes(zoekterm.toLowerCase()) ||
+        (p.merk && p.merk.toLowerCase().includes(zoekterm.toLowerCase()));
+      return matchCategorie && matchMerk && matchZoek;
+    });
+  }, [productenMetPrijzen, actieveCategorie, merkFilter, zoekterm]);
 
   const totalen = useMemo(() => {
     let nl = 0;
     let de = 0;
     let be = 0;
 
-    for (const product of PRODUCTEN) {
+    for (const product of productenMetPrijzen) {
       if (geselecteerd.has(product.id)) {
         nl += product.prijsNL;
         de += product.prijsDE;
@@ -60,7 +161,20 @@ export function BoodschappenLijst() {
       besparingDE: nl - de,
       besparingBE: nl - be,
     };
-  }, [geselecteerd]);
+  }, [productenMetPrijzen, geselecteerd]);
+
+  // Bereken A-merk vs huismerk besparing
+  const merkVergelijking = useMemo(() => {
+    const selected = productenMetPrijzen.filter((p) => geselecteerd.has(p.id));
+    const aMerken = selected.filter((p) => p.merkType === "a-merk");
+    const huisMerken = selected.filter((p) => p.merkType === "huismerk");
+    return {
+      aantalAMerk: aMerken.length,
+      aantalHuismerk: huisMerken.length,
+      totaalAMerkNL: aMerken.reduce((s, p) => s + p.prijsNL, 0),
+      totaalHuismerkNL: huisMerken.reduce((s, p) => s + p.prijsNL, 0),
+    };
+  }, [productenMetPrijzen, geselecteerd]);
 
   useEffect(() => {
     if (geselecteerd.size === 0) return;
@@ -74,62 +188,156 @@ export function BoodschappenLijst() {
     });
   }, [totalen, geselecteerd.size]);
 
-  const allesGeselecteerd = geselecteerd.size === PRODUCTEN.length;
+  const aantalAMerk = productenMetPrijzen.filter((p) => p.merkType === "a-merk").length;
+  const aantalHuismerk = productenMetPrijzen.filter((p) => p.merkType === "huismerk").length;
 
   return (
     <div className="space-y-5">
-      {/* Selecteer alles */}
+      {/* Prijsstatus indicator */}
+      <PrijsStatusBalk status={prijsStatus} onHerlaad={laadPrijzen} />
+
+      {/* Zoekbalk */}
+      <div className="relative">
+        <svg className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Zoek product of merk..."
+          value={zoekterm}
+          onChange={(e) => setZoekterm(e.target.value)}
+          className="w-full rounded-2xl border border-gray-200 bg-surface py-3 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white"
+        />
+        {zoekterm && (
+          <button
+            onClick={() => setZoekterm("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Merk filter */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setMerkFilter("alle")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+            merkFilter === "alle"
+              ? "bg-accent text-white shadow-md"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+          </svg>
+          Alles ({PRODUCTEN.length})
+        </button>
+        <button
+          onClick={() => setMerkFilter("a-merk")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+            merkFilter === "a-merk"
+              ? "bg-blue-500 text-white shadow-md"
+              : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300"
+          }`}
+        >
+          <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-blue-600 text-[8px] font-black text-white">A</span>
+          A-merken ({aantalAMerk})
+        </button>
+        <button
+          onClick={() => setMerkFilter("huismerk")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+            merkFilter === "huismerk"
+              ? "bg-gray-600 text-white shadow-md"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+          }`}
+        >
+          <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-gray-500 text-[8px] font-black text-white">H</span>
+          Huismerken ({aantalHuismerk})
+        </button>
+      </div>
+
+      {/* Categorie tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <button
+          onClick={() => setActieveCategorie("alle")}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+            actieveCategorie === "alle"
+              ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+              : "bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-800/50 dark:text-gray-400"
+          }`}
+        >
+          Alles
+        </button>
+        {CATEGORIEEN.map((cat) => {
+          const { label, icoon } = CATEGORIE_LABELS[cat];
+          return (
+            <button
+              key={cat}
+              onClick={() => setActieveCategorie(cat)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                actieveCategorie === cat
+                  ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+                  : "bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-800/50 dark:text-gray-400"
+              }`}
+            >
+              {icoon} {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selectie teller */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400">
           <span className="font-bold text-primary dark:text-accent">
             {geselecteerd.size}
           </span>{" "}
-          van {PRODUCTEN.length} producten
+          product{geselecteerd.size !== 1 && "en"} geselecteerd
+          {merkVergelijking.aantalAMerk > 0 && merkVergelijking.aantalHuismerk > 0 && (
+            <span className="ml-1 text-xs text-gray-400">
+              ({merkVergelijking.aantalAMerk} A-merk, {merkVergelijking.aantalHuismerk} huismerk)
+            </span>
+          )}
         </p>
-        <button
-          onClick={selecteerAlles}
-          className="rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-accent/20 dark:text-accent"
-        >
-          {allesGeselecteerd ? "Deselecteer alles" : "Selecteer alles"}
-        </button>
+        {geselecteerd.size > 0 && (
+          <button
+            onClick={() => setGeselecteerd(new Set())}
+            className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+          >
+            Wis selectie
+          </button>
+        )}
       </div>
 
-      {/* Productlijst per categorie */}
-      {CATEGORIEEN.map((cat) => {
-        const { label, icoon } = CATEGORIE_LABELS[cat];
-        const producten = PRODUCTEN.filter((p) => p.categorie === cat);
+      {/* Product tegels grid */}
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        {gefilterd.map((product) => (
+          <ProductTegel
+            key={product.id}
+            product={product}
+            geselecteerd={geselecteerd.has(product.id)}
+            onToggle={() => toggle(product.id)}
+          />
+        ))}
+      </div>
 
-        return (
-          <div
-            key={cat}
-            className="overflow-hidden rounded-2xl border border-gray-100 bg-surface shadow-sm dark:border-gray-800"
+      {gefilterd.length === 0 && (
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center dark:border-gray-700">
+          <div className="text-3xl">🔍</div>
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            Geen producten gevonden
+          </p>
+          <button
+            onClick={() => { setZoekterm(""); setMerkFilter("alle"); setActieveCategorie("alle"); }}
+            className="mt-2 text-xs font-bold text-accent"
           >
-            <div className="border-b border-gray-100 bg-gray-50/50 px-5 py-3 dark:border-gray-800 dark:bg-gray-800/30">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                {icoon} {label}
-              </h2>
-            </div>
-
-            <div className="hidden px-5 pt-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem] sm:gap-2 dark:text-gray-500">
-              <div>Product</div>
-              <div className="text-right">NL</div>
-              <div className="text-right">DE</div>
-              <div className="text-right">BE</div>
-            </div>
-
-            <ul className="divide-y divide-gray-50 dark:divide-gray-800/50">
-              {producten.map((product) => (
-                <ProductRij
-                  key={product.id}
-                  product={product}
-                  aangevinkt={geselecteerd.has(product.id)}
-                  onToggle={() => toggle(product.id)}
-                />
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+            Filters wissen
+          </button>
+        </div>
+      )}
 
       {/* Postcode voor supermarkten */}
       <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
@@ -170,114 +378,177 @@ export function BoodschappenLijst() {
       )}
 
       {/* Totaal overzicht */}
-      <TotaalOverzicht totalen={totalen} aantalProducten={geselecteerd.size} />
+      <TotaalOverzicht totalen={totalen} aantalProducten={geselecteerd.size} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
     </div>
   );
 }
 
-function ProductRij({
+function ProductTegel({
   product,
-  aangevinkt,
+  geselecteerd,
   onToggle,
 }: {
   product: Product;
-  aangevinkt: boolean;
+  geselecteerd: boolean;
   onToggle: () => void;
 }) {
-  const verschilDE = product.prijsNL - product.prijsDE;
-  const verschilBE = product.prijsNL - product.prijsBE;
+  const besparing = Math.max(product.prijsNL - product.prijsDE, product.prijsNL - product.prijsBE);
+  const { kleur } = CATEGORIE_LABELS[product.categorie];
+  const isAMerk = product.merkType === "a-merk";
 
   return (
-    <li>
-      <label
-        className={`flex cursor-pointer items-start gap-3 px-5 py-3 transition-all sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem] sm:items-center sm:gap-2 ${
-          aangevinkt
-            ? "bg-accent/5 dark:bg-accent/10"
-            : "hover:bg-surface-hover dark:hover:bg-gray-800/30"
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={aangevinkt}
-          onChange={onToggle}
-          className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-accent focus:ring-accent/30 sm:mt-0"
-        />
-
-        <div className="flex-1 sm:flex sm:items-baseline sm:gap-2">
-          <span
-            className={`text-sm font-medium ${
-              aangevinkt
-                ? "text-gray-900 dark:text-white"
-                : "text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            {product.naam}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {product.eenheid}
-          </span>
-
-          <div className="mt-1.5 flex gap-3 text-xs sm:hidden">
-            <span className="text-gray-400">NL {euro(product.prijsNL)}</span>
-            <PrijsVerschilBadge verschil={verschilDE} land="DE" />
-            <PrijsVerschilBadge verschil={verschilBE} land="BE" />
-          </div>
+    <button
+      onClick={onToggle}
+      className={`group relative flex flex-col items-center overflow-hidden rounded-2xl border-2 p-3 pb-2.5 transition-all active:scale-95 ${
+        geselecteerd
+          ? "border-accent bg-accent/10 shadow-md shadow-accent/20 dark:bg-accent/20"
+          : "border-gray-100 bg-surface hover:border-gray-200 hover:shadow-sm dark:border-gray-800 dark:hover:border-gray-700"
+      }`}
+    >
+      {/* Selectie indicator */}
+      {geselecteerd && (
+        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white">
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
         </div>
+      )}
 
-        <div className="hidden text-right text-sm tabular-nums text-gray-500 sm:block dark:text-gray-400">
+      {/* Merk badge */}
+      {isAMerk ? (
+        <div className="absolute left-1 top-1 rounded-md bg-blue-500 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm">
+          A-merk
+        </div>
+      ) : (
+        <div className="absolute left-1 top-1 rounded-md bg-gray-400 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm">
+          Huismerk
+        </div>
+      )}
+
+      {/* Product icoon */}
+      <div className={`mb-1.5 mt-2 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${kleur} text-2xl shadow-sm transition-transform group-hover:scale-110`}>
+        {product.icoon}
+      </div>
+
+      {/* Product naam */}
+      <span className={`text-center text-[11px] font-semibold leading-tight ${
+        geselecteerd ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
+      }`}>
+        {product.merk || product.naam}
+      </span>
+
+      {/* Subnaam als merk anders is dan naam */}
+      {product.merk && product.merk !== product.naam && (
+        <span className="text-center text-[9px] text-gray-400 dark:text-gray-500">
+          {product.naam}
+        </span>
+      )}
+
+      {/* Eenheid */}
+      <span className="mt-0.5 text-[9px] text-gray-400 dark:text-gray-500">
+        {product.eenheid}
+      </span>
+
+      {/* Prijs */}
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-[10px] tabular-nums text-gray-400 line-through dark:text-gray-500">
           {euro(product.prijsNL)}
+        </span>
+        <span className="text-xs font-bold tabular-nums text-accent">
+          {euro(Math.min(product.prijsDE, product.prijsBE))}
+        </span>
+      </div>
+
+      {/* Besparing badge */}
+      {besparing > 0.05 && (
+        <div className="mt-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">
+          -{euro(besparing)}
         </div>
-        <div className="hidden text-right sm:block">
-          <PrijsKolom prijs={product.prijsDE} verschil={verschilDE} />
-        </div>
-        <div className="hidden text-right sm:block">
-          <PrijsKolom prijs={product.prijsBE} verschil={verschilBE} />
-        </div>
-      </label>
-    </li>
+      )}
+    </button>
   );
 }
 
-function PrijsKolom({ prijs, verschil }: { prijs: number; verschil: number }) {
-  return (
-    <div>
-      <div className="text-sm tabular-nums text-gray-500 dark:text-gray-400">
-        {euro(prijs)}
+// ===== Prijsstatus balk =====
+function PrijsStatusBalk({ status, onHerlaad }: { status: PrijsStatus; onHerlaad: () => void }) {
+  if (status.laden) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-xl bg-blue-50 px-4 py-2.5 dark:bg-blue-900/20">
+        <div className="h-4 w-4 animate-spin-slow rounded-full border-2 border-blue-400 border-t-transparent" />
+        <span className="text-xs font-medium text-blue-600 dark:text-blue-300">
+          Actuele prijzen laden...
+        </span>
       </div>
-      {verschil > 0.005 && (
-        <div className="text-xs tabular-nums font-semibold text-accent">
-          -{euro(verschil)}
-        </div>
-      )}
+    );
+  }
+
+  const isLive = status.bron === "live" || status.bron === "cache";
+  const tijdLabel = status.bijgewerkt ? formatTijd(status.bijgewerkt) : null;
+
+  return (
+    <div className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${
+      isLive
+        ? "bg-emerald-50 dark:bg-emerald-900/20"
+        : "bg-amber-50 dark:bg-amber-900/20"
+    }`}>
+      <div className="flex items-center gap-2">
+        <div className={`h-2 w-2 rounded-full ${isLive ? "bg-emerald-500" : "bg-amber-500"}`} />
+        <span className={`text-xs font-medium ${
+          isLive ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"
+        }`}>
+          {isLive ? (
+            <>
+              Actuele prijzen
+              {status.aantalLive > 0 && (
+                <span className="ml-1 text-emerald-500 dark:text-emerald-400">
+                  ({status.aantalLive} live, {status.aantalFallback} geschat)
+                </span>
+              )}
+            </>
+          ) : (
+            "Geschatte prijzen (API niet bereikbaar)"
+          )}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {tijdLabel && (
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">{tijdLabel}</span>
+        )}
+        <button
+          onClick={onHerlaad}
+          className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/50 hover:text-gray-600 dark:hover:bg-gray-800/50"
+          title="Prijzen vernieuwen"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
 
-function PrijsVerschilBadge({
-  verschil,
-  land,
-}: {
-  verschil: number;
-  land: string;
-}) {
-  if (verschil <= 0.005) {
-    return (
-      <span className="text-gray-400 dark:text-gray-500">
-        {land} gelijk
-      </span>
-    );
+function formatTijd(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const nu = new Date();
+    const diffMs = nu.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "zojuist";
+    if (diffMin < 60) return `${diffMin} min geleden`;
+    const diffUur = Math.floor(diffMin / 60);
+    if (diffUur < 24) return `${diffUur} uur geleden`;
+    return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+  } catch {
+    return "";
   }
-
-  return (
-    <span className="font-semibold text-accent">
-      {land} -{euro(verschil)}
-    </span>
-  );
 }
 
 function TotaalOverzicht({
   totalen,
   aantalProducten,
+  merkInfo,
+  prijsStatus,
 }: {
   totalen: {
     nl: number;
@@ -287,13 +558,23 @@ function TotaalOverzicht({
     besparingBE: number;
   };
   aantalProducten: number;
+  merkInfo: {
+    aantalAMerk: number;
+    aantalHuismerk: number;
+    totaalAMerkNL: number;
+    totaalHuismerkNL: number;
+  };
+  prijsStatus: PrijsStatus;
 }) {
   if (aantalProducten === 0) {
     return (
       <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center dark:border-gray-700">
-        <div className="text-3xl">🛒</div>
-        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-          Vink producten aan om je besparing te berekenen
+        <div className="text-4xl">🛒</div>
+        <p className="mt-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+          Tik op producten om ze toe te voegen
+        </p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Vergelijk A-merken en huismerken over de grens
         </p>
       </div>
     );
@@ -304,39 +585,68 @@ function TotaalOverzicht({
   const besteBesparing = Math.max(totalen.besparingDE, totalen.besparingBE);
 
   return (
-    <div className="sticky bottom-20 z-10 -mx-4 border-t border-gray-200/50 bg-white/90 px-4 pb-4 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-gray-800/50 dark:bg-[#131a16]/90 sm:static sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
-      <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-        Totaaloverzicht
-      </h2>
-      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-        {aantalProducten} product{aantalProducten !== 1 && "en"}
-      </p>
-
-      <div className="mt-4 grid grid-cols-3 gap-2.5">
-        <div className="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
-          <div className="text-[11px] font-medium text-gray-400">
-            🇳🇱 Nederland
-          </div>
-          <div className="mt-1 text-base font-extrabold tabular-nums text-gray-900 dark:text-white">
+    <div className="sticky bottom-20 z-10 -mx-4 border-t border-gray-200/50 bg-white/95 px-4 pb-4 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-gray-800/50 dark:bg-[#131a16]/95 sm:static sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+            Jouw besparing
+          </h2>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            {aantalProducten} product{aantalProducten !== 1 && "en"}
+            {merkInfo.aantalAMerk > 0 && merkInfo.aantalHuismerk > 0 && (
+              <span> &middot; {merkInfo.aantalAMerk}× A-merk, {merkInfo.aantalHuismerk}× huismerk</span>
+            )}
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-gray-400">NL totaal</div>
+          <div className="text-sm font-bold tabular-nums text-gray-600 dark:text-gray-300">
             {euro(totalen.nl)}
           </div>
         </div>
+      </div>
 
+      {/* A-merk vs Huismerk inzicht */}
+      {merkInfo.aantalAMerk > 0 && merkInfo.aantalHuismerk > 0 && (
+        <div className="mt-2.5 flex gap-2">
+          <div className="flex-1 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/20">
+            <div className="flex items-center gap-1">
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-blue-500 text-[7px] font-black text-white">A</span>
+              <span className="text-[10px] font-medium text-blue-600 dark:text-blue-300">A-merken</span>
+            </div>
+            <div className="mt-0.5 text-xs font-bold tabular-nums text-blue-700 dark:text-blue-200">
+              {euro(merkInfo.totaalAMerkNL)}
+            </div>
+          </div>
+          <div className="flex-1 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/50">
+            <div className="flex items-center gap-1">
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-gray-500 text-[7px] font-black text-white">H</span>
+              <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">Huismerken</span>
+            </div>
+            <div className="mt-0.5 text-xs font-bold tabular-nums text-gray-700 dark:text-gray-200">
+              {euro(merkInfo.totaalHuismerkNL)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2.5">
         <div
           className={`rounded-xl p-3 ${
             totalen.besparingDE >= totalen.besparingBE
               ? "bg-accent/10 ring-2 ring-accent/30"
-              : "bg-accent/5"
+              : "bg-gray-50 dark:bg-gray-800/50"
           }`}
         >
-          <div className="text-[11px] font-medium text-gray-400">
-            🇩🇪 Duitsland
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🇩🇪</span>
+            <span className="text-[11px] font-medium text-gray-500">Duitsland</span>
           </div>
-          <div className="mt-1 text-base font-extrabold tabular-nums text-gray-900 dark:text-white">
+          <div className="mt-1 text-lg font-extrabold tabular-nums text-gray-900 dark:text-white">
             {euro(totalen.de)}
           </div>
-          <div className="mt-0.5 text-xs font-bold tabular-nums text-accent">
-            -{euro(totalen.besparingDE)}
+          <div className="text-xs font-bold tabular-nums text-accent">
+            Bespaar {euro(totalen.besparingDE)}
           </div>
         </div>
 
@@ -344,35 +654,46 @@ function TotaalOverzicht({
           className={`rounded-xl p-3 ${
             totalen.besparingBE > totalen.besparingDE
               ? "bg-accent/10 ring-2 ring-accent/30"
-              : "bg-accent/5"
+              : "bg-gray-50 dark:bg-gray-800/50"
           }`}
         >
-          <div className="text-[11px] font-medium text-gray-400">
-            🇧🇪 België
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🇧🇪</span>
+            <span className="text-[11px] font-medium text-gray-500">België</span>
           </div>
-          <div className="mt-1 text-base font-extrabold tabular-nums text-gray-900 dark:text-white">
+          <div className="mt-1 text-lg font-extrabold tabular-nums text-gray-900 dark:text-white">
             {euro(totalen.be)}
           </div>
-          <div className="mt-0.5 text-xs font-bold tabular-nums text-accent">
-            -{euro(totalen.besparingBE)}
+          <div className="text-xs font-bold tabular-nums text-accent">
+            Bespaar {euro(totalen.besparingBE)}
           </div>
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl bg-gradient-to-r from-accent to-emerald-500 p-3.5 text-white">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">💰</span>
-          <div>
-            <div className="text-sm font-bold">
-              {besteLand} bespaart je {euro(besteBesparing)}
-            </div>
-            <div className="text-xs text-white/80">
-              {Math.round((besteBesparing / totalen.nl) * 100)}% goedkoper
-              (excl. reiskosten)
+      {besteBesparing > 0 && (
+        <div className="mt-3 rounded-xl bg-gradient-to-r from-accent to-emerald-500 p-3.5 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">💰</span>
+            <div>
+              <div className="text-sm font-bold">
+                {besteLand} bespaart je {euro(besteBesparing)}
+              </div>
+              <div className="text-xs text-white/80">
+                {Math.round((besteBesparing / totalen.nl) * 100)}% goedkoper
+                (excl. reiskosten)
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Databron indicator */}
+      {!prijsStatus.laden && (
+        <p className="mt-2 text-center text-[10px] text-gray-400 dark:text-gray-500">
+          Prijzen via Albert Heijn (NL) &middot; Lidl (DE/BE)
+          {prijsStatus.bijgewerkt && ` &middot; ${formatTijd(prijsStatus.bijgewerkt)}`}
+        </p>
+      )}
     </div>
   );
 }
