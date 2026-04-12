@@ -1,14 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8faf9;
-  --foreground: #1a1a2e;
+  --background: #F0F4F1;
+  --foreground: #0A1628;
   --primary: #1B4332;
   --primary-light: #2D6A4F;
-  --accent: #52B788;
-  --accent-light: #74C69D;
+  --accent: #00D26A;
+  --accent-light: #4ADE80;
   --surface: #ffffff;
   --surface-hover: #f0fdf4;
+  --cta: #FF6B35;
+  --cta-hover: #E85D2C;
+  --navy: #0A1628;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --card-shadow-active: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 @theme inline {
@@ -20,38 +26,46 @@
   --color-accent-light: var(--accent-light);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
-  --font-sans: var(--font-geist-sans);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-navy: var(--navy);
+  --font-sans: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0f0d;
-    --foreground: #e8ede9;
-    --surface: #131a16;
-    --surface-hover: #1a2520;
+    --background: #070D16;
+    --foreground: #E8F0EA;
+    --surface: #0F1A24;
+    --surface-hover: #152030;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.4);
+    --card-shadow-active: 0 2px 10px rgba(0, 0, 0, 0.2);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Page transition */
+/* ====== PAGE TRANSITIONS ====== */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-page {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Hero pulse ring */
+/* ====== HERO ANIMATIONS ====== */
 @keyframes pulse-ring {
   0% { transform: scale(0.9); opacity: 0.6; }
-  50% { transform: scale(1.1); opacity: 0.2; }
+  50% { transform: scale(1.15); opacity: 0.15; }
   100% { transform: scale(0.9); opacity: 0.6; }
 }
 
@@ -59,31 +73,10 @@ body {
   animation: pulse-ring 3s ease-in-out infinite;
 }
 
-/* Skeleton shimmer */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* Spinner */
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-
-.animate-spin-slow {
-  animation: spin-slow 1.2s linear infinite;
-}
-
-/* Float animation for hero */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(2deg); }
+  75% { transform: translateY(4px) rotate(-1deg); }
 }
 
 .animate-float {
@@ -98,7 +91,63 @@ body {
   animation: float 4s ease-in-out 2s infinite;
 }
 
-/* Install banner slide up */
+/* ====== BUTTON ANIMATIONS ====== */
+@keyframes btn-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ====== COUNT UP / NUMBER ANIMATION ====== */
+@keyframes count-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.animate-count-pop {
+  animation: count-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ====== SKELETON SHIMMER ====== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .animate-shimmer {
+    background: linear-gradient(90deg, #1a2740 25%, #223350 50%, #1a2740 75%);
+    background-size: 200% 100%;
+  }
+}
+
+/* ====== SPINNER ====== */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+}
+
+/* ====== SLIDE ANIMATIONS ====== */
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(100%); }
   to { opacity: 1; transform: translateY(0); }
@@ -106,4 +155,169 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-in-bottom {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Stagger delay helpers */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+/* ====== CELEBRATION / CONFETTI ====== */
+@keyframes celebrate-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  50% { transform: scale(0.96); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.animate-celebrate {
+  animation: celebrate-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ====== GLOW EFFECT ====== */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 210, 106, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 210, 106, 0.5); }
+}
+
+.animate-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ====== SCROLLBAR ====== */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ====== CARD STYLES (Duolingo-inspired) ====== */
+.card-bold {
+  background: var(--surface);
+  border-radius: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.06);
+  box-shadow: var(--card-shadow);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-bold:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.card-bold:active {
+  box-shadow: var(--card-shadow-active);
+  transform: translateY(0px) scale(0.98);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-bold {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ====== PILL BUTTON ====== */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.75rem 1.75rem;
+  font-weight: 800;
+  font-size: 0.875rem;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-pill:active {
+  transform: scale(0.95);
+}
+
+.btn-pill-cta {
+  background: var(--cta);
+  color: white;
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.35);
+}
+
+.btn-pill-cta:hover {
+  background: var(--cta-hover);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-pill-accent {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 4px 14px rgba(0, 210, 106, 0.3);
+}
+
+.btn-pill-accent:hover {
+  box-shadow: 0 6px 20px rgba(0, 210, 106, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-pill-white {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.btn-pill-white:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+/* ====== PROGRESS BAR ====== */
+@keyframes progress-fill {
+  from { width: 0; }
+}
+
+.animate-progress {
+  animation: progress-fill 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ====== BADGE POP ====== */
+@keyframes badge-pop {
+  0% { transform: scale(0) rotate(-10deg); }
+  60% { transform: scale(1.2) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ====== INSTALL BANNER ====== */
+@keyframes install-slide {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-install-slide {
+  animation: install-slide 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
