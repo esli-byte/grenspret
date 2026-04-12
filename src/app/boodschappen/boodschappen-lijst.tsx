@@ -377,7 +377,10 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Totaal overzicht */}
+      {/* Compacte sticky besparing balk */}
+      <CompactBesparingBar totalen={totalen} aantalProducten={geselecteerd.size} />
+
+      {/* Volledig overzicht onderaan */}
       <TotaalOverzicht totalen={totalen} aantalProducten={geselecteerd.size} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
     </div>
   );
@@ -544,6 +547,48 @@ function formatTijd(iso: string): string {
   }
 }
 
+function CompactBesparingBar({
+  totalen,
+  aantalProducten,
+}: {
+  totalen: {
+    nl: number;
+    besparingDE: number;
+    besparingBE: number;
+  };
+  aantalProducten: number;
+}) {
+  if (aantalProducten === 0) return null;
+
+  const besteBesparing = Math.max(totalen.besparingDE, totalen.besparingBE);
+  const besteLand =
+    totalen.besparingDE >= totalen.besparingBE ? "🇩🇪" : "🇧🇪";
+
+  return (
+    <div className="sticky bottom-20 z-10 -mx-4 border-t border-accent/20 bg-gradient-to-r from-accent/95 to-emerald-500/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:border-accent/30 sm:shadow-md">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg">💰</span>
+          <div>
+            <div className="text-[11px] font-medium text-white/80">
+              {aantalProducten} product{aantalProducten !== 1 && "en"} &middot; Beste besparing {besteLand}
+            </div>
+            <div className="text-lg font-extrabold tabular-nums text-white">
+              Bespaar {euro(besteBesparing)}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="text-[10px] text-white/60">NL totaal</div>
+          <div className="text-sm font-bold tabular-nums text-white/90">
+            {euro(totalen.nl)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TotaalOverzicht({
   totalen,
   aantalProducten,
@@ -585,7 +630,7 @@ function TotaalOverzicht({
   const besteBesparing = Math.max(totalen.besparingDE, totalen.besparingBE);
 
   return (
-    <div className="sticky bottom-20 z-10 -mx-4 border-t border-gray-200/50 bg-white/95 px-4 pb-4 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-gray-800/50 dark:bg-[#131a16]/95 sm:static sm:mx-0 sm:rounded-2xl sm:border sm:shadow-sm">
+    <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-bold text-gray-900 dark:text-white">

@@ -77,15 +77,12 @@ export function TankenForm() {
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
   const [prijzenBron, setPrijzenBron] = useState<string>("fallback");
-  const [prijzenBijgewerkt, setPrijzenBijgewerkt] = useState<string | null>(
-    null
-  );
+  const [prijzenBijgewerkt, setPrijzenBijgewerkt] = useState<string | null>(null);
   const [prijzenLaden, setPrijzenLaden] = useState(true);
 
   // Fetch live prijzen bij mount
   useEffect(() => {
     let cancelled = false;
-
     async function fetchPrijzen() {
       try {
         const res = await fetch("/api/fuel-prices");
@@ -101,24 +98,18 @@ export function TankenForm() {
         if (!cancelled) setPrijzenLaden(false);
       }
     }
-
     fetchPrijzen();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const berekening = useMemo(() => {
     if (!voertuig) return null;
-
     const soort = mapBrandstofSoort(voertuig.brandstof);
     if (!soort) return null;
-
     const ccMatch = voertuig.cilinderinhoud.match(/(\d+)/);
     const cc = ccMatch ? parseInt(ccMatch[1], 10) : 1600;
     const tankGrootte = schattingTankgrootte(cc);
     const verbruik = schattingVerbruik(cc, soort);
-
     return {
       soort,
       soortLabel: soort === "diesel" ? "Diesel" : "Euro 95",
@@ -136,9 +127,7 @@ export function TankenForm() {
 
   useEffect(() => {
     if (!voertuig || !berekening || !routes) return;
-
     const nlPrijs = prijzen[0][berekening.soort];
-
     slaaTankenOp({
       voertuig: {
         merk: voertuig.merk,
@@ -149,18 +138,11 @@ export function TankenForm() {
       brandstofSoort: berekening.soortLabel,
       tankGrootte: berekening.tankGrootte,
       verbruik: berekening.verbruik,
-      besparingDE:
-        berekening.besparingen.find((b) => b.land === "Duitsland")
-          ?.besparing ?? 0,
-      besparingBE:
-        berekening.besparingen.find((b) => b.land === "België")?.besparing ??
-        0,
+      besparingDE: berekening.besparingen.find((b) => b.land === "Duitsland")?.besparing ?? 0,
+      besparingBE: berekening.besparingen.find((b) => b.land === "België")?.besparing ?? 0,
       route: routes.map((route) => {
-        const besparing = berekening.besparingen.find(
-          (b) => b.land === route.land
-        );
-        const brandstofRetour =
-          (route.afstandRetour / 100) * berekening.verbruik;
+        const besparing = berekening.besparingen.find((b) => b.land === route.land);
+        const brandstofRetour = (route.afstandRetour / 100) * berekening.verbruik;
         const reiskosten = brandstofRetour * nlPrijs;
         const netto = (besparing?.besparing ?? 0) - reiskosten;
         return {
@@ -181,9 +163,7 @@ export function TankenForm() {
     setLoading(true);
     setError(null);
     setVoertuig(null);
-
     const result = await zoekVoertuig(kenteken);
-
     if (result.success) {
       setVoertuig(result.data);
     } else {
@@ -193,20 +173,14 @@ export function TankenForm() {
   }
 
   function formatKenteken(value: string) {
-    return value
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, 8);
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   }
 
   return (
     <div className="space-y-5">
       {/* Kenteken invoer */}
       <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
-        <label
-          htmlFor="kenteken"
-          className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-        >
+        <label htmlFor="kenteken" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
           Kenteken
         </label>
         <div className="mt-2 flex gap-3">
@@ -235,24 +209,9 @@ export function TankenForm() {
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
                 Zoeken
               </span>
@@ -284,29 +243,17 @@ export function TankenForm() {
           <div className="p-5">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <dt className="text-gray-500 dark:text-gray-400">Merk</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.merk}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.merk}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Model</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.handelsbenaming}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.handelsbenaming}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Brandstof</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.brandstof}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.brandstof}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Kleur</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.eersteKleur}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.eersteKleur}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Cilinders</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.aantalCilinders}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.aantalCilinders}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Inhoud</dt>
-              <dd className="font-semibold text-gray-900 dark:text-white">
-                {voertuig.cilinderinhoud}
-              </dd>
+              <dd className="font-semibold text-gray-900 dark:text-white">{voertuig.cilinderinhoud}</dd>
             </dl>
             {berekening && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -327,10 +274,7 @@ export function TankenForm() {
 
       {/* Postcode invoer */}
       <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
-        <label
-          htmlFor="postcode"
-          className="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-        >
+        <label htmlFor="postcode" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
           Jouw postcode
         </label>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -342,12 +286,7 @@ export function TankenForm() {
           placeholder="1234 AB"
           value={postcode}
           onChange={(e) =>
-            setPostcode(
-              e.target.value
-                .toUpperCase()
-                .replace(/[^A-Z0-9 ]/g, "")
-                .slice(0, 7)
-            )
+            setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
           }
           className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-900 placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:w-48"
           autoComplete="postal-code"
@@ -356,11 +295,7 @@ export function TankenForm() {
 
       {/* Dichtstbijzijnde tankstations */}
       {postcode && (
-        <LocatieKaartjes
-          postcode={postcode}
-          type="tankstation"
-          titel="Dichtstbijzijnde tankstations"
-        />
+        <LocatieKaartjes postcode={postcode} type="tankstation" titel="Dichtstbijzijnde tankstations" />
       )}
 
       {/* Brandstofprijzen overzicht */}
@@ -370,30 +305,15 @@ export function TankenForm() {
         <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                Brandstofprijzen
-              </h2>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                Gemiddelde literprijzen per land
-              </p>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Brandstofprijzen</h2>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Gemiddelde literprijzen per land</p>
             </div>
-            {/* Bron indicator */}
             <div className="flex items-center gap-1.5">
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  prijzenBron === "live"
-                    ? "bg-green-500"
-                    : prijzenBron === "cache"
-                      ? "bg-amber-500"
-                      : "bg-gray-400"
-                }`}
-              />
+              <div className={`h-2 w-2 rounded-full ${
+                prijzenBron === "live" ? "bg-green-500" : prijzenBron === "cache" ? "bg-amber-500" : "bg-gray-400"
+              }`} />
               <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
-                {prijzenBron === "live"
-                  ? "Live"
-                  : prijzenBron === "cache"
-                    ? "Cached"
-                    : "Indicatief"}
+                {prijzenBron === "live" ? "Live" : prijzenBron === "cache" ? "Cached" : "Indicatief"}
               </span>
             </div>
           </div>
@@ -401,44 +321,26 @@ export function TankenForm() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="pb-2 text-left text-xs font-semibold text-gray-400 dark:text-gray-500">
-                    Land
-                  </th>
-                  <th className="pb-2 text-right text-xs font-semibold text-gray-400 dark:text-gray-500">
-                    Euro 95
-                  </th>
-                  <th className="pb-2 text-right text-xs font-semibold text-gray-400 dark:text-gray-500">
-                    Diesel
-                  </th>
+                  <th className="pb-2 text-left text-xs font-semibold text-gray-400 dark:text-gray-500">Land</th>
+                  <th className="pb-2 text-right text-xs font-semibold text-gray-400 dark:text-gray-500">Euro 95</th>
+                  <th className="pb-2 text-right text-xs font-semibold text-gray-400 dark:text-gray-500">Diesel</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {prijzen.map((land) => (
                   <tr key={land.land}>
-                    <td className="py-3 font-semibold text-gray-900 dark:text-white">
-                      {land.vlag} {land.land}
-                    </td>
-                    <td className="py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
-                      {euro(land.euro95)}
-                    </td>
-                    <td className="py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
-                      {euro(land.diesel)}
-                    </td>
+                    <td className="py-3 font-semibold text-gray-900 dark:text-white">{land.vlag} {land.land}</td>
+                    <td className="py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">{euro(land.euro95)}</td>
+                    <td className="py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">{euro(land.diesel)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {/* Laatste update */}
           {prijzenBijgewerkt && (
             <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
               Laatst bijgewerkt:{" "}
-              {new Date(prijzenBijgewerkt).toLocaleString("nl-NL", {
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {new Date(prijzenBijgewerkt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
             </p>
           )}
         </div>
@@ -456,21 +358,12 @@ export function TankenForm() {
 
       {/* Netto besparingsoverzicht */}
       {berekening && routes && (
-        <NettoBesparingOverzicht
-          berekening={berekening}
-          routes={routes}
-          prijzen={prijzen}
-          extraLiters={extraLiters}
-        />
+        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} />
       )}
 
       {/* Alleen bruto besparing als er geen postcode is */}
       {berekening && !routes && (
-        <BrutoBesparingOverzicht
-          berekening={berekening}
-          extraLiters={extraLiters}
-          prijzen={prijzen}
-        />
+        <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} />
       )}
     </div>
   );
@@ -488,12 +381,15 @@ function ExtraLitersSlider({
   prijzen: LandPrijzen[];
 }) {
   const nlPrijs = prijzen[0][brandstofSoort];
-  const dePrijs = prijzen.find((p) => p.land === "Duitsland")?.[brandstofSoort] ?? nlPrijs;
-  const bePrijs = prijzen.find((p) => p.land === "België")?.[brandstofSoort] ?? nlPrijs;
-
+  const dePrijs =
+    prijzen.find((p) => p.land === "Duitsland")?.[brandstofSoort] ?? nlPrijs;
+  const bePrijs =
+    prijzen.find((p) => p.land === "België")?.[brandstofSoort] ?? nlPrijs;
   const extraBesparingDE = extraLiters * (nlPrijs - dePrijs);
   const extraBesparingBE = extraLiters * (nlPrijs - bePrijs);
-  const pct = (extraLiters / 10) * 100;
+  const pct = (extraLiters / 80) * 100;
+  const aantalPersonen = Math.ceil(extraLiters / 10);
+  const ticks = [0, 10, 20, 30, 40, 50, 60, 70, 80];
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
@@ -506,7 +402,7 @@ function ExtraLitersSlider({
             Extra brandstof meenemen
           </h2>
           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-            Neem extra liters mee in een jerrycan
+            Neem extra liters mee in jerrycans
           </p>
         </div>
       </div>
@@ -521,42 +417,71 @@ function ExtraLitersSlider({
             {extraLiters} liter
           </span>
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            10 L
+            80 L
           </span>
         </div>
-
         <div className="relative mt-2">
           {/* Track background */}
           <div className="h-3 rounded-full bg-gray-200 dark:bg-gray-700">
-            {/* Filled track */}
-            <div
-              className="h-3 rounded-full bg-gradient-to-r from-accent to-emerald-400 transition-all"
-              style={{ width: `${pct}%` }}
-            />
+            {/* Filled track - green up to 10L, orange after */}
+            {extraLiters <= 10 ? (
+              <div
+                className="h-3 rounded-full bg-gradient-to-r from-accent to-emerald-400 transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            ) : (
+              <div className="flex h-3 overflow-hidden rounded-full">
+                <div
+                  className="h-3 bg-gradient-to-r from-accent to-emerald-400"
+                  style={{ width: `${(10 / 80) * 100}%` }}
+                />
+                <div
+                  className="h-3 bg-gradient-to-r from-amber-400 to-amber-500"
+                  style={{ width: `${((extraLiters - 10) / 80) * 100}%` }}
+                />
+              </div>
+            )}
           </div>
+          {/* Legal limit marker at 10L */}
+          <div
+            className="absolute top-0 h-3 w-0.5 bg-amber-600 dark:bg-amber-400"
+            style={{ left: `${(10 / 80) * 100}%` }}
+            title="Wettelijk maximum per persoon"
+          />
           {/* Input */}
           <input
             type="range"
             min={0}
-            max={10}
-            step={1}
+            max={80}
+            step={5}
             value={extraLiters}
             onChange={(e) => onChange(parseInt(e.target.value, 10))}
             className="absolute inset-0 h-3 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
           />
         </div>
-
-        {/* Tick marks */}
-        <div className="mt-1 flex justify-between px-0.5">
-          {Array.from({ length: 11 }, (_, i) => (
-            <div
-              key={i}
-              className={`h-1 w-1 rounded-full ${
-                i <= extraLiters
-                  ? "bg-accent"
-                  : "bg-gray-300 dark:bg-gray-600"
-              }`}
-            />
+        {/* Tick marks with labels */}
+        <div className="mt-1.5 flex justify-between px-0.5">
+          {ticks.map((tick) => (
+            <div key={tick} className="flex flex-col items-center" style={{ width: '1px' }}>
+              <div
+                className={`rounded-full ${
+                  tick === 10
+                    ? "h-2 w-1.5 bg-amber-500"
+                    : tick <= extraLiters
+                    ? "h-1.5 w-1 bg-accent"
+                    : "h-1.5 w-1 bg-gray-300 dark:bg-gray-600"
+                }`}
+              />
+              <span
+                className={`mt-0.5 text-[8px] tabular-nums ${
+                  tick === 10
+                    ? "font-bold text-amber-600 dark:text-amber-400"
+                    : "text-gray-400 dark:text-gray-500"
+                }`}
+              >
+                {tick}
+              </span>
+            </div>
           ))}
         </div>
       </div>
@@ -583,14 +508,34 @@ function ExtraLitersSlider({
         </div>
       )}
 
-      {/* Waarschuwing */}
-      <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/30">
-        <span className="shrink-0 text-sm">⚠️</span>
-        <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
-          Wettelijk maximum: <strong>10 liter</strong> per persoon in een
-          goedgekeurde (UN/metalen) jerrycan. Plastic jerrycans zijn niet
-          toegestaan voor benzine.
-        </p>
+      {/* Personen indicator bij > 10L */}
+      {extraLiters > 10 && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 dark:bg-amber-950/30">
+          <span className="text-base">👥</span>
+          <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+            Voor {extraLiters}L heb je minimaal <strong>{aantalPersonen} personen</strong> nodig
+            ({aantalPersonen} × 10L jerrycan)
+          </p>
+        </div>
+      )}
+
+      {/* Wettelijke info */}
+      <div className="mt-3 space-y-2">
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/30">
+          <span className="shrink-0 text-sm">⚠️</span>
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+            Wettelijk toegestaan: <strong>10 liter per persoon</strong> in een
+            goedgekeurde (UN/metalen) jerrycan. Plastic jerrycans zijn niet
+            toegestaan voor benzine.
+          </p>
+        </div>
+        <div className="flex items-start gap-2 rounded-xl bg-blue-50 p-3 dark:bg-blue-950/30">
+          <span className="shrink-0 text-sm">💡</span>
+          <p className="text-[11px] leading-relaxed text-blue-800 dark:text-blue-300">
+            <strong>Tip:</strong> Met meerdere personen in de auto mag ieder 10
+            liter meenemen. Zo kun je tot 80 liter extra meenemen!
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -614,30 +559,15 @@ function NettoBesparingOverzicht({
   extraLiters: number;
 }) {
   const nlPrijs = prijzen[0][berekening.soort];
-
   const kaarten = routes
     .map((route) => {
-      const besparing = berekening.besparingen.find(
-        (b) => b.land === route.land
-      );
+      const besparing = berekening.besparingen.find((b) => b.land === route.land);
       if (!besparing) return null;
-      const brandstofRetour =
-        (route.afstandRetour / 100) * berekening.verbruik;
+      const brandstofRetour = (route.afstandRetour / 100) * berekening.verbruik;
       const reiskosten = brandstofRetour * nlPrijs;
-
-      // Extra liters besparing
-      const extraBesparing =
-        extraLiters * (nlPrijs - besparing.prijsPerLiter);
-
+      const extraBesparing = extraLiters * (nlPrijs - besparing.prijsPerLiter);
       const netto = besparing.besparing + extraBesparing - reiskosten;
-      return {
-        ...route,
-        besparing,
-        brandstofRetour,
-        reiskosten,
-        extraBesparing,
-        netto,
-      };
+      return { ...route, besparing, brandstofRetour, reiskosten, extraBesparing, netto };
     })
     .filter(Boolean) as Array<{
     land: string;
@@ -656,20 +586,16 @@ function NettoBesparingOverzicht({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-        Totale netto besparing
-      </h2>
+      <h2 className="text-sm font-bold text-gray-900 dark:text-white">Totale netto besparing</h2>
       <p className="text-xs text-gray-500 dark:text-gray-400">
         {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank
         {extraLiters > 0 && <> + {extraLiters}L jerrycan</>}
         {" "}&middot; {berekening.verbruik} l/100km
       </p>
-
       <div className="grid gap-4 sm:grid-cols-2">
         {kaarten.map((k) => {
           const loont = k.netto > 0;
           const isBest = k.netto === bestNetto && loont;
-
           return (
             <div
               key={k.land}
@@ -690,75 +616,47 @@ function NettoBesparingOverzicht({
                 <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   {k.besparing.vlag} {k.land}
                 </div>
-                <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  {k.bestemming}
+                <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{k.bestemming}</div>
+                <div className={`mt-3 text-3xl font-extrabold ${
+                  loont ? "text-accent dark:text-accent-light" : "text-red-500 dark:text-red-400"
+                }`}>
+                  {loont ? "+" : ""}{euro(k.netto)}
                 </div>
-                <div
-                  className={`mt-3 text-3xl font-extrabold ${
-                    loont
-                      ? "text-accent dark:text-accent-light"
-                      : "text-red-500 dark:text-red-400"
-                  }`}
-                >
-                  {loont ? "+" : ""}
-                  {euro(k.netto)}
-                </div>
-                <div
-                  className={`text-xs font-semibold ${
-                    loont
-                      ? "text-accent/70 dark:text-accent-light/70"
-                      : "text-red-400"
-                  }`}
-                >
+                <div className={`text-xs font-semibold ${
+                  loont ? "text-accent/70 dark:text-accent-light/70" : "text-red-400"
+                }`}>
                   {loont ? "netto besparing" : "het loont niet"}
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-200/50 pt-4 text-xs dark:border-gray-700/50">
                   <div className="rounded-xl bg-white/60 p-2.5 dark:bg-gray-800/40">
                     <div className="text-gray-400">Enkele reis</div>
-                    <div className="mt-0.5 font-bold text-gray-900 dark:text-white">
-                      {k.afstandEnkel} km
-                    </div>
+                    <div className="mt-0.5 font-bold text-gray-900 dark:text-white">{k.afstandEnkel} km</div>
                   </div>
                   <div className="rounded-xl bg-white/60 p-2.5 dark:bg-gray-800/40">
                     <div className="text-gray-400">Rijtijd retour</div>
-                    <div className="mt-0.5 font-bold text-gray-900 dark:text-white">
-                      {formatRijtijd(k.rijtijdMinuten)}
-                    </div>
+                    <div className="mt-0.5 font-bold text-gray-900 dark:text-white">{formatRijtijd(k.rijtijdMinuten)}</div>
                   </div>
                 </div>
                 <div className="mt-3 space-y-1.5 border-t border-gray-200/50 pt-3 text-xs dark:border-gray-700/50">
                   <div className="flex justify-between text-gray-500">
                     <span>Besparing volle tank</span>
-                    <span className="tabular-nums font-semibold text-accent">
-                      +{euro(k.besparing.besparing)}
-                    </span>
+                    <span className="tabular-nums font-semibold text-accent">+{euro(k.besparing.besparing)}</span>
                   </div>
                   {extraLiters > 0 && (
                     <div className="flex justify-between text-gray-500">
                       <span>Extra {extraLiters}L jerrycan</span>
-                      <span className="tabular-nums font-semibold text-accent">
-                        +{euro(k.extraBesparing)}
-                      </span>
+                      <span className="tabular-nums font-semibold text-accent">+{euro(k.extraBesparing)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-gray-500">
                     <span>Reiskosten ({k.afstandRetour} km)</span>
-                    <span className="tabular-nums font-semibold text-red-500">
-                      -{euro(k.reiskosten)}
-                    </span>
+                    <span className="tabular-nums font-semibold text-red-500">-{euro(k.reiskosten)}</span>
                   </div>
-                  <div
-                    className={`flex justify-between border-t pt-1.5 font-bold ${
-                      loont
-                        ? "border-accent/20 text-accent"
-                        : "border-red-200 text-red-500"
-                    }`}
-                  >
+                  <div className={`flex justify-between border-t pt-1.5 font-bold ${
+                    loont ? "border-accent/20 text-accent" : "border-red-200 text-red-500"
+                  }`}>
                     <span>Netto totaal</span>
-                    <span className="tabular-nums">
-                      {loont ? "+" : ""}
-                      {euro(k.netto)}
-                    </span>
+                    <span className="tabular-nums">{loont ? "+" : ""}{euro(k.netto)}</span>
                   </div>
                 </div>
               </div>
@@ -766,10 +664,8 @@ function NettoBesparingOverzicht({
           );
         })}
       </div>
-
       <p className="text-xs text-gray-400 dark:text-gray-500">
-        Afstanden en verbruik zijn schattingen. Werkelijke besparing kan
-        afwijken.
+        Afstanden en verbruik zijn schattingen. Werkelijke besparing kan afwijken.
       </p>
     </div>
   );
@@ -796,36 +692,25 @@ function BrutoBesparingOverzicht({
   return (
     <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm dark:border-gray-800">
       <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-        Besparing per volle tank
-        {extraLiters > 0 && ` + ${extraLiters}L jerrycan`}
+        Besparing per volle tank {extraLiters > 0 && ` + ${extraLiters}L jerrycan`}
       </h2>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank &middot;
-        Vul je postcode in voor netto besparing
+        {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank &middot; Vul je postcode in voor netto besparing
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {buitenland.map((b) => {
           const extra = extraLiters * (nlPrijs - b.prijsPerLiter);
           const totaal = b.besparing + extra;
           return (
-            <div
-              key={b.land}
-              className="rounded-xl border border-accent/30 bg-accent/5 p-4"
-            >
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {b.vlag} {b.land}
-              </div>
-              <div className="mt-2 text-2xl font-extrabold text-accent">
-                +{euro(totaal)}
-              </div>
+            <div key={b.land} className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">{b.vlag} {b.land}</div>
+              <div className="mt-2 text-2xl font-extrabold text-accent">+{euro(totaal)}</div>
               {extraLiters > 0 && (
                 <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
                   tank {euro(b.besparing)} + jerrycan {euro(extra)}
                 </div>
               )}
-              <div className="mt-0.5 text-xs text-accent/60">
-                bruto besparing (excl. reiskosten)
-              </div>
+              <div className="mt-0.5 text-xs text-accent/60">bruto besparing (excl. reiskosten)</div>
             </div>
           );
         })}
