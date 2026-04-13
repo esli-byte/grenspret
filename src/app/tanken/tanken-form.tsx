@@ -73,6 +73,8 @@ export function TankenForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [extraLiters, setExtraLiters] = useState(0);
+  const [isLeaseAuto, setIsLeaseAuto] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
@@ -176,6 +178,47 @@ export function TankenForm() {
     return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   }
 
+  async function handleGeolocate() {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setGeoLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Use Nominatim reverse geocoding (free, no API key needed)
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await response.json();
+
+          // Extract postcode from address
+          if (data.address && data.address.postcode) {
+            const pc = data.address.postcode.toUpperCase();
+            // Format as Dutch postcode (####AB format)
+            const formatted = pc.replace(/\s/g, "").slice(0, 7);
+            setPostcode(formatted);
+          } else {
+            setError("Postcode niet gevonden op deze locatie");
+          }
+        } catch (err) {
+          setError("Kon postcode niet bepalen. Probeer het handmatig in te voeren.");
+        } finally {
+          setGeoLoading(false);
+        }
+      },
+      (error) => {
+        setError(`Locatie bericht: ${error.message}`);
+        setGeoLoading(false);
+      }
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Kenteken invoer */}
@@ -185,8 +228,12 @@ export function TankenForm() {
         </label>
         <div className="mt-2.5 flex gap-3">
           <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center rounded-l-2xl bg-navy dark:bg-accent">
-              <span className="text-xs font-extrabold text-white">NL</span>
+            {/* Dutch license plate styling */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex h-full items-center rounded-l-xl bg-[#003399] px-1.5">
+              <div className="flex flex-col items-center">
+                <div className="text-[10px] font-extrabold leading-none text-yellow-300">★★★</div>
+                <div className="text-xs font-extrabold text-yellow-300">NL</div>
+              </div>
             </div>
             <input
               id="kenteken"
@@ -195,11 +242,12 @@ export function TankenForm() {
               value={kenteken}
               onChange={(e) => setKenteken(formatKenteken(e.target.value))}
               onKeyDown={(e) => e.key === "Enter" && handleKentekenZoek()}
-              className="w-full rounded-2xl border-2 border-gray-200 bg-amber-50 py-3.5 pl-12 pr-4 text-center text-lg font-extrabold tracking-widest text-navy placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-amber-950 dark:text-white"
+              className="w-full rounded-xl border-2 border-gray-300 bg-[#F5C518] py-3.5 pl-16 pr-4 text-center text-lg font-extrabold tracking-widest text-black placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-500 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-[#F5C518] dark:text-black"
               autoCapitalize="characters"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
+              style={{ fontFamily: "monospace" }}
             />
           </div>
           <button
@@ -221,6 +269,56 @@ export function TankenForm() {
           </button>
         </div>
       </div>
+
+      {/* Lease-auto toggle */}
+      <div className="card-bold p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-500 text-xl shadow-md">
+            🚙
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-extrabold text-navy dark:text-white">
+              Lease-auto met tankpas?
+            </h3>
+            <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+              Brandstof wordt door werkgever betaald
+            </p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={isLeaseAuto}
+              onChange={(e) => {
+                setIsLeaseAuto(e.target.checked);
+                if (e.target.checked) {
+                  localStorage.setItem("grenspret_lease_auto", "true");
+                } else {
+                  localStorage.removeItem("grenspret_lease_auto");
+                }
+              }}
+              className="peer sr-only"
+            />
+            <div className="peer h-8 w-16 rounded-full border-2 border-gray-300 bg-white transition-all after:absolute after:left-1 after:top-1 after:h-6 after:w-6 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:after:translate-x-8 peer-checked:after:border-accent peer-checked:after:bg-accent dark:border-gray-600 dark:bg-gray-800 dark:after:border-gray-600 dark:after:bg-gray-700 dark:peer-checked:border-accent dark:peer-checked:bg-accent/20 dark:peer-checked:after:bg-accent" />
+          </label>
+        </div>
+      </div>
+
+      {/* Lease-auto banner */}
+      {isLeaseAuto && (
+        <div className="rounded-2xl border-2 border-blue-300 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30 animate-slide-in-bottom">
+          <div className="flex gap-3">
+            <span className="shrink-0 text-lg">💰</span>
+            <div>
+              <h3 className="text-sm font-extrabold text-blue-900 dark:text-blue-100">
+                Brandstofkosten: €0.00
+              </h3>
+              <p className="mt-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                Met een lease-auto en tankpas betaalt je werkgever de brandstof. De besparing is daarom vooral op boodschappen!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && <LoadingSpinner />}
@@ -280,17 +378,36 @@ export function TankenForm() {
         <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
           Om de afstand tot de grens te berekenen
         </p>
-        <input
-          id="postcode"
-          type="text"
-          placeholder="1234 AB"
-          value={postcode}
-          onChange={(e) =>
-            setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
-          }
-          className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
-          autoComplete="postal-code"
-        />
+        <div className="mt-2.5 flex gap-3">
+          <input
+            id="postcode"
+            type="text"
+            placeholder="1234 AB"
+            value={postcode}
+            onChange={(e) =>
+              setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
+            }
+            className="flex-1 rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
+            autoComplete="postal-code"
+          />
+          <button
+            onClick={handleGeolocate}
+            disabled={geoLoading}
+            className="btn-pill btn-pill-outline px-4 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Auto-detecteer je locatie"
+          >
+            {geoLoading ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </span>
+            ) : (
+              <span>📍</span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Dichtstbijzijnde tankstations */}
@@ -358,12 +475,12 @@ export function TankenForm() {
 
       {/* Netto besparingsoverzicht */}
       {berekening && routes && (
-        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} />
+        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} isLeaseAuto={isLeaseAuto} />
       )}
 
       {/* Alleen bruto besparing als er geen postcode is */}
       {berekening && !routes && (
-        <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} />
+        <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} isLeaseAuto={isLeaseAuto} />
       )}
     </div>
   );
@@ -546,6 +663,7 @@ function NettoBesparingOverzicht({
   routes,
   prijzen,
   extraLiters,
+  isLeaseAuto,
 }: {
   berekening: {
     soort: BrandstofSoort;
@@ -557,6 +675,7 @@ function NettoBesparingOverzicht({
   routes: RouteSchatting[];
   prijzen: LandPrijzen[];
   extraLiters: number;
+  isLeaseAuto: boolean;
 }) {
   const nlPrijs = prijzen[0][berekening.soort];
   const kaarten = routes
@@ -564,7 +683,7 @@ function NettoBesparingOverzicht({
       const besparing = berekening.besparingen.find((b) => b.land === route.land);
       if (!besparing) return null;
       const brandstofRetour = (route.afstandRetour / 100) * berekening.verbruik;
-      const reiskosten = brandstofRetour * nlPrijs;
+      const reiskosten = isLeaseAuto ? 0 : brandstofRetour * nlPrijs;
       const extraBesparing = extraLiters * (nlPrijs - besparing.prijsPerLiter);
       const netto = besparing.besparing + extraBesparing - reiskosten;
       return { ...route, besparing, brandstofRetour, reiskosten, extraBesparing, netto };
@@ -659,6 +778,14 @@ function NettoBesparingOverzicht({
                     <span className="tabular-nums">{loont ? "+" : ""}{euro(k.netto)}</span>
                   </div>
                 </div>
+                {isLeaseAuto && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
+                    <span className="text-xs">🚙</span>
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                      Lease-auto: brandstof door werkgever
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -675,6 +802,7 @@ function BrutoBesparingOverzicht({
   berekening,
   extraLiters,
   prijzen,
+  isLeaseAuto,
 }: {
   berekening: {
     soort: BrandstofSoort;
@@ -684,6 +812,7 @@ function BrutoBesparingOverzicht({
   };
   extraLiters: number;
   prijzen: LandPrijzen[];
+  isLeaseAuto: boolean;
 }) {
   const nlPrijs = prijzen[0][berekening.soort];
   const buitenland = berekening.besparingen.filter((b) => b.besparing > 0);
@@ -695,7 +824,7 @@ function BrutoBesparingOverzicht({
         Besparing per volle tank {extraLiters > 0 && ` + ${extraLiters}L jerrycan`}
       </h2>
       <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-        {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank &middot; Vul je postcode in voor netto besparing
+        {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank {isLeaseAuto && "🚙 (lease-auto)"} &middot; Vul je postcode in voor netto besparing
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {buitenland.map((b) => {
@@ -711,6 +840,14 @@ function BrutoBesparingOverzicht({
                 </div>
               )}
               <div className="mt-0.5 text-xs font-bold text-accent/60">bruto besparing (excl. reiskosten)</div>
+              {isLeaseAuto && (
+                <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 dark:bg-blue-950/30">
+                  <span className="text-xs">🚙</span>
+                  <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                    Lease-auto: brandstof gratis
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}

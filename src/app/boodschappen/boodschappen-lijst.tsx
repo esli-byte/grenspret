@@ -38,7 +38,7 @@ type PrijsStatus = {
 const CATEGORIEEN = Object.keys(CATEGORIE_LABELS) as Categorie[];
 
 export function BoodschappenLijst() {
-  const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
+  const [geselecteerd, setGeselecteerd] = useState<Map<string, number>>(new Map());
   const [postcode, setPostcode] = useState("");
   const [zoekterm, setZoekterm] = useState("");
   const [actieveCategorie, setActieveCategorie] = useState<Categorie | "alle">("alle");
@@ -116,13 +116,23 @@ export function BoodschappenLijst() {
     });
   }, [livePrijzen]);
 
-  function toggle(id: string) {
+  function incrementQuantity(id: string) {
     setGeselecteerd((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+      const next = new Map(prev);
+      const current = next.get(id) ?? 0;
+      next.set(id, current + 1);
+      return next;
+    });
+  }
+
+  function decrementQuantity(id: string) {
+    setGeselecteerd((prev) => {
+      const next = new Map(prev);
+      const current = next.get(id) ?? 0;
+      if (current > 1) {
+        next.set(id, current - 1);
       } else {
-        next.add(id);
+        next.delete(id);
       }
       return next;
     });
@@ -146,10 +156,11 @@ export function BoodschappenLijst() {
     let be = 0;
 
     for (const product of productenMetPrijzen) {
-      if (geselecteerd.has(product.id)) {
-        nl += product.prijsNL;
-        de += product.prijsDE;
-        be += product.prijsBE;
+      const quantity = geselecteerd.get(product.id) ?? 0;
+      if (quantity > 0) {
+        nl += product.prijsNL * quantity;
+        de += product.prijsDE * quantity;
+        be += product.prijsBE * quantity;
       }
     }
 
@@ -168,24 +179,32 @@ export function BoodschappenLijst() {
     const aMerken = selected.filter((p) => p.merkType === "a-merk");
     const huisMerken = selected.filter((p) => p.merkType === "huismerk");
     return {
-      aantalAMerk: aMerken.length,
-      aantalHuismerk: huisMerken.length,
-      totaalAMerkNL: aMerken.reduce((s, p) => s + p.prijsNL, 0),
-      totaalHuismerkNL: huisMerken.reduce((s, p) => s + p.prijsNL, 0),
+      aantalAMerk: aMerken.reduce((s, p) => s + (geselecteerd.get(p.id) ?? 0), 0),
+      aantalHuismerk: huisMerken.reduce((s, p) => s + (geselecteerd.get(p.id) ?? 0), 0),
+      totaalAMerkNL: aMerken.reduce((s, p) => s + p.prijsNL * (geselecteerd.get(p.id) ?? 0), 0),
+      totaalHuismerkNL: huisMerken.reduce((s, p) => s + p.prijsNL * (geselecteerd.get(p.id) ?? 0), 0),
     };
   }, [productenMetPrijzen, geselecteerd]);
 
+  const totalAantalItems = useMemo(() => {
+    let total = 0;
+    for (const quantity of geselecteerd.values()) {
+      total += quantity;
+    }
+    return total;
+  }, [geselecteerd]);
+
   useEffect(() => {
-    if (geselecteerd.size === 0) return;
+    if (totalAantalItems === 0) return;
     slaaBoodschappenOp({
-      aantalProducten: geselecteerd.size,
+      aantalProducten: totalAantalItems,
       totaalNL: totalen.nl,
       totaalDE: totalen.de,
       totaalBE: totalen.be,
       besparingDE: totalen.besparingDE,
       besparingBE: totalen.besparingBE,
     });
-  }, [totalen, geselecteerd.size]);
+  }, [totalen, totalAantalItems]);
 
   const aantalAMerk = productenMetPrijzen.filter((p) => p.merkType === "a-merk").length;
   const aantalHuismerk = productenMetPrijzen.filter((p) => p.merkType === "huismerk").length;
@@ -292,18 +311,18 @@ export function BoodschappenLijst() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400">
           <span className="font-extrabold text-accent">
-            {geselecteerd.size}
+            {totalAantalItems}
           </span>{" "}
-          product{geselecteerd.size !== 1 && "en"} geselecteerd
+          product{totalAantalItems !== 1 && "en"} geselecteerd
           {merkVergelijking.aantalAMerk > 0 && merkVergelijking.aantalHuismerk > 0 && (
             <span className="ml-1 text-xs text-gray-400">
               ({merkVergelijking.aantalAMerk} A-merk, {merkVergelijking.aantalHuismerk} huismerk)
             </span>
           )}
         </p>
-        {geselecteerd.size > 0 && (
+        {totalAantalItems > 0 && (
           <button
-            onClick={() => setGeselecteerd(new Set())}
+            onClick={() => setGeselecteerd(new Map())}
             className="rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-extrabold text-red-500 transition-all hover:bg-red-100 active:scale-95 dark:bg-red-900/20 dark:text-red-400"
           >
             Wis selectie
@@ -317,8 +336,9 @@ export function BoodschappenLijst() {
           <ProductTegel
             key={product.id}
             product={product}
-            geselecteerd={geselecteerd.has(product.id)}
-            onToggle={() => toggle(product.id)}
+            quantity={geselecteerd.get(product.id) ?? 0}
+            onIncrement={() => incrementQuantity(product.id)}
+            onDecrement={() => decrementQuantity(product.id)}
           />
         ))}
       </div>
@@ -377,43 +397,60 @@ export function BoodschappenLijst() {
       )}
 
       {/* Compacte sticky besparing balk */}
-      <CompactBesparingBar totalen={totalen} aantalProducten={geselecteerd.size} />
+      <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} />
 
       {/* Volledig overzicht onderaan */}
-      <TotaalOverzicht totalen={totalen} aantalProducten={geselecteerd.size} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
+      <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
     </div>
   );
 }
 
 function ProductTegel({
   product,
-  geselecteerd,
-  onToggle,
+  quantity,
+  onIncrement,
+  onDecrement,
 }: {
   product: Product;
-  geselecteerd: boolean;
-  onToggle: () => void;
+  quantity: number;
+  onIncrement: () => void;
+  onDecrement: () => void;
 }) {
   const besparing = Math.max(product.prijsNL - product.prijsDE, product.prijsNL - product.prijsBE);
   const { kleur } = CATEGORIE_LABELS[product.categorie];
   const isAMerk = product.merkType === "a-merk";
+  const isSelected = quantity > 0;
 
   return (
     <button
-      onClick={onToggle}
+      onClick={onIncrement}
       className={`group relative flex flex-col items-center overflow-hidden rounded-2xl border-2 p-3 pb-2.5 transition-all duration-200 active:scale-95 ${
-        geselecteerd
+        isSelected
           ? "border-accent bg-accent/10 shadow-lg shadow-accent/15 dark:bg-accent/20"
           : "border-gray-100 bg-surface hover:border-gray-200 hover:shadow-md dark:border-gray-800 dark:hover:border-gray-700"
       }`}
     >
-      {/* Selectie indicator */}
-      {geselecteerd && (
-        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white animate-bounce-in">
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-          </svg>
+      {/* Quantity badge */}
+      {isSelected && (
+        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white font-extrabold text-xs animate-bounce-in">
+          {quantity}
         </div>
+      )}
+
+      {/* Minus button */}
+      {isSelected && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDecrement();
+          }}
+          className="absolute bottom-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-90 transition-all"
+          title="Hoeveelheid verminderen"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+          </svg>
+        </button>
       )}
 
       {/* Merk badge */}
@@ -434,7 +471,7 @@ function ProductTegel({
 
       {/* Product naam */}
       <span className={`text-center text-[11px] leading-tight ${
-        geselecteerd ? "font-extrabold text-navy dark:text-white" : "font-bold text-gray-700 dark:text-gray-300"
+        isSelected ? "font-extrabold text-navy dark:text-white" : "font-bold text-gray-700 dark:text-gray-300"
       }`}>
         {product.merk || product.naam}
       </span>
