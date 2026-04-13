@@ -5,7 +5,6 @@ import {
   InstallBanner,
 } from "@/components/ServiceWorkerRegistration";
 import { BottomNav } from "@/components/BottomNav";
-import { AuthProvider } from "@/components/AuthContext";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -56,12 +55,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="min-h-full flex flex-col pb-20 pt-[env(safe-area-inset-top)]">
-        <AuthProvider>
-          <div className="animate-page flex flex-1 flex-col">{children}</div>
-          <BottomNav />
-          <InstallBanner />
-          <ServiceWorkerRegistration />
-        </AuthProvider>
+        <div className="animate-page flex flex-1 flex-col">{children}</div>
+        <BottomNav />
+        <InstallBanner />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
