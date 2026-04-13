@@ -16,7 +16,7 @@ import {
   schattingVerbruik,
   type RouteSchatting,
 } from "./afstand";
-import { slaaTankenOp } from "@/lib/opslag";
+import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 
@@ -81,6 +81,27 @@ export function TankenForm() {
   const [prijzenBron, setPrijzenBron] = useState<string>("fallback");
   const [prijzenBijgewerkt, setPrijzenBijgewerkt] = useState<string | null>(null);
   const [prijzenLaden, setPrijzenLaden] = useState(true);
+
+  // Laad opgeslagen voorkeuren bij mount
+  useEffect(() => {
+    const voorkeuren = leesVoorkeuren();
+    if (voorkeuren.kenteken) {
+      setKenteken(voorkeuren.kenteken);
+      // Auto-zoek voertuig als kenteken opgeslagen was
+      zoekVoertuig(voorkeuren.kenteken).then((result) => {
+        if (result.success) setVoertuig(result.data);
+      });
+    }
+    if (voorkeuren.postcode) setPostcode(voorkeuren.postcode);
+    if (voorkeuren.isLeaseAuto) setIsLeaseAuto(true);
+  }, []);
+
+  // Sla voorkeuren op bij wijziging
+  useEffect(() => {
+    if (kenteken || postcode) {
+      slaaVoorkeurenOp({ kenteken, postcode, isLeaseAuto });
+    }
+  }, [kenteken, postcode, isLeaseAuto]);
 
   // Fetch live prijzen bij mount
   useEffect(() => {

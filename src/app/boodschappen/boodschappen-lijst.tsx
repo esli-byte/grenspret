@@ -9,7 +9,7 @@ import {
   type MerkType,
   type Product,
 } from "./producten";
-import { slaaBoodschappenOp } from "@/lib/opslag";
+import { slaaBoodschappenOp, slaaBoodschappenSelectieOp, leesBoodschappenSelectie, leesVoorkeuren } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 
 function euro(bedrag: number) {
@@ -101,6 +101,29 @@ export function BoodschappenLijst() {
   useEffect(() => {
     laadPrijzen();
   }, [laadPrijzen]);
+
+  // Laad opgeslagen selectie en postcode bij mount
+  useEffect(() => {
+    const selectie = leesBoodschappenSelectie();
+    if (selectie?.producten) {
+      const map = new Map<string, number>();
+      for (const [id, qty] of Object.entries(selectie.producten)) {
+        if (qty > 0) map.set(id, qty);
+      }
+      if (map.size > 0) setGeselecteerd(map);
+    }
+    const voorkeuren = leesVoorkeuren();
+    if (voorkeuren.postcode) setPostcode(voorkeuren.postcode);
+  }, []);
+
+  // Sla selectie op bij wijziging
+  useEffect(() => {
+    if (geselecteerd.size > 0) {
+      const obj: Record<string, number> = {};
+      geselecteerd.forEach((qty, id) => { obj[id] = qty; });
+      slaaBoodschappenSelectieOp(obj);
+    }
+  }, [geselecteerd]);
 
   // Producten met (eventueel) live prijzen
   const productenMetPrijzen = useMemo(() => {

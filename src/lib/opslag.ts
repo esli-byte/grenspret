@@ -35,9 +35,22 @@ export type BoodschappenOpslag = {
   besparingBE: number;
 };
 
+export type GebruikerVoorkeuren = {
+  kenteken?: string;
+  postcode?: string;
+  isLeaseAuto?: boolean;
+  laatsteBezoek?: string;
+};
+
+export type BoodschappenSelectie = {
+  producten: Record<string, number>; // productId -> quantity
+};
+
 const TANKEN_KEY = "grensbesparing_tanken";
 const BOODSCHAPPEN_KEY = "grensbesparing_boodschappen";
 const HUISHOUDENS_KEY = "grensbesparing_huishoudens";
+const VOORKEUREN_KEY = "grensbesparing_voorkeuren";
+const BOODSCHAPPEN_SELECTIE_KEY = "grensbesparing_boodschappen_selectie";
 
 export function slaaHuishoudensOp(aantal: number) {
   try {
@@ -85,6 +98,44 @@ export function slaaBoodschappenOp(data: BoodschappenOpslag) {
 export function leesBoodschappen(): BoodschappenOpslag | null {
   try {
     const raw = localStorage.getItem(BOODSCHAPPEN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// === Gebruiker voorkeuren (kenteken, postcode, lease) ===
+export function slaaVoorkeurenOp(data: Partial<GebruikerVoorkeuren>) {
+  try {
+    const bestaand = leesVoorkeuren();
+    const bijgewerkt = { ...bestaand, ...data, laatsteBezoek: new Date().toISOString() };
+    localStorage.setItem(VOORKEUREN_KEY, JSON.stringify(bijgewerkt));
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
+
+export function leesVoorkeuren(): GebruikerVoorkeuren {
+  try {
+    const raw = localStorage.getItem(VOORKEUREN_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+// === Boodschappen selectie (product aantallen) ===
+export function slaaBoodschappenSelectieOp(producten: Record<string, number>) {
+  try {
+    localStorage.setItem(BOODSCHAPPEN_SELECTIE_KEY, JSON.stringify({ producten }));
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
+
+export function leesBoodschappenSelectie(): BoodschappenSelectie | null {
+  try {
+    const raw = localStorage.getItem(BOODSCHAPPEN_SELECTIE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
