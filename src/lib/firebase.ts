@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC6CdueibWzSg2dJgfqx10-iV5KMqgdE1w",
-  authDomain: "grenspret.vercel.app",
+  authDomain: "grenspret-6126d.firebaseapp.com",
   projectId: "grenspret-6126d",
   storageBucket: "grenspret-6126d.firebasestorage.app",
   messagingSenderId: "320368521945",
