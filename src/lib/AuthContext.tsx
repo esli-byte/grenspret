@@ -10,6 +10,8 @@ import {
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
@@ -34,6 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check of er een redirect-resultaat is (na terugkeer van Google login)
+    getRedirectResult(auth).catch(() => {});
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
@@ -43,9 +48,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      // Probeer popup eerst, val terug op redirect als popup geblokkeerd wordt
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login mislukt:", error);
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string };
+      if (
+        firebaseError.code === "auth/popup-blocked" ||
+        firebaseError.code === "auth/popup-closed-by-user"
+      ) {
+        // Fallback: redirect-based login (werkt altijd)
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        console.error("Login mislukt:", error);
+      }
     }
   };
 
