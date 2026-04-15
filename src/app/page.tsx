@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HuishoudensKiezer } from "./huishoudens-kiezer";
+import { HoeWerktHet } from "./hoe-werkt-het";
 import { AccountKnop } from "@/components/AccountKnop";
 
 export default function Home() {
@@ -44,6 +45,11 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
           </Link>
+
+          {/* Subtiele 'Hoe werkt het' knop */}
+          <div className="mt-5">
+            <HoeWerktHet />
+          </div>
         </div>
       </section>
 
@@ -52,11 +58,29 @@ export default function Home() {
         {/* Huishoudens kiezer */}
         <HuishoudensKiezer />
 
-        {/* Feature cards — Duolingo-style bold cards */}
-        <div className="mt-6 grid gap-4">
+        {/* Stappen header */}
+        <div className="mt-8 mb-4 flex items-center gap-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/15 text-[10px] font-black text-accent">
+            3
+          </div>
+          <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+            Stappen naar je besparing
+          </p>
+          <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
+        </div>
+
+        {/* Feature cards — nu met stap-nummers en timeline */}
+        <div className="relative grid gap-4">
+          {/* Subtiele verticale lijn tussen cards */}
+          <div
+            className="pointer-events-none absolute left-[44px] top-[60px] bottom-[60px] w-0.5 bg-gradient-to-b from-accent/30 via-teal-400/30 to-blue-400/30"
+            aria-hidden="true"
+          />
+
           <FeatureCard
             href="/tanken"
             icon="⛽"
+            stap={1}
             title="Tankbesparing"
             description="Voer je kenteken in en ontdek hoeveel je bespaart op een volle tank over de grens."
             gradient="from-emerald-500 to-green-600"
@@ -65,14 +89,16 @@ export default function Home() {
           <FeatureCard
             href="/boodschappen"
             icon="🛒"
+            stap={2}
             title="Boodschappen"
-            description="Vergelijk 20+ producten en bereken je besparing op de wekelijkse boodschappen."
+            description="Vergelijk 150+ producten en bereken je besparing op de wekelijkse boodschappen."
             gradient="from-teal-500 to-cyan-600"
             delay="stagger-2"
           />
           <FeatureCard
             href="/resultaat"
             icon="📊"
+            stap={3}
             title="Totaaloverzicht"
             description="Bekijk je totale netto besparing inclusief reiskosten. Loont de rit?"
             gradient="from-blue-500 to-indigo-600"
@@ -82,9 +108,9 @@ export default function Home() {
 
         {/* Trust indicators — bolder, card-style */}
         <div className="mt-8 grid grid-cols-3 gap-3 text-center">
-          <TrustBadge label="RDW" sublabel="Officiele voertuigdata" />
+          <TrustBadge label="RDW" sublabel="Officiële voertuigdata" />
           <TrustBadge label="3" sublabel="Landen vergeleken" />
-          <TrustBadge label="20+" sublabel="Producten" />
+          <TrustBadge label="150+" sublabel="Producten" />
         </div>
       </main>
     </div>
@@ -94,6 +120,7 @@ export default function Home() {
 function FeatureCard({
   href,
   icon,
+  stap,
   title,
   description,
   gradient,
@@ -101,6 +128,7 @@ function FeatureCard({
 }: {
   href: string;
   icon: string;
+  stap: number;
   title: string;
   description: string;
   gradient: string;
@@ -109,12 +137,22 @@ function FeatureCard({
   return (
     <Link
       href={href}
-      className={`animate-slide-in-bottom ${delay} card-bold group flex items-start gap-4 p-5`}
+      className={`animate-slide-in-bottom ${delay} card-bold group relative flex items-start gap-4 p-5`}
     >
-      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-2xl shadow-lg transition-transform duration-200 group-hover:scale-110 group-active:scale-95`}>
-        {icon}
+      {/* Icon met stap badge */}
+      <div className="relative shrink-0">
+        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-2xl shadow-lg transition-transform duration-200 group-hover:scale-110 group-active:scale-95`}>
+          {icon}
+        </div>
+        <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-black text-navy shadow-md ring-2 ring-white dark:bg-navy dark:text-white dark:ring-navy">
+          {stap}
+        </div>
       </div>
+
       <div className="flex-1">
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+          Stap {stap}
+        </p>
         <h2 className="text-base font-extrabold text-navy dark:text-white">
           {title}
         </h2>
@@ -122,6 +160,7 @@ function FeatureCard({
           {description}
         </p>
       </div>
+
       <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 transition-all duration-200 group-hover:bg-accent/20 group-hover:translate-x-1">
         <svg className="h-4 w-4 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
