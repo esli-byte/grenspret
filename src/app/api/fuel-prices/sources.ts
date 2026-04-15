@@ -105,108 +105,136 @@ export async function haalDuitsePrijzen(
 // ═══════════════════════════════════════════════════════════
 //  NEDERLAND — CBS Open Data
 //
-//  Tabel 81309NED: "Consumentenprijzen; motorbrandstoffen"
-//  Bevat wekelijkse nationale gemiddelden voor Euro95, Diesel, LPG.
-//  JSON API, geen key nodig, 100% gratis en officieel.
+//  Tabel 80416NED: "Pompprijzen motorbrandstoffen; brandstofsoort, per dag"
+//  Dagelijkse landelijke pompprijzen voor Euro95, Diesel en LPG,
+//  inclusief BTW en accijns. Gepubliceerd 1× per week door het CBS.
+//
+//  Structuur: rijen met (BrandstofSoorten, Perioden, Pompprijs_1).
+//  We halen recente rijen op en zoeken Euro95 + Diesel via metadata.
 // ═══════════════════════════════════════════════════════════
 
-export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
-  // Meest recente week, 3 brandstoffen
-  // Benzine Euro95 = 01, Diesel = 02, LPG = 03 (BrandstofSoorten codering)
-  const url =
-    "https://opendata.cbs.nl/ODataApi/odata/81309NED/TypedDataSet?$orderby=Perioden%20desc&$top=3";
+const CBS_TABLE = "80416NED";
+const CBS_BASE = `https://opendata.cbs.nl/ODataApi/odata/${CBS_TABLE}`;
 
+type CbsRow = Record<string, unknown>;
+type CbsCategoryEntry = { Key: string; Title: string };
+
+async function cbsFetch<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(url, {
+    const res = await fetch(`${CBS_BASE}${path}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT),
       headers: { Accept: "application/json" },
     });
-
-    if (!res.ok) {
-      return {
-        euro95: null,
-        diesel: null,
-        bron: "CBS",
-        debug: { url, httpStatus: res.status, error: `HTTP ${res.status}` },
-      };
-    }
-
+    if (!res.ok) return null;
     const data = await res.json();
-    if (!data.value || !Array.isArray(data.value) || data.value.length === 0) {
-      return {
-        euro95: null,
-        diesel: null,
-        bron: "CBS",
-        debug: { url, error: "lege response" },
-      };
-    }
+    return data as T;
+  } catch {
+    return null;
+  }
+}
 
-    // Zoek de recentste periode met prijs-data. Structuur per CBS:
-    // { Perioden: "2026W15", BenzineEuro95_1: 215.4, Diesel_2: 178.9, ... }
-    // of met andere veldnamen. Probeer een paar varianten.
-    type CbsRow = Record<string, unknown>;
-    const rows: CbsRow[] = data.value;
-
-    function pickPrice(row: CbsRow, keys: string[]): number | null {
-      for (const key of keys) {
-        const v = row[key];
-        if (typeof v === "number" && v > 30 && v < 500) {
-          // CBS geeft vaak in cents per liter — converteer naar euro
-          return v > 10 ? Math.round((v / 100) * 1000) / 1000 : v;
-        }
-      }
-      return null;
-    }
-
-    let euro95: number | null = null;
-    let diesel: number | null = null;
-
-    for (const row of rows) {
-      if (euro95 === null) {
-        euro95 = pickPrice(row, [
-          "BenzineEuro95_1",
-          "Euro95_1",
-          "Euro95",
-          "BenzineEuro95",
-        ]);
-      }
-      if (diesel === null) {
-        diesel = pickPrice(row, ["Diesel_2", "Diesel"]);
-      }
-      if (euro95 !== null && diesel !== null) break;
-    }
-
-    const periode =
-      typeof rows[0]?.Perioden === "string" ? rows[0].Perioden : "";
-
-    if (euro95 === null && diesel === null) {
-      return {
-        euro95: null,
-        diesel: null,
-        bron: "CBS",
-        debug: {
-          url,
-          error: "geen prijs-velden gevonden",
-          matched: { sample: JSON.stringify(rows[0]).slice(0, 300) },
-        },
-      };
-    }
-
-    return {
-      euro95,
-      diesel,
-      bron: "CBS",
-      bronUrl: "https://opendata.cbs.nl",
-      debug: { url, matched: { periode } },
-    };
-  } catch (err) {
+export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
+  // Stap 1: ontdek welke BrandstofSoorten codes we nodig hebben
+  const categorieenUrl = "/BrandstofSoorten";
+  const categorieen = await cbsFetch<{ value: CbsCategoryEntry[] }>(
+    categorieenUrl,
+  );
+  if (!categorieen?.value) {
     return {
       euro95: null,
       diesel: null,
       bron: "CBS",
-      debug: { url, error: err instanceof Error ? err.message : String(err) },
+      debug: { url: CBS_BASE + categorieenUrl, error: "kon BrandstofSoorten niet ophalen" },
     };
   }
+
+  function findKey(zoek: RegExp): string | null {
+    const match = categorieen.value.find((c) => zoek.test(c.Title));
+    return match?.Key ?? null;
+  }
+
+  const euro95Key = findKey(/Euro\s*95|Benzine.*95/i);
+  const dieselKey = findKey(/Diesel/i);
+
+  if (!euro95Key && !dieselKey) {
+    return {
+      euro95: null,
+      diesel: null,
+      bron: "CBS",
+      debug: {
+        url: CBS_BASE + categorieenUrl,
+        error: "geen Euro95 of Diesel categorie",
+        matched: {
+          eersteCategorieen: categorieen.value
+            .slice(0, 5)
+            .map((c) => `${c.Key}=${c.Title}`)
+            .join("; "),
+        },
+      },
+    };
+  }
+
+  // Stap 2: haal de meest recente rij op voor elke gewenste brandstof
+  async function laatstePrijs(brandstofKey: string): Promise<{ prijs: number; periode: string } | null> {
+    const url = `/TypedDataSet?$filter=BrandstofSoorten eq '${brandstofKey}'&$orderby=Perioden desc&$top=1`;
+    const data = await cbsFetch<{ value: CbsRow[] }>(url);
+    if (!data?.value?.[0]) return null;
+    const row = data.value[0];
+
+    // Zoek het prijsveld — meestal "Pompprijs_1" maar kan variëren
+    let prijsCenten: number | null = null;
+    for (const [key, val] of Object.entries(row)) {
+      if (
+        /pompprijs/i.test(key) &&
+        typeof val === "number" &&
+        val > 30 &&
+        val < 500
+      ) {
+        prijsCenten = val;
+        break;
+      }
+    }
+    if (prijsCenten === null) return null;
+
+    return {
+      prijs: Math.round((prijsCenten / 100) * 1000) / 1000,
+      periode: typeof row.Perioden === "string" ? row.Perioden : "",
+    };
+  }
+
+  const [euro95Result, dieselResult] = await Promise.all([
+    euro95Key ? laatstePrijs(euro95Key) : Promise.resolve(null),
+    dieselKey ? laatstePrijs(dieselKey) : Promise.resolve(null),
+  ]);
+
+  if (!euro95Result && !dieselResult) {
+    return {
+      euro95: null,
+      diesel: null,
+      bron: "CBS",
+      debug: {
+        url: CBS_BASE + "/TypedDataSet",
+        error: "geen prijs gevonden in TypedDataSet",
+        matched: {
+          gebruikteKeys: `Euro95=${euro95Key ?? "geen"}, Diesel=${dieselKey ?? "geen"}`,
+        },
+      },
+    };
+  }
+
+  return {
+    euro95: euro95Result?.prijs ?? null,
+    diesel: dieselResult?.prijs ?? null,
+    bron: "CBS",
+    bronUrl: "https://opendata.cbs.nl",
+    debug: {
+      url: CBS_BASE,
+      matched: {
+        euro95: euro95Result ? `${euro95Result.periode}` : undefined,
+        diesel: dieselResult ? `${dieselResult.periode}` : undefined,
+      },
+    },
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
