@@ -25,24 +25,6 @@ const VRAGEN: Vraag[] = [
     ),
   },
   {
-    vraag: "Hoe nauwkeurig zijn de besparingen die ik zie?",
-    antwoord: (
-      <>
-        <p>
-          Eerlijk antwoord: het zijn goede schattingen, geen keiharde
-          eindbedragen. De voertuig- en afstandsgegevens zijn exact (RDW en
-          Google Maps), maar brandstof- en boodschappenprijzen zijn
-          gemiddelden op basis van veelgekochte producten.
-        </p>
-        <p className="mt-2">
-          Voor een boodschappenlijst die niet in onze catalogus staat, gebruiken
-          we categorie-gemiddelden. Dat geeft je een realistische indicatie,
-          maar je werkelijke besparing kan een paar euro afwijken.
-        </p>
-      </>
-    ),
-  },
-  {
     vraag: "Hoeveel brandstof mag ik wettelijk meenemen over de grens?",
     antwoord: (
       <>

@@ -13,7 +13,7 @@ export default function VeelgesteldeVragenPage() {
     <div className="flex flex-1 flex-col">
       <PageHeader
         title="Veelgestelde vragen"
-        subtitle="De 12 vragen die mensen ons het meest stellen"
+        subtitle="De vragen die mensen ons het meest stellen"
       />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
         <FAQLijst />
