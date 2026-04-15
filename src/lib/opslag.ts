@@ -51,6 +51,21 @@ const BOODSCHAPPEN_KEY = "grensbesparing_boodschappen";
 const HUISHOUDENS_KEY = "grensbesparing_huishoudens";
 const VOORKEUREN_KEY = "grensbesparing_voorkeuren";
 const BOODSCHAPPEN_SELECTIE_KEY = "grensbesparing_boodschappen_selectie";
+const EIGEN_PRODUCTEN_KEY = "grensbesparing_eigen_producten";
+
+// Minimal shape for stored custom products (import type comes from producten.ts)
+type OpgeslagenEigenProduct = {
+  id: string;
+  naam: string;
+  merkType: string;
+  eenheid: string;
+  categorie: string;
+  icoon: string;
+  prijsNL: number;
+  prijsDE: number;
+  prijsBE: number;
+  isEigen: true;
+};
 
 export function slaaHuishoudensOp(aantal: number) {
   try {
@@ -121,6 +136,26 @@ export function leesVoorkeuren(): GebruikerVoorkeuren {
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
+  }
+}
+
+// === Eigen producten (door gebruiker toegevoegd) ===
+export function slaaEigenProductenOp(producten: OpgeslagenEigenProduct[]) {
+  try {
+    localStorage.setItem(EIGEN_PRODUCTEN_KEY, JSON.stringify(producten));
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
+
+export function leesEigenProducten(): OpgeslagenEigenProduct[] {
+  try {
+    const raw = localStorage.getItem(EIGEN_PRODUCTEN_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 

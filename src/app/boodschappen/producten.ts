@@ -33,6 +33,47 @@ export const MERK_LABELS: Record<MerkType, { label: string; kleur: string }> = {
   "huismerk": { label: "Huismerk", kleur: "bg-gray-500" },
 };
 
+/**
+ * Gemiddelde besparingspercentages per categorie (fractie, 0-1).
+ * Gebaseerd op publieke marktdata (Consumentenbond, CBS).
+ * Gebruikt voor "eigen product" feature: wanneer een gebruiker een product
+ * toevoegt dat niet in de catalogus staat, schatten we DE/BE prijs op basis
+ * van deze gemiddelde kortingen.
+ */
+export const CATEGORIE_KORTING: Record<Categorie, { DE: number; BE: number }> = {
+  zuivel: { DE: 0.27, BE: 0.15 }, // zuivel & vlees gemiddeld
+  vlees: { DE: 0.27, BE: 0.15 },
+  dranken: { DE: 0.38, BE: 0.20 }, // dranken/alcohol hoogste korting
+  verzorging: { DE: 0.32, BE: 0.15 }, // drogisterij & huishoudelijk
+  basis: { DE: 0.22, BE: 0.12 }, // droge waren
+};
+
+export type EigenProduct = {
+  id: string;
+  naam: string;
+  merk?: string;
+  merkType: MerkType;
+  eenheid: string;
+  categorie: Categorie;
+  icoon: string;
+  prijsNL: number;
+  prijsDE: number;
+  prijsBE: number;
+  isEigen: true;
+};
+
+/**
+ * Bereken geschatte DE en BE prijs voor een eigen product
+ * op basis van NL prijs en categorie-gemiddelde.
+ */
+export function schatBuitenlandPrijzen(prijsNL: number, categorie: Categorie) {
+  const korting = CATEGORIE_KORTING[categorie];
+  return {
+    prijsDE: Math.round(prijsNL * (1 - korting.DE) * 100) / 100,
+    prijsBE: Math.round(prijsNL * (1 - korting.BE) * 100) / 100,
+  };
+}
+
 export const PRODUCTEN: Product[] = [
   // ═══════════════════════════════════════
   //  ZUIVEL

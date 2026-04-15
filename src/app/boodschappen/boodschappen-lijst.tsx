@@ -4,13 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PRODUCTEN,
   CATEGORIE_LABELS,
-  MERK_LABELS,
   type Categorie,
   type MerkType,
   type Product,
+  type EigenProduct,
 } from "./producten";
-import { slaaBoodschappenOp, slaaBoodschappenSelectieOp, leesBoodschappenSelectie, leesVoorkeuren } from "@/lib/opslag";
+import {
+  slaaBoodschappenOp,
+  slaaBoodschappenSelectieOp,
+  leesBoodschappenSelectie,
+  leesVoorkeuren,
+  slaaEigenProductenOp,
+  leesEigenProducten,
+} from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
+import { EigenProductModal } from "./eigen-product-modal";
+
+// Union type for products in the list (regular or user-added)
+type ProductOfEigen = Product | EigenProduct;
 
 function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
@@ -43,6 +54,8 @@ export function BoodschappenLijst() {
   const [zoekterm, setZoekterm] = useState("");
   const [actieveCategorie, setActieveCategorie] = useState<Categorie | "alle">("alle");
   const [merkFilter, setMerkFilter] = useState<MerkType | "alle">("alle");
+  const [eigenProducten, setEigenProducten] = useState<EigenProduct[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Live prijzen state
   const [livePrijzen, setLivePrijzen] = useState<LivePrijzen>({});
@@ -102,7 +115,7 @@ export function BoodschappenLijst() {
     laadPrijzen();
   }, [laadPrijzen]);
 
-  // Laad opgeslagen selectie en postcode bij mount
+  // Laad opgeslagen selectie, eigen producten en postcode bij mount
   useEffect(() => {
     const selectie = leesBoodschappenSelectie();
     if (selectie?.producten) {
@@ -114,7 +127,35 @@ export function BoodschappenLijst() {
     }
     const voorkeuren = leesVoorkeuren();
     if (voorkeuren.postcode) setPostcode(voorkeuren.postcode);
+    const opgeslagenEigen = leesEigenProducten();
+    if (opgeslagenEigen.length > 0) {
+      setEigenProducten(opgeslagenEigen as EigenProduct[]);
+    }
   }, []);
+
+  // Sla eigen producten op bij wijziging
+  useEffect(() => {
+    slaaEigenProductenOp(eigenProducten);
+  }, [eigenProducten]);
+
+  function voegEigenProductToe(product: EigenProduct) {
+    setEigenProducten((prev) => [...prev, product]);
+    // Direct 1 toevoegen aan selectie
+    setGeselecteerd((prev) => {
+      const next = new Map(prev);
+      next.set(product.id, 1);
+      return next;
+    });
+  }
+
+  function verwijderEigenProduct(id: string) {
+    setEigenProducten((prev) => prev.filter((p) => p.id !== id));
+    setGeselecteerd((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }
 
   // Sla selectie op bij wijziging
   useEffect(() => {
@@ -125,9 +166,9 @@ export function BoodschappenLijst() {
     }
   }, [geselecteerd]);
 
-  // Producten met (eventueel) live prijzen
-  const productenMetPrijzen = useMemo(() => {
-    return PRODUCTEN.map((p) => {
+  // Producten met (eventueel) live prijzen + eigen producten erbij
+  const productenMetPrijzen = useMemo<ProductOfEigen[]>(() => {
+    const regulier = PRODUCTEN.map((p) => {
       const live = livePrijzen[p.id];
       if (!live) return p;
       return {
@@ -137,7 +178,8 @@ export function BoodschappenLijst() {
         prijsBE: live.prijsBE ?? p.prijsBE,
       };
     });
-  }, [livePrijzen]);
+    return [...eigenProducten, ...regulier];
+  }, [livePrijzen, eigenProducten]);
 
   function incrementQuantity(id: string) {
     setGeselecteerd((prev) => {
@@ -355,6 +397,8 @@ export function BoodschappenLijst() {
 
       {/* Product tegels grid */}
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        {/* Eigen-product toevoegen knop (altijd zichtbaar) */}
+        <EigenProductTegel onKlik={() => setModalOpen(true)} />
         {gefilterd.map((product) => (
           <ProductTegel
             key={product.id}
@@ -362,9 +406,22 @@ export function BoodschappenLijst() {
             quantity={geselecteerd.get(product.id) ?? 0}
             onIncrement={() => incrementQuantity(product.id)}
             onDecrement={() => decrementQuantity(product.id)}
+            onVerwijder={
+              "isEigen" in product && product.isEigen
+                ? () => verwijderEigenProduct(product.id)
+                : undefined
+            }
           />
         ))}
       </div>
+
+      {/* Modal — alleen renderen als open, zodat state reset bij heropenen */}
+      {modalOpen && (
+        <EigenProductModal
+          onSluiten={() => setModalOpen(false)}
+          onToevoegen={voegEigenProductToe}
+        />
+      )}
 
       {gefilterd.length === 0 && (
         <div className="card-bold border-dashed p-8 text-center">
@@ -428,21 +485,45 @@ export function BoodschappenLijst() {
   );
 }
 
+function EigenProductTegel({ onKlik }: { onKlik: () => void }) {
+  return (
+    <button
+      onClick={onKlik}
+      className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 p-3 pb-2.5 transition-all duration-200 hover:border-accent hover:bg-accent/10 active:scale-95"
+    >
+      <div className="mb-1.5 mt-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-md transition-transform duration-200 group-hover:scale-110">
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      </div>
+      <span className="text-center text-[11px] font-extrabold leading-tight text-accent">
+        Eigen product
+      </span>
+      <span className="mt-0.5 text-[9px] font-medium text-accent/70">
+        toevoegen
+      </span>
+    </button>
+  );
+}
+
 function ProductTegel({
   product,
   quantity,
   onIncrement,
   onDecrement,
+  onVerwijder,
 }: {
-  product: Product;
+  product: ProductOfEigen;
   quantity: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  onVerwijder?: () => void;
 }) {
   const besparing = Math.max(product.prijsNL - product.prijsDE, product.prijsNL - product.prijsBE);
   const { kleur } = CATEGORIE_LABELS[product.categorie];
   const isAMerk = product.merkType === "a-merk";
   const isSelected = quantity > 0;
+  const isEigen = "isEigen" in product && product.isEigen;
 
   return (
     <button
@@ -477,7 +558,11 @@ function ProductTegel({
       )}
 
       {/* Merk badge */}
-      {isAMerk ? (
+      {isEigen ? (
+        <div className="absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[7px] font-black text-white shadow-sm">
+          Eigen
+        </div>
+      ) : isAMerk ? (
         <div className="absolute left-1 top-1 rounded-full bg-blue-500 px-1.5 py-0.5 text-[7px] font-black text-white shadow-sm">
           A-merk
         </div>
@@ -485,6 +570,22 @@ function ProductTegel({
         <div className="absolute left-1 top-1 rounded-full bg-gray-400 px-1.5 py-0.5 text-[7px] font-black text-white shadow-sm">
           Huismerk
         </div>
+      )}
+
+      {/* Verwijder knop (alleen voor eigen producten) */}
+      {isEigen && onVerwijder && !isSelected && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm(`"${product.naam}" verwijderen?`)) onVerwijder();
+          }}
+          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-white transition-all hover:bg-red-500 active:scale-90"
+          title="Verwijder eigen product"
+        >
+          <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
       )}
 
       {/* Product icoon */}
