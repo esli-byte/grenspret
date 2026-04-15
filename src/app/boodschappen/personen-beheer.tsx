@@ -86,13 +86,13 @@ export function PersonenBeheer({
           role="switch"
           aria-checked={groepsmodus}
           onClick={() => onGroepsmodusToggle(!groepsmodus)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full px-0.5 transition-colors ${
             groepsmodus ? "bg-accent" : "bg-gray-300 dark:bg-gray-600"
           }`}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
-              groepsmodus ? "translate-x-5" : "translate-x-0.5"
+            className={`inline-block h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
+              groepsmodus ? "translate-x-5" : "translate-x-0"
             }`}
           />
         </button>
