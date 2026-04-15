@@ -801,14 +801,16 @@ function DeelKnoppen({
         </div>
       )}
 
-      {/* ShareCard off-screen, wordt alleen gebruikt voor de PNG-render */}
+      {/* ShareCard off-screen maar wel volledig gerenderd zodat html-to-image
+          het betrouwbaar kan vangen. left: -200vw zet 'm buiten het zicht
+          zonder dat browser-optimisaties 'm overslaan. */}
       <div
         style={{
           position: "fixed",
-          left: "-9999px",
+          left: "-200vw",
           top: "0",
-          opacity: 0,
           pointerEvents: "none",
+          zIndex: -1,
         }}
         aria-hidden="true"
       >
