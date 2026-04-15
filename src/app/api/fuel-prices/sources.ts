@@ -117,7 +117,6 @@ const CBS_TABLE = "80416NED";
 const CBS_BASE = `https://opendata.cbs.nl/ODataApi/odata/${CBS_TABLE}`;
 
 type CbsRow = Record<string, unknown>;
-type CbsCategoryEntry = { Key: string; Title: string };
 
 async function cbsFetch<T>(path: string): Promise<T | null> {
   try {
