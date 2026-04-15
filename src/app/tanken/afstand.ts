@@ -181,7 +181,9 @@ export function schatAfstand(postcode: string): RouteSchatting[] | null {
     });
   }
 
-  return result;
+  // Sorteer op afstand: dichtstbijzijnde grens bovenaan,
+  // ongeacht of het Duitsland of België is
+  return result.sort((a, b) => a.afstandEnkel - b.afstandEnkel);
 }
 
 /** Schat verbruik in l/100km op basis van cilinderinhoud en brandstofsoort */
