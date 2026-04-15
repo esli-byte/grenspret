@@ -3,7 +3,11 @@ export type Categorie =
   | "vlees"
   | "dranken"
   | "verzorging"
-  | "basis";
+  | "basis"
+  | "groente-fruit"
+  | "brood"
+  | "diepvries"
+  | "snacks";
 
 export type MerkType = "a-merk" | "huismerk";
 
@@ -26,6 +30,10 @@ export const CATEGORIE_LABELS: Record<Categorie, { label: string; icoon: string;
   dranken: { label: "Dranken", icoon: "🥤", kleur: "from-blue-400 to-cyan-300" },
   verzorging: { label: "Verzorging", icoon: "🧴", kleur: "from-purple-400 to-pink-300" },
   basis: { label: "Basisproducten", icoon: "🌾", kleur: "from-emerald-400 to-green-300" },
+  "groente-fruit": { label: "Groente & Fruit", icoon: "🥦", kleur: "from-lime-400 to-green-400" },
+  brood: { label: "Brood & Ontbijt", icoon: "🍞", kleur: "from-orange-400 to-amber-400" },
+  diepvries: { label: "Diepvries", icoon: "🧊", kleur: "from-sky-400 to-blue-400" },
+  snacks: { label: "Snacks & Koek", icoon: "🍿", kleur: "from-fuchsia-400 to-pink-400" },
 };
 
 export const MERK_LABELS: Record<MerkType, { label: string; kleur: string }> = {
@@ -46,6 +54,10 @@ export const CATEGORIE_KORTING: Record<Categorie, { DE: number; BE: number }> = 
   dranken: { DE: 0.38, BE: 0.20 }, // dranken/alcohol hoogste korting
   verzorging: { DE: 0.32, BE: 0.15 }, // drogisterij & huishoudelijk
   basis: { DE: 0.22, BE: 0.12 }, // droge waren
+  "groente-fruit": { DE: 0.10, BE: 0.05 }, // weinig verschil, lokaal geteeld
+  brood: { DE: 0.15, BE: 0.08 }, // bakkerijproducten matig goedkoper
+  diepvries: { DE: 0.28, BE: 0.15 }, // vergelijkbaar met zuivel
+  snacks: { DE: 0.25, BE: 0.12 }, // koek/snoep gemiddeld
 };
 
 export type EigenProduct = {
@@ -176,4 +188,118 @@ export const PRODUCTEN: Product[] = [
 
   // Nutella
   { id: "nutella", naam: "Nutella", merk: "Nutella", merkType: "a-merk", eenheid: "400 gram", categorie: "basis", icoon: "🍫", prijsNL: 3.69, prijsDE: 2.49, prijsBE: 2.89 },
+
+  // Rijst
+  { id: "rijst-lassie", naam: "Basmati rijst", merk: "Lassie", merkType: "a-merk", eenheid: "500 gram", categorie: "basis", icoon: "🍚", prijsNL: 2.79, prijsDE: 2.19, prijsBE: 2.49 },
+  { id: "rijst-huismerk", naam: "Witte rijst", merkType: "huismerk", eenheid: "1 kg", categorie: "basis", icoon: "🍚", prijsNL: 1.89, prijsDE: 1.29, prijsBE: 1.59 },
+
+  // Blik / conserven
+  { id: "tomatenpuree", naam: "Tomatenpuree", merkType: "huismerk", eenheid: "140 gram", categorie: "basis", icoon: "🥫", prijsNL: 0.69, prijsDE: 0.49, prijsBE: 0.59 },
+  { id: "bonen-heinz", naam: "Witte bonen in tomatensaus", merk: "Heinz", merkType: "a-merk", eenheid: "415 gram", categorie: "basis", icoon: "🥫", prijsNL: 1.69, prijsDE: 1.29, prijsBE: 1.49 },
+  { id: "soep-unox", naam: "Tomatensoep", merk: "Unox", merkType: "a-merk", eenheid: "800 ml", categorie: "basis", icoon: "🥫", prijsNL: 2.49, prijsDE: 1.89, prijsBE: 2.19 },
+  { id: "mais-bonduelle", naam: "Mais", merk: "Bonduelle", merkType: "a-merk", eenheid: "300 gram", categorie: "basis", icoon: "🌽", prijsNL: 1.79, prijsDE: 1.29, prijsBE: 1.49 },
+
+  // Sauzen
+  { id: "mayonaise-hellmann", naam: "Mayonaise", merk: "Hellmann's", merkType: "a-merk", eenheid: "450 ml", categorie: "basis", icoon: "🥫", prijsNL: 2.99, prijsDE: 2.19, prijsBE: 2.49 },
+  { id: "ketchup-heinz", naam: "Tomatenketchup", merk: "Heinz", merkType: "a-merk", eenheid: "570 gram", categorie: "basis", icoon: "🍅", prijsNL: 3.49, prijsDE: 2.29, prijsBE: 2.69 },
+  { id: "sojasaus-kikkoman", naam: "Sojasaus", merk: "Kikkoman", merkType: "a-merk", eenheid: "250 ml", categorie: "basis", icoon: "🫙", prijsNL: 2.99, prijsDE: 2.19, prijsBE: 2.49 },
+
+  // Eieren
+  { id: "eieren-10", naam: "Scharreleieren", merkType: "huismerk", eenheid: "10 stuks", categorie: "zuivel", icoon: "🥚", prijsNL: 2.49, prijsDE: 1.89, prijsBE: 2.09 },
+  { id: "eieren-6", naam: "Vrije uitloop eieren", merkType: "huismerk", eenheid: "6 stuks", categorie: "zuivel", icoon: "🥚", prijsNL: 1.99, prijsDE: 1.49, prijsBE: 1.69 },
+
+  // Kaas varianten
+  { id: "kaas-oude", naam: "Oude kaas plakjes", merkType: "huismerk", eenheid: "200 gram", categorie: "zuivel", icoon: "🧀", prijsNL: 3.29, prijsDE: 2.39, prijsBE: 2.69 },
+  { id: "kaas-mozzarella", naam: "Mozzarella", merk: "Galbani", merkType: "a-merk", eenheid: "125 gram", categorie: "zuivel", icoon: "🧀", prijsNL: 1.69, prijsDE: 0.99, prijsBE: 1.19 },
+
+  // Yoghurt/zuivel
+  { id: "kwark-arla", naam: "Magere kwark", merk: "Arla", merkType: "a-merk", eenheid: "500 gram", categorie: "zuivel", icoon: "🍶", prijsNL: 1.99, prijsDE: 1.39, prijsBE: 1.59 },
+  { id: "slagroom", naam: "Slagroom", merkType: "huismerk", eenheid: "250 ml", categorie: "zuivel", icoon: "🥛", prijsNL: 1.49, prijsDE: 0.99, prijsBE: 1.19 },
+  { id: "vla-melkunie", naam: "Vanillevla", merk: "Melkunie", merkType: "a-merk", eenheid: "1 liter", categorie: "zuivel", icoon: "🍶", prijsNL: 2.19, prijsDE: 1.59, prijsBE: 1.79 },
+
+  // Vlees extra
+  { id: "hamburger", naam: "Hamburgers", merkType: "huismerk", eenheid: "4 stuks", categorie: "vlees", icoon: "🍔", prijsNL: 3.99, prijsDE: 2.79, prijsBE: 3.19 },
+  { id: "knakworst-unox", naam: "Knakworstjes", merk: "Unox", merkType: "a-merk", eenheid: "200 gram", categorie: "vlees", icoon: "🌭", prijsNL: 2.69, prijsDE: 1.89, prijsBE: 2.19 },
+  { id: "bacon", naam: "Bacon", merkType: "huismerk", eenheid: "150 gram", categorie: "vlees", icoon: "🥓", prijsNL: 2.49, prijsDE: 1.69, prijsBE: 1.99 },
+  { id: "shoarma", naam: "Shoarmavlees", merkType: "huismerk", eenheid: "500 gram", categorie: "vlees", icoon: "🌯", prijsNL: 5.49, prijsDE: 3.99, prijsBE: 4.49 },
+  { id: "worstjes-bbq", naam: "BBQ worstjes", merkType: "huismerk", eenheid: "400 gram", categorie: "vlees", icoon: "🌭", prijsNL: 4.29, prijsDE: 3.19, prijsBE: 3.59 },
+
+  // Dranken extra
+  { id: "aj-dubbelfris", naam: "Dubbelfrisss", merk: "Dubbelfrisss", merkType: "a-merk", eenheid: "1.5 liter", categorie: "dranken", icoon: "🧃", prijsNL: 1.99, prijsDE: 1.29, prijsBE: 1.49 },
+  { id: "water-spa", naam: "Mineraalwater", merk: "Spa", merkType: "a-merk", eenheid: "1.5 liter", categorie: "dranken", icoon: "💧", prijsNL: 1.19, prijsDE: 0.69, prijsBE: 0.89 },
+  { id: "water-huismerk", naam: "Bronwater", merkType: "huismerk", eenheid: "6×1.5L", categorie: "dranken", icoon: "💧", prijsNL: 2.99, prijsDE: 1.99, prijsBE: 2.29 },
+  { id: "thee-pickwick", naam: "Engelse melange thee", merk: "Pickwick", merkType: "a-merk", eenheid: "80 zakjes", categorie: "dranken", icoon: "🍵", prijsNL: 3.79, prijsDE: 2.49, prijsBE: 2.89 },
+  { id: "koffie-pads", naam: "Senseo koffiepads", merk: "Senseo", merkType: "a-merk", eenheid: "36 stuks", categorie: "dranken", icoon: "☕", prijsNL: 3.99, prijsDE: 2.49, prijsBE: 2.99 },
+  { id: "redbull", naam: "Energy drink", merk: "Red Bull", merkType: "a-merk", eenheid: "250 ml", categorie: "dranken", icoon: "⚡", prijsNL: 1.89, prijsDE: 1.29, prijsBE: 1.49 },
+  { id: "wijn-wit", naam: "Witte wijn", merkType: "huismerk", eenheid: "0.75 liter", categorie: "dranken", icoon: "🍾", prijsNL: 4.49, prijsDE: 2.79, prijsBE: 3.49 },
+  { id: "prosecco", naam: "Prosecco", merkType: "huismerk", eenheid: "0.75 liter", categorie: "dranken", icoon: "🥂", prijsNL: 6.99, prijsDE: 3.99, prijsBE: 4.99 },
+
+  // Verzorging extra
+  { id: "douchegel-nivea", naam: "Douchegel", merk: "Nivea", merkType: "a-merk", eenheid: "250 ml", categorie: "verzorging", icoon: "🧴", prijsNL: 3.49, prijsDE: 2.19, prijsBE: 2.59 },
+  { id: "zeep-dove", naam: "Handzeep", merk: "Dove", merkType: "a-merk", eenheid: "250 ml", categorie: "verzorging", icoon: "🧼", prijsNL: 2.49, prijsDE: 1.59, prijsBE: 1.89 },
+  { id: "mondwater-listerine", naam: "Mondwater", merk: "Listerine", merkType: "a-merk", eenheid: "500 ml", categorie: "verzorging", icoon: "🪥", prijsNL: 5.49, prijsDE: 3.49, prijsBE: 4.19 },
+  { id: "luiers-pampers", naam: "Luiers maat 4", merk: "Pampers", merkType: "a-merk", eenheid: "44 stuks", categorie: "verzorging", icoon: "👶", prijsNL: 12.99, prijsDE: 8.49, prijsBE: 9.99 },
+  { id: "maandverband", naam: "Maandverband", merk: "Always", merkType: "a-merk", eenheid: "16 stuks", categorie: "verzorging", icoon: "🩸", prijsNL: 3.99, prijsDE: 2.49, prijsBE: 2.99 },
+  { id: "vaatwastabletten", naam: "Vaatwastabletten", merk: "Finish", merkType: "a-merk", eenheid: "40 stuks", categorie: "verzorging", icoon: "🫧", prijsNL: 12.99, prijsDE: 7.99, prijsBE: 9.99 },
+  { id: "keukenrol", naam: "Keukenpapier", merkType: "huismerk", eenheid: "4 rollen", categorie: "verzorging", icoon: "🧻", prijsNL: 3.49, prijsDE: 2.19, prijsBE: 2.69 },
+
+  // ═══════════════════════════════════════
+  //  GROENTE & FRUIT
+  // ═══════════════════════════════════════
+  { id: "tomaten", naam: "Tomaten los", merkType: "huismerk", eenheid: "500 gram", categorie: "groente-fruit", icoon: "🍅", prijsNL: 1.99, prijsDE: 1.79, prijsBE: 1.89 },
+  { id: "komkommer", naam: "Komkommer", merkType: "huismerk", eenheid: "1 stuk", categorie: "groente-fruit", icoon: "🥒", prijsNL: 0.99, prijsDE: 0.89, prijsBE: 0.95 },
+  { id: "paprika", naam: "Paprika rood", merkType: "huismerk", eenheid: "1 stuk", categorie: "groente-fruit", icoon: "🫑", prijsNL: 1.29, prijsDE: 1.09, prijsBE: 1.19 },
+  { id: "sla", naam: "Kropsla", merkType: "huismerk", eenheid: "1 krop", categorie: "groente-fruit", icoon: "🥬", prijsNL: 1.49, prijsDE: 1.29, prijsBE: 1.39 },
+  { id: "uien", naam: "Uien", merkType: "huismerk", eenheid: "1 kg", categorie: "groente-fruit", icoon: "🧅", prijsNL: 1.29, prijsDE: 1.09, prijsBE: 1.19 },
+  { id: "wortelen", naam: "Winterwortelen", merkType: "huismerk", eenheid: "1 kg", categorie: "groente-fruit", icoon: "🥕", prijsNL: 1.19, prijsDE: 0.99, prijsBE: 1.09 },
+  { id: "aardappelen", naam: "Aardappelen", merkType: "huismerk", eenheid: "2.5 kg", categorie: "groente-fruit", icoon: "🥔", prijsNL: 3.49, prijsDE: 2.99, prijsBE: 3.19 },
+  { id: "champignons", naam: "Champignons", merkType: "huismerk", eenheid: "250 gram", categorie: "groente-fruit", icoon: "🍄", prijsNL: 1.49, prijsDE: 1.29, prijsBE: 1.39 },
+  { id: "broccoli", naam: "Broccoli", merkType: "huismerk", eenheid: "500 gram", categorie: "groente-fruit", icoon: "🥦", prijsNL: 1.99, prijsDE: 1.69, prijsBE: 1.89 },
+  { id: "appel", naam: "Elstar appels", merkType: "huismerk", eenheid: "1 kg", categorie: "groente-fruit", icoon: "🍎", prijsNL: 2.49, prijsDE: 2.19, prijsBE: 2.29 },
+  { id: "banaan", naam: "Bananen", merkType: "huismerk", eenheid: "1 kg", categorie: "groente-fruit", icoon: "🍌", prijsNL: 1.79, prijsDE: 1.49, prijsBE: 1.59 },
+  { id: "sinaasappel", naam: "Sinaasappels", merkType: "huismerk", eenheid: "1.5 kg", categorie: "groente-fruit", icoon: "🍊", prijsNL: 2.99, prijsDE: 2.49, prijsBE: 2.69 },
+  { id: "avocado", naam: "Avocado", merkType: "huismerk", eenheid: "1 stuk", categorie: "groente-fruit", icoon: "🥑", prijsNL: 1.49, prijsDE: 1.29, prijsBE: 1.39 },
+  { id: "druiven", naam: "Witte druiven", merkType: "huismerk", eenheid: "500 gram", categorie: "groente-fruit", icoon: "🍇", prijsNL: 2.99, prijsDE: 2.49, prijsBE: 2.79 },
+
+  // ═══════════════════════════════════════
+  //  BROOD & ONTBIJT
+  // ═══════════════════════════════════════
+  { id: "brood-wit", naam: "Wit casino", merkType: "huismerk", eenheid: "800 gram", categorie: "brood", icoon: "🍞", prijsNL: 1.99, prijsDE: 1.59, prijsBE: 1.79 },
+  { id: "brood-volkoren", naam: "Volkoren casino", merkType: "huismerk", eenheid: "800 gram", categorie: "brood", icoon: "🍞", prijsNL: 2.29, prijsDE: 1.79, prijsBE: 2.09 },
+  { id: "brood-bruin", naam: "Bruin casino", merkType: "huismerk", eenheid: "800 gram", categorie: "brood", icoon: "🍞", prijsNL: 2.09, prijsDE: 1.69, prijsBE: 1.89 },
+  { id: "croissants", naam: "Croissants", merkType: "huismerk", eenheid: "6 stuks", categorie: "brood", icoon: "🥐", prijsNL: 2.49, prijsDE: 1.99, prijsBE: 2.19 },
+  { id: "beschuit", naam: "Beschuit", merk: "Bolletje", merkType: "a-merk", eenheid: "13 stuks", categorie: "brood", icoon: "🍪", prijsNL: 1.59, prijsDE: 1.19, prijsBE: 1.39 },
+  { id: "crackers", naam: "Crackers", merk: "LU", merkType: "a-merk", eenheid: "250 gram", categorie: "brood", icoon: "🍘", prijsNL: 1.89, prijsDE: 1.39, prijsBE: 1.59 },
+  { id: "muesli-quaker", naam: "Havermout", merk: "Quaker", merkType: "a-merk", eenheid: "500 gram", categorie: "brood", icoon: "🥣", prijsNL: 2.49, prijsDE: 1.79, prijsBE: 2.09 },
+  { id: "cornflakes-kellogg", naam: "Cornflakes", merk: "Kellogg's", merkType: "a-merk", eenheid: "500 gram", categorie: "brood", icoon: "🥣", prijsNL: 3.49, prijsDE: 2.49, prijsBE: 2.89 },
+  { id: "muesli-huismerk", naam: "Luxe muesli", merkType: "huismerk", eenheid: "500 gram", categorie: "brood", icoon: "🥣", prijsNL: 2.29, prijsDE: 1.69, prijsBE: 1.89 },
+  { id: "kaas-plakjes", naam: "Jonge kaas plakjes", merkType: "huismerk", eenheid: "200 gram", categorie: "brood", icoon: "🧀", prijsNL: 2.99, prijsDE: 2.29, prijsBE: 2.49 },
+
+  // ═══════════════════════════════════════
+  //  DIEPVRIES
+  // ═══════════════════════════════════════
+  { id: "pizza-dr-oetker", naam: "Pizza Ristorante", merk: "Dr. Oetker", merkType: "a-merk", eenheid: "355 gram", categorie: "diepvries", icoon: "🍕", prijsNL: 3.49, prijsDE: 2.29, prijsBE: 2.69 },
+  { id: "pizza-huismerk", naam: "Pizza Margherita", merkType: "huismerk", eenheid: "350 gram", categorie: "diepvries", icoon: "🍕", prijsNL: 1.99, prijsDE: 1.29, prijsBE: 1.49 },
+  { id: "friet", naam: "Frites dunne", merkType: "huismerk", eenheid: "1 kg", categorie: "diepvries", icoon: "🍟", prijsNL: 2.49, prijsDE: 1.79, prijsBE: 1.99 },
+  { id: "ijs-ben-jerry", naam: "IJs", merk: "Ben & Jerry's", merkType: "a-merk", eenheid: "465 ml", categorie: "diepvries", icoon: "🍨", prijsNL: 6.99, prijsDE: 4.99, prijsBE: 5.79 },
+  { id: "ijs-magnum", naam: "Magnum Classic", merk: "Magnum", merkType: "a-merk", eenheid: "4 stuks", categorie: "diepvries", icoon: "🍦", prijsNL: 3.99, prijsDE: 2.79, prijsBE: 3.29 },
+  { id: "loempia", naam: "Loempia", merkType: "huismerk", eenheid: "6 stuks", categorie: "diepvries", icoon: "🥟", prijsNL: 2.99, prijsDE: 2.19, prijsBE: 2.49 },
+  { id: "spinazie-vries", naam: "Gehakte spinazie", merkType: "huismerk", eenheid: "450 gram", categorie: "diepvries", icoon: "🥬", prijsNL: 1.49, prijsDE: 1.09, prijsBE: 1.29 },
+  { id: "vissticks-iglo", naam: "Vissticks", merk: "Iglo", merkType: "a-merk", eenheid: "450 gram", categorie: "diepvries", icoon: "🐟", prijsNL: 4.49, prijsDE: 3.19, prijsBE: 3.69 },
+
+  // ═══════════════════════════════════════
+  //  SNACKS & KOEK
+  // ═══════════════════════════════════════
+  { id: "chips-lays", naam: "Naturel chips", merk: "Lay's", merkType: "a-merk", eenheid: "225 gram", categorie: "snacks", icoon: "🍟", prijsNL: 2.49, prijsDE: 1.89, prijsBE: 2.19 },
+  { id: "chips-doritos", naam: "Doritos Nacho Cheese", merk: "Doritos", merkType: "a-merk", eenheid: "185 gram", categorie: "snacks", icoon: "🧀", prijsNL: 2.79, prijsDE: 2.09, prijsBE: 2.39 },
+  { id: "popcorn", naam: "Popcorn zoet", merkType: "huismerk", eenheid: "100 gram", categorie: "snacks", icoon: "🍿", prijsNL: 1.49, prijsDE: 0.99, prijsBE: 1.19 },
+  { id: "choco-milka", naam: "Chocolade melk", merk: "Milka", merkType: "a-merk", eenheid: "100 gram", categorie: "snacks", icoon: "🍫", prijsNL: 1.79, prijsDE: 1.19, prijsBE: 1.39 },
+  { id: "choco-tonys", naam: "Chocolade melk", merk: "Tony's", merkType: "a-merk", eenheid: "180 gram", categorie: "snacks", icoon: "🍫", prijsNL: 3.49, prijsDE: 3.19, prijsBE: 3.29 },
+  { id: "stroopwafels", naam: "Stroopwafels", merk: "Jules Destrooper", merkType: "a-merk", eenheid: "10 stuks", categorie: "snacks", icoon: "🧇", prijsNL: 2.99, prijsDE: 2.29, prijsBE: 2.59 },
+  { id: "koekjes-lu", naam: "Prince chocolade", merk: "LU", merkType: "a-merk", eenheid: "300 gram", categorie: "snacks", icoon: "🍪", prijsNL: 2.29, prijsDE: 1.59, prijsBE: 1.89 },
+  { id: "drop", naam: "Drop gemengd", merk: "Venco", merkType: "a-merk", eenheid: "400 gram", categorie: "snacks", icoon: "🍬", prijsNL: 3.49, prijsDE: 2.79, prijsBE: 3.09 },
+  { id: "mars", naam: "Mars", merk: "Mars", merkType: "a-merk", eenheid: "4 × 51 gram", categorie: "snacks", icoon: "🍫", prijsNL: 2.49, prijsDE: 1.79, prijsBE: 2.09 },
+  { id: "snickers", naam: "Snickers", merk: "Snickers", merkType: "a-merk", eenheid: "4 × 50 gram", categorie: "snacks", icoon: "🍫", prijsNL: 2.49, prijsDE: 1.79, prijsBE: 2.09 },
+  { id: "oreo", naam: "Oreo koekjes", merk: "Oreo", merkType: "a-merk", eenheid: "154 gram", categorie: "snacks", icoon: "🍪", prijsNL: 1.99, prijsDE: 1.39, prijsBE: 1.69 },
+  { id: "ontbijtkoek", naam: "Ontbijtkoek", merk: "Peijnenburg", merkType: "a-merk", eenheid: "450 gram", categorie: "snacks", icoon: "🍞", prijsNL: 2.79, prijsDE: 2.19, prijsBE: 2.49 },
 ];
