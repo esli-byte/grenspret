@@ -16,59 +16,59 @@ const CACHE_DIR = path.join(process.cwd(), ".cache");
 const CACHE_FILE = path.join(CACHE_DIR, "product-prices.json");
 const CACHE_DUUR_MS = 24 * 60 * 60 * 1000; // 24 uur
 
-// Producten die we willen opzoeken, met zoektermen per bron
+// Producten die we willen opzoeken. maxPrijs filtert multipack-outliers.
 const PRODUCT_ZOEKOPDRACHTEN = [
   // Zuivel
-  { id: "melk-campina", zoekNL: "campina volle melk 1l", zoekDE: "vollmilch 1l", zoekBE: "volle melk 1l" },
-  { id: "melk-huismerk", zoekNL: "ah volle melk 1l", zoekDE: "milch frisch 1l", zoekBE: "volle melk 1l" },
-  { id: "kaas-jong", zoekNL: "jonge kaas", zoekDE: "gouda jung", zoekBE: "jonge kaas" },
-  { id: "boter-campina", zoekNL: "campina botergoud", zoekDE: "butter markenbutter", zoekBE: "roomboter" },
-  { id: "boter-huismerk", zoekNL: "ah roomboter", zoekDE: "deutsche markenbutter", zoekBE: "roomboter" },
-  { id: "yoghurt-optimel", zoekNL: "optimel drinkyoghurt", zoekDE: "trinkjoghurt", zoekBE: "drinkyoghurt" },
-  { id: "yoghurt-huismerk", zoekNL: "ah yoghurt natuur", zoekDE: "naturjoghurt", zoekBE: "yoghurt natuur" },
+  { id: "melk-campina", zoekNL: "campina volle melk 1l", zoekDE: "vollmilch 1l", zoekBE: "volle melk 1l", maxPrijs: 3 },
+  { id: "melk-huismerk", zoekNL: "ah volle melk 1l", zoekDE: "milch frisch 1l", zoekBE: "volle melk 1l", maxPrijs: 2 },
+  { id: "kaas-jong", zoekNL: "jonge kaas plak", zoekDE: "gouda jung", zoekBE: "jonge kaas", maxPrijs: 12 },
+  { id: "boter-campina", zoekNL: "campina botergoud 250g", zoekDE: "butter markenbutter 250g", zoekBE: "roomboter 250g", maxPrijs: 4 },
+  { id: "boter-huismerk", zoekNL: "ah roomboter 250g", zoekDE: "deutsche markenbutter 250g", zoekBE: "roomboter 250g", maxPrijs: 3 },
+  { id: "yoghurt-optimel", zoekNL: "optimel drinkyoghurt 1l", zoekDE: "trinkjoghurt 1l", zoekBE: "drinkyoghurt 1l", maxPrijs: 3 },
+  { id: "yoghurt-huismerk", zoekNL: "ah yoghurt natuur 500g", zoekDE: "naturjoghurt 500g", zoekBE: "yoghurt natuur", maxPrijs: 2 },
 
   // Vlees
-  { id: "gehakt", zoekNL: "half om half gehakt 500g", zoekDE: "hackfleisch gemischt 500g", zoekBE: "gehakt 500g" },
-  { id: "kipfilet", zoekNL: "kipfilet 500g", zoekDE: "hähnchenbrustfilet", zoekBE: "kipfilet" },
-  { id: "speklappen", zoekNL: "speklappen", zoekDE: "schweinebauch", zoekBE: "speklappen" },
-  { id: "rookworst-unox", zoekNL: "unox rookworst", zoekDE: "bockwurst", zoekBE: "rookworst" },
-  { id: "rookworst-huismerk", zoekNL: "ah rookworst", zoekDE: "bockwurst", zoekBE: "rookworst" },
+  { id: "gehakt", zoekNL: "half om half gehakt 500g", zoekDE: "hackfleisch gemischt 500g", zoekBE: "gehakt 500g", maxPrijs: 7 },
+  { id: "kipfilet", zoekNL: "kipfilet 500g", zoekDE: "hähnchenbrustfilet 500g", zoekBE: "kipfilet 500g", maxPrijs: 8 },
+  { id: "speklappen", zoekNL: "speklappen 500g", zoekDE: "schweinebauch 500g", zoekBE: "speklappen", maxPrijs: 7 },
+  { id: "rookworst-unox", zoekNL: "unox rookworst 275g", zoekDE: "bockwurst", zoekBE: "rookworst", maxPrijs: 4 },
+  { id: "rookworst-huismerk", zoekNL: "ah rookworst 275g", zoekDE: "bockwurst", zoekBE: "rookworst", maxPrijs: 3 },
 
-  // Dranken
-  { id: "cola-cocacola", zoekNL: "coca cola 1.5l", zoekDE: "coca cola 1.5l", zoekBE: "coca cola 1.5l" },
-  { id: "cola-pepsi", zoekNL: "pepsi 1.5l", zoekDE: "pepsi 1.5l", zoekBE: "pepsi 1.5l" },
-  { id: "cola-huismerk", zoekNL: "ah cola 1.5l", zoekDE: "cola 1.5l freeway", zoekBE: "cola 1.5l" },
-  { id: "bier-heineken", zoekNL: "heineken krat", zoekDE: "heineken", zoekBE: "heineken" },
-  { id: "bier-huismerk", zoekNL: "ah pils krat", zoekDE: "perlenbacher pils", zoekBE: "pils" },
-  { id: "koffie-douwe", zoekNL: "douwe egberts aroma rood", zoekDE: "jacobs filterkaffee", zoekBE: "douwe egberts" },
-  { id: "koffie-huismerk", zoekNL: "ah filterkoffie", zoekDE: "bellarom kaffee", zoekBE: "filterkoffie" },
-  { id: "wijn", zoekNL: "rode wijn huiswijn", zoekDE: "rotwein", zoekBE: "rode wijn" },
+  // Dranken — STRIKTE max om multipacks te negeren
+  { id: "cola-cocacola", zoekNL: "coca cola 1.5l fles", zoekDE: "coca cola 1.5l", zoekBE: "coca cola 1.5l", maxPrijs: 3.5 },
+  { id: "cola-pepsi", zoekNL: "pepsi 1.5l fles", zoekDE: "pepsi 1.5l", zoekBE: "pepsi 1.5l", maxPrijs: 3 },
+  { id: "cola-huismerk", zoekNL: "ah cola 1.5l fles", zoekDE: "cola 1.5l freeway", zoekBE: "cola 1.5l", maxPrijs: 2 },
+  { id: "bier-heineken", zoekNL: "heineken krat 24", zoekDE: "heineken kasten", zoekBE: "heineken bak", maxPrijs: 25 },
+  { id: "bier-huismerk", zoekNL: "ah pils krat 24", zoekDE: "perlenbacher pils kasten", zoekBE: "pils bak", maxPrijs: 18 },
+  { id: "koffie-douwe", zoekNL: "douwe egberts aroma rood 500g", zoekDE: "jacobs filterkaffee 500g", zoekBE: "douwe egberts 500g", maxPrijs: 12 },
+  { id: "koffie-huismerk", zoekNL: "ah filterkoffie 500g", zoekDE: "bellarom kaffee 500g", zoekBE: "filterkoffie 500g", maxPrijs: 6 },
+  { id: "wijn", zoekNL: "rode wijn huiswijn", zoekDE: "rotwein", zoekBE: "rode wijn", maxPrijs: 8 },
 
   // Verzorging
-  { id: "deo-dove", zoekNL: "dove deodorant", zoekDE: "dove deodorant", zoekBE: "dove deodorant" },
-  { id: "deo-axe", zoekNL: "axe deodorant", zoekDE: "axe deodorant", zoekBE: "axe deodorant" },
-  { id: "deo-huismerk", zoekNL: "ah deodorant", zoekDE: "deodorant", zoekBE: "deodorant" },
-  { id: "tandpasta-prodent", zoekNL: "prodent tandpasta", zoekDE: "zahnpasta", zoekBE: "tandpasta" },
-  { id: "tandpasta-huismerk", zoekNL: "ah tandpasta", zoekDE: "zahnpasta", zoekBE: "tandpasta" },
-  { id: "shampoo-andrelon", zoekNL: "andrelon shampoo", zoekDE: "shampoo", zoekBE: "shampoo" },
-  { id: "shampoo-huismerk", zoekNL: "ah shampoo", zoekDE: "shampoo", zoekBE: "shampoo" },
-  { id: "afwasmiddel-dreft", zoekNL: "dreft afwasmiddel", zoekDE: "spülmittel", zoekBE: "afwasmiddel" },
-  { id: "waspoeder-persil", zoekNL: "persil wasmiddel", zoekDE: "persil waschmittel", zoekBE: "persil" },
-  { id: "waspoeder-huismerk", zoekNL: "ah waspoeder", zoekDE: "waschmittel", zoekBE: "waspoeder" },
-  { id: "wc-papier-page", zoekNL: "page toiletpapier", zoekDE: "toilettenpapier", zoekBE: "toiletpapier" },
-  { id: "wc-papier-huismerk", zoekNL: "ah toiletpapier", zoekDE: "toilettenpapier", zoekBE: "toiletpapier" },
+  { id: "deo-dove", zoekNL: "dove deodorant spray 150ml", zoekDE: "dove deodorant 150ml", zoekBE: "dove deodorant 150ml", maxPrijs: 5 },
+  { id: "deo-axe", zoekNL: "axe deodorant spray 150ml", zoekDE: "axe deodorant 150ml", zoekBE: "axe deodorant 150ml", maxPrijs: 5 },
+  { id: "deo-huismerk", zoekNL: "ah deodorant spray", zoekDE: "deodorant spray", zoekBE: "deodorant spray", maxPrijs: 3 },
+  { id: "tandpasta-prodent", zoekNL: "prodent tandpasta 75ml", zoekDE: "zahnpasta 75ml", zoekBE: "tandpasta 75ml", maxPrijs: 4 },
+  { id: "tandpasta-huismerk", zoekNL: "ah tandpasta 75ml", zoekDE: "zahnpasta", zoekBE: "tandpasta", maxPrijs: 2 },
+  { id: "shampoo-andrelon", zoekNL: "andrelon shampoo 300ml", zoekDE: "shampoo 300ml", zoekBE: "shampoo 300ml", maxPrijs: 6 },
+  { id: "shampoo-huismerk", zoekNL: "ah shampoo 250ml", zoekDE: "shampoo 250ml", zoekBE: "shampoo 250ml", maxPrijs: 3 },
+  { id: "afwasmiddel-dreft", zoekNL: "dreft afwasmiddel 890ml", zoekDE: "spülmittel", zoekBE: "afwasmiddel", maxPrijs: 5 },
+  { id: "waspoeder-persil", zoekNL: "persil wasmiddel poeder", zoekDE: "persil waschmittel", zoekBE: "persil", maxPrijs: 18 },
+  { id: "waspoeder-huismerk", zoekNL: "ah waspoeder", zoekDE: "waschmittel", zoekBE: "waspoeder", maxPrijs: 8 },
+  { id: "wc-papier-page", zoekNL: "page toiletpapier 8 rollen", zoekDE: "toilettenpapier 8 rollen", zoekBE: "toiletpapier 8 rollen", maxPrijs: 8 },
+  { id: "wc-papier-huismerk", zoekNL: "ah toiletpapier 8 rollen", zoekDE: "toilettenpapier 8 rollen", zoekBE: "toiletpapier 8 rollen", maxPrijs: 5 },
 
   // Basis
-  { id: "pindakaas-calve", zoekNL: "calve pindakaas", zoekDE: "erdnussbutter", zoekBE: "pindakaas" },
-  { id: "pindakaas-huismerk", zoekNL: "ah pindakaas", zoekDE: "erdnusscreme", zoekBE: "pindakaas" },
-  { id: "hagelslag-dehollandse", zoekNL: "de ruijter hagelslag", zoekDE: "schokostreusel", zoekBE: "hagelslag" },
-  { id: "suiker", zoekNL: "witte suiker 1kg", zoekDE: "zucker 1kg", zoekBE: "witte suiker" },
-  { id: "bloem", zoekNL: "tarwebloem 1kg", zoekDE: "weizenmehl 1kg", zoekBE: "tarwebloem" },
-  { id: "pasta-barilla", zoekNL: "barilla spaghetti", zoekDE: "barilla spaghetti", zoekBE: "barilla spaghetti" },
-  { id: "pasta-huismerk", zoekNL: "ah spaghetti", zoekDE: "spaghetti", zoekBE: "spaghetti" },
-  { id: "olijfolie-bertolli", zoekNL: "bertolli olijfolie", zoekDE: "bertolli olivenöl", zoekBE: "bertolli olijfolie" },
-  { id: "olijfolie-huismerk", zoekNL: "ah olijfolie", zoekDE: "olivenöl", zoekBE: "olijfolie" },
-  { id: "nutella", zoekNL: "nutella 400g", zoekDE: "nutella 450g", zoekBE: "nutella" },
+  { id: "pindakaas-calve", zoekNL: "calve pindakaas 350g", zoekDE: "erdnussbutter 350g", zoekBE: "pindakaas 350g", maxPrijs: 5 },
+  { id: "pindakaas-huismerk", zoekNL: "ah pindakaas 350g", zoekDE: "erdnusscreme", zoekBE: "pindakaas", maxPrijs: 3 },
+  { id: "hagelslag-dehollandse", zoekNL: "de ruijter hagelslag", zoekDE: "schokostreusel", zoekBE: "hagelslag", maxPrijs: 4 },
+  { id: "suiker", zoekNL: "witte suiker 1kg", zoekDE: "zucker 1kg", zoekBE: "witte suiker 1kg", maxPrijs: 3 },
+  { id: "bloem", zoekNL: "tarwebloem 1kg", zoekDE: "weizenmehl 1kg", zoekBE: "tarwebloem 1kg", maxPrijs: 2 },
+  { id: "pasta-barilla", zoekNL: "barilla spaghetti 500g", zoekDE: "barilla spaghetti 500g", zoekBE: "barilla spaghetti 500g", maxPrijs: 3 },
+  { id: "pasta-huismerk", zoekNL: "ah spaghetti 500g", zoekDE: "spaghetti 500g", zoekBE: "spaghetti 500g", maxPrijs: 2 },
+  { id: "olijfolie-bertolli", zoekNL: "bertolli olijfolie 500ml", zoekDE: "bertolli olivenöl 500ml", zoekBE: "bertolli olijfolie 500ml", maxPrijs: 10 },
+  { id: "olijfolie-huismerk", zoekNL: "ah olijfolie 500ml", zoekDE: "olivenöl 500ml", zoekBE: "olijfolie 500ml", maxPrijs: 6 },
+  { id: "nutella", zoekNL: "nutella 400g", zoekDE: "nutella 450g", zoekBE: "nutella 400g", maxPrijs: 5 },
 ];
 
 type PrijsData = {
@@ -174,13 +174,14 @@ async function getAHToken(): Promise<string | null> {
   }
 }
 
-async function zoekAHPrijs(query: string): Promise<number | null> {
+async function zoekAHPrijs(
+  query: string,
+  maxPrijs: number = 50,
+): Promise<number | null> {
   const token = await getAHToken();
   if (!token) return null;
 
   try {
-    // Sortering op prijs ascending — pak de goedkoopste (= meestal de
-    // standaard verpakking, niet een multipack of XL-formaat)
     const url = `https://api.ah.nl/mobile-services/product/search/v2?query=${encodeURIComponent(query)}&size=10&sortOn=PRICELOWHIGH`;
     const res = await fetch(url, {
       headers: {
@@ -213,7 +214,8 @@ async function zoekAHPrijs(query: string): Promise<number | null> {
       ) ||
       [];
 
-    // Verzamel alle geldige prijzen
+    // Verzamel alle prijzen binnen de redelijke range (filtert multipacks
+    // en mini-formaten weg)
     const prijzen: number[] = [];
     for (const product of products) {
       const prijs =
@@ -221,14 +223,14 @@ async function zoekAHPrijs(query: string): Promise<number | null> {
         product?.currentPrice ??
         product?.price?.now ??
         null;
-      if (typeof prijs === "number" && prijs > 0.3 && prijs < 50) {
+      if (typeof prijs === "number" && prijs > 0.3 && prijs <= maxPrijs) {
         prijzen.push(prijs);
       }
     }
 
     if (prijzen.length === 0) return null;
 
-    // Pak de mediaan om uitschieters (mini-formaten of multipacks) te vermijden
+    // Mediaan = robuust midden van de geldige prijzen
     prijzen.sort((a, b) => a - b);
     const mediaan = prijzen[Math.floor(prijzen.length / 2)];
     return Math.round(mediaan * 100) / 100;
@@ -407,13 +409,13 @@ async function haalAllePrijzenOp(): Promise<CacheData> {
       batch.map(async (product) => {
         const fallback = FALLBACK_PRIJZEN[product.id];
 
-        // NL: Albert Heijn
-        const ahPrijs = await zoekAHPrijs(product.zoekNL);
+        // NL: Albert Heijn — pas maxPrijs toe om multipack-uitschieters te negeren
+        const ahPrijs = await zoekAHPrijs(product.zoekNL, product.maxPrijs);
 
-        // DE: Lidl
+        // DE: Lidl — alle endpoints geven 404, fallback gebruikt
         const lidlDEPrijs = await zoekLidlDEPrijs(product.zoekDE);
 
-        // BE: Lidl
+        // BE: Lidl — alle endpoints geven 404, fallback gebruikt
         const lidlBEPrijs = await zoekLidlBEPrijs(product.zoekBE);
 
         return {
