@@ -134,9 +134,18 @@ async function cbsFetch<T>(path: string): Promise<T | null> {
 }
 
 export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
-  // Haal de laatste 30 dagen aan rijen op (3 brandstoffen × ~10 dagen)
-  // Daaruit destilleren we euro95 en diesel
-  const dataUrl = "/TypedDataSet?$orderby=Perioden desc&$top=30";
+  // Tabel 80416NED structuur (ontdekt via debug):
+  // - Eén rij per dag met alle brandstoffen als kolommen
+  // - Velden: BenzineEuro95_1, Diesel_2, Lpg_3 (al in euro, niet cents)
+  // - Perioden in formaat "YYYYMMDD"
+  // - $orderby werkt niet betrouwbaar, dus we filteren op recente datum
+
+  // Bereken een afkapdatum 60 dagen terug
+  const nu = new Date();
+  const grens = new Date(nu.getTime() - 60 * 24 * 60 * 60 * 1000);
+  const grensStr = `${grens.getFullYear()}${String(grens.getMonth() + 1).padStart(2, "0")}${String(grens.getDate()).padStart(2, "0")}`;
+
+  const dataUrl = `/TypedDataSet?$filter=Perioden gt '${grensStr}'&$top=200`;
   const data = await cbsFetch<{ value: CbsRow[] }>(dataUrl);
 
   if (!data?.value || data.value.length === 0) {
@@ -148,90 +157,67 @@ export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
     };
   }
 
-  // Eerst proberen we de BrandstofSoorten metadata, maar dat is niet kritiek
-  const categorieen = await cbsFetch<{ value: CbsCategoryEntry[] }>("/BrandstofSoorten");
-  const codeNaarLabel = new Map<string, string>();
-  if (categorieen?.value) {
-    for (const c of categorieen.value) {
-      codeNaarLabel.set(c.Key, c.Title);
+  // Sorteer op Perioden DESC client-side (CBS $orderby werkt niet altijd)
+  const gesorteerd = [...data.value]
+    .filter((r) => typeof r.Perioden === "string")
+    .sort((a, b) => String(b.Perioden).localeCompare(String(a.Perioden)));
+
+  // Vind de eerste rij waar Euro95 of Diesel een geldige waarde heeft
+  let euro95: number | null = null;
+  let diesel: number | null = null;
+  let periode = "";
+
+  for (const row of gesorteerd) {
+    const e95 = row.BenzineEuro95_1;
+    const die = row.Diesel_2;
+    if (
+      typeof e95 === "number" &&
+      e95 > 0.5 &&
+      e95 < 5 &&
+      euro95 === null
+    ) {
+      euro95 = Math.round(e95 * 1000) / 1000;
+      if (!periode) periode = String(row.Perioden);
     }
+    if (
+      typeof die === "number" &&
+      die > 0.5 &&
+      die < 5 &&
+      diesel === null
+    ) {
+      diesel = Math.round(die * 1000) / 1000;
+      if (!periode) periode = String(row.Perioden);
+    }
+    if (euro95 !== null && diesel !== null) break;
   }
 
-  // Loop door de rijen, gegroepeerd op BrandstofSoorten code
-  // Pak de eerste euro95 en diesel match die we tegenkomen (= meest recent)
-  let euro95Prijs: number | null = null;
-  let dieselPrijs: number | null = null;
-  let euro95Periode = "";
-  let dieselPeriode = "";
-  const ontdekteCodes = new Set<string>();
-
-  function rowToPrice(row: CbsRow): number | null {
-    for (const [key, val] of Object.entries(row)) {
-      if (
-        /pompprijs|prijs/i.test(key) &&
-        typeof val === "number" &&
-        val > 30 &&
-        val < 500
-      ) {
-        return Math.round((val / 100) * 1000) / 1000;
-      }
-    }
-    return null;
-  }
-
-  for (const row of data.value) {
-    const code = typeof row.BrandstofSoorten === "string" ? row.BrandstofSoorten.trim() : "";
-    if (!code) continue;
-    ontdekteCodes.add(code);
-
-    const label = codeNaarLabel.get(code) ?? "";
-    const isEuro95 = /euro\s*95|benzine.*95|^001$/i.test(label) || /^A0?11694$/i.test(code);
-    const isDiesel = /diesel/i.test(label) || /^002$/i.test(code) || /^A0?11695$/i.test(code);
-
-    if (isEuro95 && euro95Prijs === null) {
-      const prijs = rowToPrice(row);
-      if (prijs !== null) {
-        euro95Prijs = prijs;
-        euro95Periode = typeof row.Perioden === "string" ? row.Perioden : "";
-      }
-    }
-    if (isDiesel && dieselPrijs === null) {
-      const prijs = rowToPrice(row);
-      if (prijs !== null) {
-        dieselPrijs = prijs;
-        dieselPeriode = typeof row.Perioden === "string" ? row.Perioden : "";
-      }
-    }
-    if (euro95Prijs !== null && dieselPrijs !== null) break;
-  }
-
-  if (euro95Prijs === null && dieselPrijs === null) {
+  if (euro95 === null && diesel === null) {
     return {
       euro95: null,
       diesel: null,
       bron: "CBS",
       debug: {
         url: CBS_BASE + dataUrl,
-        error: "geen Euro95 of Diesel rij gevonden",
+        error: "geen geldige prijs in recente rijen",
         matched: {
-          ontdekteCodes: Array.from(ontdekteCodes).slice(0, 5).join(","),
-          metadataGevonden: codeNaarLabel.size > 0 ? "ja" : "nee",
-          eersteRij: JSON.stringify(data.value[0]).slice(0, 200),
+          aantalRijen: String(gesorteerd.length),
+          eersteRij: JSON.stringify(gesorteerd[0]).slice(0, 300),
         },
       },
     };
   }
 
   return {
-    euro95: euro95Prijs,
-    diesel: dieselPrijs,
+    euro95,
+    diesel,
     bron: "CBS",
     bronUrl: "https://opendata.cbs.nl",
     debug: {
       url: CBS_BASE,
       matched: {
-        euro95: euro95Periode || undefined,
-        diesel: dieselPeriode || undefined,
+        periode: periode
+          ? `${periode.slice(0, 4)}-${periode.slice(4, 6)}-${periode.slice(6, 8)}`
+          : undefined,
       },
     },
   };
