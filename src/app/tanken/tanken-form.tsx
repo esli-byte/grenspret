@@ -541,7 +541,6 @@ function ExtraLitersSlider({
   const extraBesparingDE = extraLiters * (nlPrijs - dePrijs);
   const extraBesparingBE = extraLiters * (nlPrijs - bePrijs);
   const pct = (extraLiters / 80) * 100;
-  const aantalPersonen = Math.ceil(extraLiters / 10);
   const ticks = [0, 10, 20, 30, 40, 50, 60, 70, 80];
 
   return (
@@ -661,32 +660,14 @@ function ExtraLitersSlider({
         </div>
       )}
 
-      {/* Personen indicator bij > 10L */}
-      {extraLiters > 10 && (
-        <div className="mt-3 flex items-center gap-2.5 rounded-2xl bg-cta/5 border border-cta/15 px-4 py-3 animate-slide-in-bottom">
-          <span className="text-lg">👥</span>
-          <p className="text-xs font-bold text-cta dark:text-amber-300">
-            Voor {extraLiters}L heb je minimaal <strong>{aantalPersonen} personen</strong> nodig
-            ({aantalPersonen} x 10L jerrycan)
-          </p>
-        </div>
-      )}
-
       {/* Wettelijke info */}
-      <div className="mt-3 space-y-2">
+      <div className="mt-3">
         <div className="flex items-start gap-2.5 rounded-2xl bg-amber-50 border border-amber-200/50 p-3.5 dark:bg-amber-950/30 dark:border-amber-800/30">
           <span className="shrink-0 text-sm">⚠️</span>
           <p className="text-[11px] font-medium leading-relaxed text-amber-800 dark:text-amber-300">
             Wettelijk toegestaan: <strong>10 liter per persoon</strong> in een
             goedgekeurde (UN/metalen) jerrycan. Plastic jerrycans zijn niet
             toegestaan voor benzine.
-          </p>
-        </div>
-        <div className="flex items-start gap-2.5 rounded-2xl bg-blue-50 border border-blue-200/50 p-3.5 dark:bg-blue-950/30 dark:border-blue-800/30">
-          <span className="shrink-0 text-sm">💡</span>
-          <p className="text-[11px] font-medium leading-relaxed text-blue-800 dark:text-blue-300">
-            <strong>Tip:</strong> Met meerdere personen in de auto mag ieder 10
-            liter meenemen. Zo kun je tot 80 liter extra meenemen!
           </p>
         </div>
       </div>
@@ -827,9 +808,12 @@ function NettoBesparingOverzicht({
           );
         })}
       </div>
-      <p className="text-xs font-medium text-gray-400 dark:text-gray-500">
-        Afstanden en verbruik zijn schattingen. Werkelijke besparing kan afwijken.
-      </p>
+      <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+        </svg>
+        Gekoppeld met de RDW en OpenStreetMap voor betrouwbare data
+      </div>
     </div>
   );
 }

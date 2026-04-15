@@ -7,7 +7,9 @@ export type Categorie =
   | "groente-fruit"
   | "brood"
   | "diepvries"
-  | "snacks";
+  | "snacks"
+  | "tabak"
+  | "sterke-drank";
 
 export type MerkType = "a-merk" | "huismerk";
 
@@ -34,6 +36,8 @@ export const CATEGORIE_LABELS: Record<Categorie, { label: string; icoon: string;
   brood: { label: "Brood & Ontbijt", icoon: "🍞", kleur: "from-orange-400 to-amber-400" },
   diepvries: { label: "Diepvries", icoon: "🧊", kleur: "from-sky-400 to-blue-400" },
   snacks: { label: "Snacks & Koek", icoon: "🍿", kleur: "from-fuchsia-400 to-pink-400" },
+  tabak: { label: "Tabak", icoon: "🚬", kleur: "from-stone-500 to-zinc-500" },
+  "sterke-drank": { label: "Sterke drank", icoon: "🥃", kleur: "from-amber-600 to-yellow-700" },
 };
 
 export const MERK_LABELS: Record<MerkType, { label: string; kleur: string }> = {
@@ -58,6 +62,8 @@ export const CATEGORIE_KORTING: Record<Categorie, { DE: number; BE: number }> = 
   brood: { DE: 0.15, BE: 0.08 }, // bakkerijproducten matig goedkoper
   diepvries: { DE: 0.28, BE: 0.15 }, // vergelijkbaar met zuivel
   snacks: { DE: 0.25, BE: 0.12 }, // koek/snoep gemiddeld
+  tabak: { DE: 0.05, BE: 0.10 }, // DE amper goedkoper, BE iets wel
+  "sterke-drank": { DE: 0.28, BE: 0.18 }, // BE accijns lager, DE nog lager
 };
 
 export type EigenProduct = {
@@ -302,4 +308,66 @@ export const PRODUCTEN: Product[] = [
   { id: "snickers", naam: "Snickers", merk: "Snickers", merkType: "a-merk", eenheid: "4 × 50 gram", categorie: "snacks", icoon: "🍫", prijsNL: 2.49, prijsDE: 1.79, prijsBE: 2.09 },
   { id: "oreo", naam: "Oreo koekjes", merk: "Oreo", merkType: "a-merk", eenheid: "154 gram", categorie: "snacks", icoon: "🍪", prijsNL: 1.99, prijsDE: 1.39, prijsBE: 1.69 },
   { id: "ontbijtkoek", naam: "Ontbijtkoek", merk: "Peijnenburg", merkType: "a-merk", eenheid: "450 gram", categorie: "snacks", icoon: "🍞", prijsNL: 2.79, prijsDE: 2.19, prijsBE: 2.49 },
+
+  // ═══════════════════════════════════════
+  //  TABAK & SIGARETTEN
+  // ═══════════════════════════════════════
+  // Sigaretten pakjes (20 stuks)
+  { id: "sig-marlboro", naam: "Sigaretten 20", merk: "Marlboro", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 10.50, prijsDE: 9.10, prijsBE: 8.10 },
+  { id: "sig-marlboro-gold", naam: "Sigaretten Gold 20", merk: "Marlboro", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 10.50, prijsDE: 9.10, prijsBE: 8.10 },
+  { id: "sig-lucky-strike", naam: "Sigaretten 20", merk: "Lucky Strike", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 10.30, prijsDE: 9.00, prijsBE: 7.90 },
+  { id: "sig-camel", naam: "Sigaretten 20", merk: "Camel", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 10.30, prijsDE: 8.90, prijsBE: 7.80 },
+  { id: "sig-winston", naam: "Sigaretten 20", merk: "Winston", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 9.80, prijsDE: 8.50, prijsBE: 7.40 },
+  { id: "sig-lm", naam: "Sigaretten 20", merk: "L&M", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 9.80, prijsDE: 8.50, prijsBE: 7.40 },
+  { id: "sig-philip-morris", naam: "Sigaretten 20", merk: "Philip Morris", merkType: "a-merk", eenheid: "20 stuks", categorie: "tabak", icoon: "🚬", prijsNL: 10.00, prijsDE: 8.70, prijsBE: 7.60 },
+
+  // Sigaretten slof (200 stuks = 10 pakjes)
+  { id: "sig-marlboro-slof", naam: "Sigaretten slof", merk: "Marlboro", merkType: "a-merk", eenheid: "10 × 20", categorie: "tabak", icoon: "🚬", prijsNL: 105.00, prijsDE: 91.00, prijsBE: 81.00 },
+  { id: "sig-lucky-slof", naam: "Sigaretten slof", merk: "Lucky Strike", merkType: "a-merk", eenheid: "10 × 20", categorie: "tabak", icoon: "🚬", prijsNL: 103.00, prijsDE: 90.00, prijsBE: 79.00 },
+
+  // Shag / rolshag (50 gr)
+  { id: "shag-van-nelle", naam: "Shag", merk: "Van Nelle", merkType: "a-merk", eenheid: "50 gram", categorie: "tabak", icoon: "🌿", prijsNL: 12.80, prijsDE: 11.00, prijsBE: 9.50 },
+  { id: "shag-drum", naam: "Shag", merk: "Drum", merkType: "a-merk", eenheid: "50 gram", categorie: "tabak", icoon: "🌿", prijsNL: 12.80, prijsDE: 11.00, prijsBE: 9.50 },
+  { id: "shag-samson", naam: "Shag", merk: "Samson", merkType: "a-merk", eenheid: "50 gram", categorie: "tabak", icoon: "🌿", prijsNL: 12.50, prijsDE: 10.80, prijsBE: 9.30 },
+  { id: "shag-javaanse", naam: "Shag", merk: "Javaanse Jongens", merkType: "a-merk", eenheid: "50 gram", categorie: "tabak", icoon: "🌿", prijsNL: 12.50, prijsDE: 10.80, prijsBE: 9.30 },
+
+  // Vloei / aanstekers
+  { id: "vloei-rizla", naam: "Vloeipapier", merk: "Rizla", merkType: "a-merk", eenheid: "50 vellen", categorie: "tabak", icoon: "📄", prijsNL: 0.99, prijsDE: 0.79, prijsBE: 0.85 },
+  { id: "aansteker-bic", naam: "Aansteker", merk: "Bic", merkType: "a-merk", eenheid: "1 stuk", categorie: "tabak", icoon: "🔥", prijsNL: 1.99, prijsDE: 1.49, prijsBE: 1.69 },
+
+  // ═══════════════════════════════════════
+  //  STERKE DRANK
+  // ═══════════════════════════════════════
+  // Whisky
+  { id: "whisky-johnnie-red", naam: "Red Label", merk: "Johnnie Walker", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 21.99, prijsDE: 15.99, prijsBE: 18.49 },
+  { id: "whisky-jameson", naam: "Ierse whisky", merk: "Jameson", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 24.99, prijsDE: 17.99, prijsBE: 20.99 },
+  { id: "whisky-jack", naam: "Tennessee whisky", merk: "Jack Daniel's", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 26.99, prijsDE: 19.99, prijsBE: 22.49 },
+  { id: "whisky-ballantines", naam: "Finest", merk: "Ballantine's", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 19.99, prijsDE: 13.99, prijsBE: 16.49 },
+
+  // Rum
+  { id: "rum-bacardi", naam: "Carta Blanca", merk: "Bacardi", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 18.99, prijsDE: 13.49, prijsBE: 15.49 },
+  { id: "rum-captain-morgan", naam: "Spiced Gold", merk: "Captain Morgan", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 19.99, prijsDE: 14.49, prijsBE: 16.99 },
+  { id: "rum-havana", naam: "Añejo 3 años", merk: "Havana Club", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 20.99, prijsDE: 14.99, prijsBE: 17.49 },
+
+  // Wodka
+  { id: "wodka-smirnoff", naam: "Red Label", merk: "Smirnoff", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 16.99, prijsDE: 11.99, prijsBE: 13.99 },
+  { id: "wodka-absolut", naam: "Original", merk: "Absolut", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 19.99, prijsDE: 14.49, prijsBE: 16.49 },
+
+  // Gin
+  { id: "gin-bombay", naam: "Sapphire", merk: "Bombay", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 22.99, prijsDE: 16.49, prijsBE: 18.99 },
+  { id: "gin-hendricks", naam: "Gin", merk: "Hendrick's", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 34.99, prijsDE: 24.99, prijsBE: 28.99 },
+  { id: "gin-gordons", naam: "London Dry", merk: "Gordon's", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 17.99, prijsDE: 12.99, prijsBE: 14.99 },
+
+  // Jenever & likeur
+  { id: "jenever-bols", naam: "Jonge jenever", merk: "Bols", merkType: "a-merk", eenheid: "1 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 15.99, prijsDE: 13.49, prijsBE: 14.49 },
+  { id: "jenever-hartevelt", naam: "Jonge jenever", merk: "Hartevelt", merkType: "a-merk", eenheid: "1 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 14.99, prijsDE: 12.49, prijsBE: 13.49 },
+  { id: "likeur-baileys", naam: "Original", merk: "Baileys", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍾", prijsNL: 17.99, prijsDE: 12.49, prijsBE: 14.99 },
+  { id: "amaretto-disaronno", naam: "Amaretto", merk: "Disaronno", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🍾", prijsNL: 19.99, prijsDE: 14.49, prijsBE: 16.99 },
+
+  // Cognac / brandy
+  { id: "cognac-hennessy", naam: "V.S.", merk: "Hennessy", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 46.99, prijsDE: 33.99, prijsBE: 38.99 },
+  { id: "martini-bianco", naam: "Bianco", merk: "Martini", merkType: "a-merk", eenheid: "1 liter", categorie: "sterke-drank", icoon: "🍸", prijsNL: 11.99, prijsDE: 8.49, prijsBE: 9.99 },
+
+  // Tequila
+  { id: "tequila-jose", naam: "Silver", merk: "José Cuervo", merkType: "a-merk", eenheid: "0.7 liter", categorie: "sterke-drank", icoon: "🥃", prijsNL: 19.99, prijsDE: 14.49, prijsBE: 16.99 },
 ];
