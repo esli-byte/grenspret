@@ -487,10 +487,10 @@ export function TankenForm() {
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5">
               <div className={`h-2 w-2 rounded-full ${
-                prijzenBron === "live" ? "bg-accent animate-glow" : prijzenBron === "cache" ? "bg-amber-500" : "bg-gray-400"
+                prijzenBron === "live" ? "bg-accent animate-glow" : prijzenBron === "cache" ? "bg-accent" : "bg-gray-400"
               }`} />
               <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                {prijzenBron === "live" ? "Live" : prijzenBron === "cache" ? "Cached" : "Indicatief"}
+                {prijzenBron === "live" ? "Actueel" : prijzenBron === "cache" ? "Recent" : "Laatst bekend"}
               </span>
             </div>
           </div>
@@ -515,10 +515,28 @@ export function TankenForm() {
             </table>
           </div>
           {prijzenBijgewerkt && (
-            <p className="mt-3 text-[11px] font-medium text-gray-400 dark:text-gray-500">
-              Laatst bijgewerkt:{" "}
-              {new Date(prijzenBijgewerkt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+              <span>
+                Bijgewerkt{" "}
+                {new Date(prijzenBijgewerkt).toLocaleString("nl-NL", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+              {(() => {
+                const bronnen = Array.from(
+                  new Set(
+                    prijzen
+                      .map((p) => p.bron)
+                      .filter((b): b is string => !!b && b !== "handmatig"),
+                  ),
+                );
+                if (bronnen.length === 0) return null;
+                return <span>· Bronnen: {bronnen.join(", ")}</span>;
+              })()}
+            </div>
           )}
         </div>
       )}

@@ -1,174 +1,97 @@
 import { NextResponse } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import {
+  haalNederlandsePrijzen,
+  haalBelgischePrijzen,
+  haalDuitsePrijzen,
+} from "./sources";
 
 /**
- * Brandstofprijzen API
+ * Brandstofprijzen API.
  *
- * Haalt prijzen op uit:
- * - Tankerkoenig API (Duitsland) — vereist TANKERKOENIG_API_KEY env var
- * - Hardcoded NL/BE gemiddelden (handmatig bijgewerkt)
+ * Combineert live data uit meerdere bronnen en valt gracieus terug
+ * op handmatig bijgehouden fallback-prijzen als een bron niet
+ * bereikbaar is.
  *
- * Cached in .cache/fuel-prices.json, max 1× per uur vernieuwd.
+ * Cache: Next.js fetch-cache (1 uur revalidate) zorgt dat we de
+ * externe bronnen max 1× per uur bevragen, ook op Vercel serverless.
  */
 
-export type FuelPricesResponse = {
-  prijzen: LandPrijs[];
-  bijgewerkt: string;
-  bron: "live" | "cache" | "fallback";
-};
+export const revalidate = 3600; // seconds
 
 type LandPrijs = {
   land: string;
   vlag: string;
   euro95: number;
   diesel: number;
+  bron: string;
+  bronUrl?: string;
 };
 
-// Fallback / handmatige NL & BE prijzen (realistisch per april 2025)
-const NL_PRIJZEN: LandPrijs = {
-  land: "Nederland",
-  vlag: "🇳🇱",
-  euro95: 2.15,
-  diesel: 1.75,
-};
-
-const BE_PRIJZEN: LandPrijs = {
-  land: "België",
-  vlag: "🇧🇪",
-  euro95: 1.78,
-  diesel: 1.65,
-};
-
-const DE_FALLBACK: LandPrijs = {
-  land: "Duitsland",
-  vlag: "🇩🇪",
-  euro95: 1.72,
-  diesel: 1.58,
-};
-
-const CACHE_DIR = join(process.cwd(), ".cache");
-const CACHE_FILE = join(CACHE_DIR, "fuel-prices.json");
-const CACHE_MAX_AGE_MS = 60 * 60 * 1000; // 1 uur
-
-type CacheData = {
+export type FuelPricesResponse = {
   prijzen: LandPrijs[];
-  timestamp: number;
+  bijgewerkt: string;
+  // Deprecated veld, voor backwards compatibility met bestaande UI
+  bron: "live" | "cache" | "fallback";
 };
 
-async function readCache(): Promise<CacheData | null> {
-  try {
-    const raw = await readFile(CACHE_FILE, "utf-8");
-    const data: CacheData = JSON.parse(raw);
-    if (Date.now() - data.timestamp < CACHE_MAX_AGE_MS) {
-      return data;
-    }
-    return null; // verlopen
-  } catch {
-    return null;
-  }
-}
-
-async function writeCache(data: CacheData) {
-  try {
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(CACHE_FILE, JSON.stringify(data));
-  } catch {
-    // Cache schrijven gefaald — niet kritiek
-  }
-}
-
-/**
- * Haal gemiddelde Duitse brandstofprijzen op via Tankerkoenig.
- * Gebruikt het "list" endpoint voor stations rond een grenslocatie.
- */
-async function fetchDuitsePrijzen(
-  apiKey: string
-): Promise<LandPrijs | null> {
-  try {
-    // Zoek stations bij Venlo (grensovergang, centraal gelegen)
-    // lat=51.37, lng=6.17, rad=5km
-    const url = `https://creativecommons.tankerkoenig.de/json/list.php?lat=51.37&lng=6.17&rad=10&sort=dist&type=all&apikey=${apiKey}`;
-
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-
-    if (!data.ok || !data.stations || data.stations.length === 0) {
-      return null;
-    }
-
-    // Bereken gemiddelden van open stations met prijzen
-    let e5Total = 0,
-      e5Count = 0;
-    let dieselTotal = 0,
-      dieselCount = 0;
-
-    for (const station of data.stations) {
-      if (!station.isOpen) continue;
-      if (station.e5 && station.e5 > 0) {
-        e5Total += station.e5;
-        e5Count++;
-      }
-      if (station.diesel && station.diesel > 0) {
-        dieselTotal += station.diesel;
-        dieselCount++;
-      }
-    }
-
-    if (e5Count === 0 && dieselCount === 0) return null;
-
-    return {
-      land: "Duitsland",
-      vlag: "🇩🇪",
-      euro95: e5Count > 0 ? Math.round((e5Total / e5Count) * 1000) / 1000 : DE_FALLBACK.euro95,
-      diesel:
-        dieselCount > 0
-          ? Math.round((dieselTotal / dieselCount) * 1000) / 1000
-          : DE_FALLBACK.diesel,
-    };
-  } catch {
-    return null;
-  }
-}
+// Fallback-prijzen als laatste redmiddel.
+// Laatste handmatige update: april 2026.
+const NL_FALLBACK = { euro95: 2.15, diesel: 1.79 };
+const DE_FALLBACK = { euro95: 1.73, diesel: 1.60 };
+const BE_FALLBACK = { euro95: 1.81, diesel: 1.68 };
 
 export async function GET() {
-  // 1. Check cache
-  const cached = await readCache();
-  if (cached) {
-    return NextResponse.json({
-      prijzen: cached.prijzen,
-      bijgewerkt: new Date(cached.timestamp).toISOString(),
-      bron: "cache",
-    } satisfies FuelPricesResponse);
-  }
-
-  // 2. Probeer live Duitse prijzen
-  const apiKey = process.env.TANKERKOENIG_API_KEY;
-  let dePrijzen = DE_FALLBACK;
-  let bron: FuelPricesResponse["bron"] = "fallback";
-
-  if (apiKey) {
-    const live = await fetchDuitsePrijzen(apiKey);
-    if (live) {
-      dePrijzen = live;
-      bron = "live";
-    }
-  }
-
-  const prijzen: LandPrijs[] = [NL_PRIJZEN, dePrijzen, BE_PRIJZEN];
   const timestamp = Date.now();
+  const nietNull = <T>(x: T | null | undefined, fallback: T): T => (x != null ? x : fallback);
 
-  // 3. Cache opslaan
-  await writeCache({ prijzen, timestamp });
+  // Alle drie bronnen parallel ophalen
+  const apiKey = process.env.TANKERKOENIG_API_KEY;
+  const [nl, be, de] = await Promise.all([
+    haalNederlandsePrijzen(),
+    haalBelgischePrijzen(),
+    apiKey ? haalDuitsePrijzen(apiKey) : Promise.resolve(null),
+  ]);
+
+  // Per land: combineer live data met fallback waar nodig
+  const prijzen: LandPrijs[] = [
+    {
+      land: "Nederland",
+      vlag: "🇳🇱",
+      euro95: nietNull(nl?.euro95, NL_FALLBACK.euro95),
+      diesel: nietNull(nl?.diesel, NL_FALLBACK.diesel),
+      bron: nl?.bron ?? "handmatig",
+      bronUrl: nl?.bronUrl,
+    },
+    {
+      land: "Duitsland",
+      vlag: "🇩🇪",
+      euro95: nietNull(de?.euro95, DE_FALLBACK.euro95),
+      diesel: nietNull(de?.diesel, DE_FALLBACK.diesel),
+      bron: de?.bron ?? "handmatig",
+      bronUrl: de?.bronUrl,
+    },
+    {
+      land: "België",
+      vlag: "🇧🇪",
+      euro95: nietNull(be?.euro95, BE_FALLBACK.euro95),
+      diesel: nietNull(be?.diesel, BE_FALLBACK.diesel),
+      bron: be?.bron ?? "handmatig",
+      bronUrl: be?.bronUrl,
+    },
+  ];
+
+  // Deprecated 'bron' veld voor de bestaande UI
+  const alleLive = nl && be && (de || !apiKey);
+  const geenLive = !nl && !be && !de;
+  const combi: FuelPricesResponse["bron"] = alleLive
+    ? "live"
+    : geenLive
+      ? "fallback"
+      : "cache";
 
   return NextResponse.json({
     prijzen,
     bijgewerkt: new Date(timestamp).toISOString(),
-    bron,
+    bron: combi,
   } satisfies FuelPricesResponse);
 }

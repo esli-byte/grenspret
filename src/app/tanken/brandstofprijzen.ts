@@ -5,13 +5,15 @@ export type LandPrijzen = {
   vlag: string;
   euro95: number;
   diesel: number;
+  bron?: string;
+  bronUrl?: string;
 };
 
-/** Fallback prijzen als de API niet beschikbaar is */
+/** Fallback prijzen als de API niet beschikbaar is — april 2026 */
 export const FALLBACK_PRIJZEN: LandPrijzen[] = [
-  { land: "Nederland", vlag: "🇳🇱", euro95: 2.15, diesel: 1.75 },
-  { land: "Duitsland", vlag: "🇩🇪", euro95: 1.72, diesel: 1.58 },
-  { land: "België", vlag: "🇧🇪", euro95: 1.78, diesel: 1.65 },
+  { land: "Nederland", vlag: "🇳🇱", euro95: 2.15, diesel: 1.79, bron: "handmatig" },
+  { land: "Duitsland", vlag: "🇩🇪", euro95: 1.73, diesel: 1.60, bron: "handmatig" },
+  { land: "België", vlag: "🇧🇪", euro95: 1.81, diesel: 1.68, bron: "handmatig" },
 ];
 
 /** Gemiddelde tankgrootte op basis van cilinderinhoud */
