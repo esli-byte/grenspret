@@ -36,34 +36,37 @@ export function HoeWerktHet() {
       {open && (
         <div className="mt-5 animate-fade-in">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-left backdrop-blur-sm sm:p-6">
-            <p className="mb-4 text-center text-[11px] font-extrabold uppercase tracking-widest text-accent">
-              In 3 stappen je besparing berekenen
+            <p className="mb-5 text-center text-[11px] font-extrabold uppercase tracking-widest text-accent">
+              Zo bespaar je in 3 stappen
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <Stap
                 nummer={1}
-                titel="Voer je kenteken en postcode in"
-                uitleg="We gebruiken officiële RDW-data voor je voertuiggegevens en OpenStreetMap voor de afstand naar de grens. Zo weten we precies hoeveel brandstof je auto verbruikt op weg naar Duitsland of België."
+                titel="Vertel ons over je auto"
+                uitleg="Vul je kenteken in en je postcode. Geen zin om te typen? Tik op Huidige locatie, dan haalt je telefoon de postcode zelf op. Je ziet meteen hoeveel je bespaart op een volle tank over de grens, en de tankstations die het dichtste bij liggen."
+                tip="Heb je een lease-auto? Vink dat vakje aan en we rekenen geen brandstof mee, alleen je boodschappen."
               />
               <Stap
                 nummer={2}
-                titel="Vink je boodschappen aan"
-                uitleg="Kies uit 150+ veelgekochte producten of voeg je eigen producten toe. Per product zie je direct wat je bespaart over de grens. Ga je met meerdere mensen? Activeer dan samen boodschappen om na afloop makkelijk te verrekenen."
+                titel="Zet je boodschappenlijst in elkaar"
+                uitleg="Tik op een product om het toe te voegen. Nog een keer tikken voegt er meer van toe. Staat iets er niet bij? Voeg je eigen product toe en wij schatten wat je bespaart."
+                tip="Ga je ook voor familie of buren shoppen? Zet Samen boodschappen aan, verdeel per persoon, en stuur achteraf met één tik een Tikkie-bericht."
               />
               <Stap
                 nummer={3}
-                titel="Bekijk je totale netto besparing"
-                uitleg="Grenspret trekt de brandstofkosten van heen en terug er al van af. Je ziet dus niet alleen wat je bespaart op boodschappen en tanken, maar ook of de rit het écht waard is."
+                titel="Zie of de rit het waard is"
+                uitleg="Alles op een rij: wat je bespaart op boodschappen, op tanken, en wat de reiskosten van heen en terug je kosten. In één oogopslag zie je of het echt loont om te gaan."
+                tip="Eerlijk antwoord, ook als het tegenvalt. Soms is thuisblijven gewoon goedkoper."
                 laatste
               />
             </div>
 
-            <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-accent/10 px-4 py-3 text-center">
-              <span className="text-base">💡</span>
-              <p className="text-[11px] font-medium leading-snug text-gray-200">
-                Altijd transparant: prijzen, afstanden en besparingen tonen we
-                met hun bron. Geen verrassingen.
+            <div className="mt-5 flex items-start gap-2.5 rounded-2xl bg-accent/10 px-4 py-3">
+              <span className="shrink-0 text-base leading-none">✨</span>
+              <p className="text-[11px] font-medium leading-relaxed text-gray-200">
+                Je voortgang wordt automatisch opgeslagen. Je kunt altijd terug
+                naar een eerdere stap via het menu onderaan het scherm.
               </p>
             </div>
           </div>
@@ -77,11 +80,13 @@ function Stap({
   nummer,
   titel,
   uitleg,
+  tip,
   laatste,
 }: {
   nummer: number;
   titel: string;
   uitleg: string;
+  tip?: string;
   laatste?: boolean;
 }) {
   return (
@@ -94,9 +99,15 @@ function Stap({
           <div className="mt-1 w-0.5 flex-1 bg-gradient-to-b from-accent/40 to-accent/5" />
         )}
       </div>
-      <div className={laatste ? "" : "pb-2"}>
+      <div className={`flex-1 ${laatste ? "" : "pb-3"}`}>
         <h3 className="text-sm font-extrabold text-white">{titel}</h3>
-        <p className="mt-0.5 text-xs leading-relaxed text-gray-300">{uitleg}</p>
+        <p className="mt-1 text-xs leading-relaxed text-gray-300">{uitleg}</p>
+        {tip && (
+          <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-accent/90">
+            <span className="shrink-0 leading-none">💡</span>
+            <span>{tip}</span>
+          </p>
+        )}
       </div>
     </div>
   );
