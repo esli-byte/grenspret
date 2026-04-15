@@ -148,8 +148,9 @@ export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
     };
   }
 
+  const beschikbareCategorieen = categorieen.value;
   function findKey(zoek: RegExp): string | null {
-    const match = categorieen.value.find((c) => zoek.test(c.Title));
+    const match = beschikbareCategorieen.find((c) => zoek.test(c.Title));
     return match?.Key ?? null;
   }
 
@@ -165,7 +166,7 @@ export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
         url: CBS_BASE + categorieenUrl,
         error: "geen Euro95 of Diesel categorie",
         matched: {
-          eersteCategorieen: categorieen.value
+          eersteCategorieen: beschikbareCategorieen
             .slice(0, 5)
             .map((c) => `${c.Key}=${c.Title}`)
             .join("; "),
