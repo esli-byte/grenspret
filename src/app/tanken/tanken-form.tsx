@@ -399,7 +399,7 @@ export function TankenForm() {
         <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
           Om de afstand tot de grens te berekenen
         </p>
-        <div className="mt-2.5 flex gap-3">
+        <div className="mt-2.5 flex gap-2">
           <input
             id="postcode"
             type="text"
@@ -414,21 +414,36 @@ export function TankenForm() {
           <button
             onClick={handleGeolocate}
             disabled={geoLoading}
-            className="btn-pill btn-pill-outline px-4 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
-            title="Auto-detecteer je locatie"
+            className="flex items-center gap-2 rounded-2xl border-2 border-accent/30 bg-accent/5 px-4 py-3.5 text-sm font-extrabold text-accent transition-all hover:bg-accent/10 hover:border-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Gebruik huidige locatie om postcode automatisch in te vullen"
           >
             {geoLoading ? (
-              <span className="flex items-center gap-2">
+              <>
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-              </span>
+                <span className="hidden sm:inline">Zoeken...</span>
+              </>
             ) : (
-              <span>📍</span>
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                </svg>
+                <span>Huidige locatie</span>
+              </>
             )}
           </button>
         </div>
+        <p className="mt-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+          <span className="inline-flex items-center gap-1">
+            <svg className="h-3 w-3 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+            </svg>
+            Tip: tik op <strong className="font-extrabold text-accent">Huidige locatie</strong> om je postcode automatisch in te vullen
+          </span>
+        </p>
       </div>
 
       {/* Dichtstbijzijnde tankstations */}
