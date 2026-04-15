@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { haalDuitsePrijzen } from "./sources";
+import {
+  haalDuitsePrijzen,
+  haalNederlandsePrijzen,
+  haalBelgischePrijzen,
+} from "./sources";
 
 /**
  * Brandstofprijzen API.
  *
- * - Duitsland: live via Tankerkoenig API (gratis, wettelijk verplichte
- *   prijsverstrekking door alle Duitse tankstations).
- * - Nederland en België: handmatig bijgehouden fallback-prijzen.
+ * Bronnen:
+ * - 🇳🇱 Nederland: CBS Open Data (wekelijks officieel gemiddelde)
+ * - 🇩🇪 Duitsland: Tankerkoenig API (live per station, grens-gebied)
+ * - 🇧🇪 België: FOD Economie (dagelijks officieel max - 3ct)
  *
- * Cache: 1 uur (Next.js fetch-cache), zodat we Tankerkoenig niet meer
- * dan 1× per uur bevragen.
+ * Cache 1 uur om externe API-rate-limits te respecteren.
  */
 
 export const revalidate = 3600;
@@ -30,8 +34,7 @@ export type FuelPricesResponse = {
   debug?: unknown;
 };
 
-// Handmatig bijgehouden fallback-prijzen (april 2026).
-// Update deze 1× per kwartaal of als je grote afwijkingen ziet.
+// Handmatige fallbacks (april 2026) als een bron niet bereikbaar is
 const NL_FALLBACK = { euro95: 2.15, diesel: 1.79 };
 const DE_FALLBACK = { euro95: 1.73, diesel: 1.6 };
 const BE_FALLBACK = { euro95: 1.81, diesel: 1.68 };
@@ -40,40 +43,45 @@ export async function GET(request: NextRequest) {
   const timestamp = Date.now();
   const debugMode = request.nextUrl.searchParams.get("debug") === "1";
 
-  // Duitsland: live via Tankerkoenig
   const apiKey = process.env.TANKERKOENIG_API_KEY;
-  const de = apiKey ? await haalDuitsePrijzen(apiKey) : null;
 
-  const dePrijs: LandPrijs = {
-    land: "Duitsland",
-    vlag: "🇩🇪",
-    euro95: de?.euro95 ?? DE_FALLBACK.euro95,
-    diesel: de?.diesel ?? DE_FALLBACK.diesel,
-    bron: de && (de.euro95 !== null || de.diesel !== null) ? de.bron : "handmatig",
-    bronUrl: de?.bronUrl,
-  };
+  // Alle drie bronnen parallel
+  const [nl, de, be] = await Promise.all([
+    haalNederlandsePrijzen(),
+    apiKey ? haalDuitsePrijzen(apiKey) : Promise.resolve(null),
+    haalBelgischePrijzen(),
+  ]);
 
   const prijzen: LandPrijs[] = [
     {
       land: "Nederland",
       vlag: "🇳🇱",
-      euro95: NL_FALLBACK.euro95,
-      diesel: NL_FALLBACK.diesel,
-      bron: "handmatig",
+      euro95: nl?.euro95 ?? NL_FALLBACK.euro95,
+      diesel: nl?.diesel ?? NL_FALLBACK.diesel,
+      bron: nl && (nl.euro95 !== null || nl.diesel !== null) ? nl.bron : "handmatig",
+      bronUrl: nl?.bronUrl,
     },
-    dePrijs,
+    {
+      land: "Duitsland",
+      vlag: "🇩🇪",
+      euro95: de?.euro95 ?? DE_FALLBACK.euro95,
+      diesel: de?.diesel ?? DE_FALLBACK.diesel,
+      bron: de && (de.euro95 !== null || de.diesel !== null) ? de.bron : "handmatig",
+      bronUrl: de?.bronUrl,
+    },
     {
       land: "België",
       vlag: "🇧🇪",
-      euro95: BE_FALLBACK.euro95,
-      diesel: BE_FALLBACK.diesel,
-      bron: "handmatig",
+      euro95: be?.euro95 ?? BE_FALLBACK.euro95,
+      diesel: be?.diesel ?? BE_FALLBACK.diesel,
+      bron: be && (be.euro95 !== null || be.diesel !== null) ? be.bron : "handmatig",
+      bronUrl: be?.bronUrl,
     },
   ];
 
-  // Status: 'live' als DE live is en we DE hebben, anders 'fallback'
+  const aantalLive = prijzen.filter((p) => p.bron !== "handmatig").length;
   const combi: FuelPricesResponse["bron"] =
-    dePrijs.bron === "Tankerkoenig" ? "live" : "fallback";
+    aantalLive === 3 ? "live" : aantalLive > 0 ? "cache" : "fallback";
 
   const response: FuelPricesResponse = {
     prijzen,
@@ -84,9 +92,9 @@ export async function GET(request: NextRequest) {
   if (debugMode) {
     response.debug = {
       tankerkoenigKeyAanwezig: !!apiKey,
+      nl: nl?.debug ?? "haalNederlandsePrijzen returned null",
       de: de?.debug ?? (apiKey ? "haalDuitsePrijzen returned null" : "geen API key"),
-      nl: "geen live bron, handmatige prijzen",
-      be: "geen live bron, handmatige prijzen",
+      be: be?.debug ?? "haalBelgischePrijzen returned null",
     };
   }
 
