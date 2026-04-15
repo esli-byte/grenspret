@@ -309,13 +309,14 @@ export type LocatieMetAfstand = GrensLocatie & {
 };
 
 /**
- * Zoek de dichtstbijzijnde locaties van een bepaald type per land.
- * Returns top N per land, gesorteerd op afstand.
+ * Zoek de dichtstbijzijnde locaties van een bepaald type.
+ * Returns top N over alle landen, puur gesorteerd op afstand —
+ * dichtstbijzijnde bovenaan, ongeacht of het Duitsland of België is.
  */
 export function zoekDichtstbijzijnde(
   origin: Coordinaat,
   type: "tankstation" | "supermarkt",
-  aantalPerLand: number = 3
+  aantal: number = 5
 ): LocatieMetAfstand[] {
   const locaties = GRENSLOCATIES.filter((l) => l.type === type);
 
@@ -326,17 +327,9 @@ export function zoekDichtstbijzijnde(
     return { ...l, afstandKm, rijtijdMin };
   });
 
-  // Top N per land
-  const result: LocatieMetAfstand[] = [];
-  for (const land of ["Duitsland", "België"] as const) {
-    const vanLand = metAfstand
-      .filter((l) => l.land === land)
-      .sort((a, b) => a.afstandKm - b.afstandKm)
-      .slice(0, aantalPerLand);
-    result.push(...vanLand);
-  }
-
-  return result;
+  return metAfstand
+    .sort((a, b) => a.afstandKm - b.afstandKm)
+    .slice(0, aantal);
 }
 
 /** Postcode prefix naar coordinaat */

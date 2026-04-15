@@ -46,9 +46,9 @@ export function LocatieKaartjes({
     if (cleaned.length < 4) return null;
     const origin = postcodeNaarCoordinaat(postcode);
     if (!origin) return null;
-    // Gesorteerd op afstand (oplopend): dichtstbijzijnde bovenaan,
-    // ongeacht welk land
-    return zoekDichtstbijzijnde(origin, type, 3);
+    // Top 5 dichtstbijzijnde, puur gesorteerd op afstand.
+    // Dichtstbijzijnde bovenaan, ongeacht of het Duitsland of België is.
+    return zoekDichtstbijzijnde(origin, type, 5);
   }, [postcode, type]);
 
   if (!locaties || locaties.length === 0) return null;
