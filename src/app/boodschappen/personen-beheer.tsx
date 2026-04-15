@@ -31,11 +31,11 @@ export function PersonenBeheer({
 }: Props) {
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
   const [nieuweNaam, setNieuweNaam] = useState("");
+  const [uitlegOpen, setUitlegOpen] = useState(false);
 
   function handleToevoegen() {
     const naam = nieuweNaam.trim();
     if (!naam) return;
-    // Kies een kleur die nog niet gebruikt is
     const gebruikteKleuren = new Set(personen.map((p) => p.kleur));
     const kleur =
       PERSOON_KLEUREN.find((k) => !gebruikteKleuren.has(k)) ??
@@ -49,16 +49,17 @@ export function PersonenBeheer({
     setToevoegenOpen(false);
   }
 
-  // Samengestelde lijst met "mij" als eerste persoon
   const allePersonen: { id: string; naam: string; kleur: string; verwijderbaar: boolean }[] = [
     { id: MIJ_ID, naam: mijnNaam, kleur: MIJ_KLEUR, verwijderbaar: false },
     ...personen.map((p) => ({ ...p, verwijderbaar: true })),
   ];
 
+  const heeftAndersen = personen.length > 0;
+
   return (
-    <div className="card-bold p-4 space-y-3">
+    <div className="card-bold overflow-hidden">
       {/* Header met toggle */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 p-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <svg className="h-5 w-5 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -67,9 +68,18 @@ export function PersonenBeheer({
             <h3 className="text-sm font-extrabold text-navy dark:text-white">
               Samen boodschappen
             </h3>
+            {groepsmodus && (
+              <button
+                onClick={() => setUitlegOpen((v) => !v)}
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[11px] font-black text-gray-500 transition-all hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                title="Hoe werkt het?"
+              >
+                ?
+              </button>
+            )}
           </div>
           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-            Splitten over meerdere mensen, verrekenen na afloop
+            Splitten over meerdere mensen, samen afrekenen
           </p>
         </div>
         <button
@@ -88,106 +98,154 @@ export function PersonenBeheer({
         </button>
       </div>
 
-      {/* Persoon chips + toevoegen */}
+      {/* Groepsmodus content */}
       {groepsmodus && (
-        <>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {allePersonen.map((p) => {
-              const isActief = p.id === actievePersoon;
-              return (
-                <div key={p.id} className="relative">
-                  <button
-                    onClick={() => onActiveerPersoon(p.id)}
-                    className={`flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 text-xs font-extrabold transition-all active:scale-95 ${
-                      isActief
-                        ? "text-white shadow-lg scale-105"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
-                    }`}
-                    style={isActief ? { backgroundColor: p.kleur } : undefined}
-                  >
-                    <span
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black text-white"
-                      style={{ backgroundColor: p.kleur }}
-                    >
-                      {p.naam[0]?.toUpperCase() ?? "?"}
-                    </span>
-                    <span>{p.id === MIJ_ID ? "Ik" : p.naam}</span>
-                  </button>
-                  {p.verwijderbaar && (
-                    <button
-                      onClick={() => {
-                        if (confirm(`Persoon "${p.naam}" verwijderen?`)) onVerwijder(p.id);
-                      }}
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-gray-400 text-white opacity-60 hover:bg-red-500 hover:opacity-100 transition-all"
-                      title="Verwijder persoon"
-                    >
-                      <svg className="h-2 w-2" fill="none" viewBox="0 0 24 24" strokeWidth={3.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            {!toevoegenOpen ? (
-              <button
-                onClick={() => setToevoegenOpen(true)}
-                className="flex items-center gap-1.5 rounded-full border-2 border-dashed border-accent/40 px-3 py-1.5 text-xs font-extrabold text-accent hover:border-accent hover:bg-accent/5 active:scale-95"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        <div className="border-t border-gray-100 p-4 space-y-3 dark:border-white/10">
+          {/* Zo werkt het — automatisch zichtbaar bij geen personen, anders alleen bij uitleg toggle */}
+          {(!heeftAndersen || uitlegOpen) && (
+            <div className="rounded-2xl bg-gradient-to-br from-accent/8 to-accent/3 p-3.5 border border-accent/15 animate-fade-in">
+              <div className="mb-2.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-accent">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
                 </svg>
-                Persoon
-              </button>
-            ) : (
-              <div className="flex items-center gap-1.5 rounded-full border-2 border-accent bg-accent/5 pl-3 pr-1 py-0.5">
-                <input
-                  type="text"
-                  value={nieuweNaam}
-                  onChange={(e) => setNieuweNaam(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleToevoegen();
-                    if (e.key === "Escape") {
+                Zo werkt het
+              </div>
+              <ol className="space-y-1.5 text-xs text-gray-700 dark:text-gray-300">
+                <li className="flex gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-black text-accent">1</span>
+                  <span><strong>Voeg personen toe</strong> (bijv. Kevin, buurvrouw)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-black text-accent">2</span>
+                  <span><strong>Tik op hun naam</strong> om te shoppen voor die persoon</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-black text-accent">3</span>
+                  <span><strong>Vink producten aan</strong> — ze komen op diens lijst</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-black text-accent">4</span>
+                  <span><strong>Onderaan</strong> zie je wie wat betaalt + kopieer een Tikkie-bericht</span>
+                </li>
+              </ol>
+              {uitlegOpen && heeftAndersen && (
+                <button
+                  onClick={() => setUitlegOpen(false)}
+                  className="mt-2.5 text-[11px] font-extrabold text-accent/70 hover:text-accent"
+                >
+                  Uitleg verbergen
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Persoon chips */}
+          <div>
+            <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Wie doet er mee?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {allePersonen.map((p) => {
+                const isActief = p.id === actievePersoon;
+                return (
+                  <div key={p.id} className="relative">
+                    <button
+                      onClick={() => onActiveerPersoon(p.id)}
+                      className={`flex items-center gap-2 rounded-full pl-1 pr-3.5 py-1 text-xs font-extrabold transition-all active:scale-95 ${
+                        isActief
+                          ? "text-white shadow-lg scale-[1.02] ring-2 ring-offset-2 ring-offset-white dark:ring-offset-navy"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
+                      }`}
+                      style={
+                        isActief
+                          ? { backgroundColor: p.kleur, "--tw-ring-color": p.kleur } as React.CSSProperties
+                          : undefined
+                      }
+                    >
+                      <span
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black text-white"
+                        style={{
+                          backgroundColor: isActief ? "rgba(255,255,255,0.25)" : p.kleur,
+                        }}
+                      >
+                        {p.naam[0]?.toUpperCase() ?? "?"}
+                      </span>
+                      <span>{p.id === MIJ_ID ? "Ik" : p.naam}</span>
+                      {isActief && (
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
+                      )}
+                    </button>
+                    {p.verwijderbaar && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`"${p.naam}" verwijderen?`)) onVerwijder(p.id);
+                        }}
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-gray-400 text-white opacity-50 hover:bg-red-500 hover:opacity-100 transition-all"
+                        title="Verwijder persoon"
+                      >
+                        <svg className="h-2 w-2" fill="none" viewBox="0 0 24 24" strokeWidth={3.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {!toevoegenOpen ? (
+                <button
+                  onClick={() => setToevoegenOpen(true)}
+                  className="flex items-center gap-1.5 rounded-full border-2 border-dashed border-accent/40 px-3 py-1 text-xs font-extrabold text-accent hover:border-accent hover:bg-accent/5 active:scale-95"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Persoon
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-full border-2 border-accent bg-accent/5 pl-3 pr-1 py-0.5">
+                  <input
+                    type="text"
+                    value={nieuweNaam}
+                    onChange={(e) => setNieuweNaam(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleToevoegen();
+                      if (e.key === "Escape") {
+                        setToevoegenOpen(false);
+                        setNieuweNaam("");
+                      }
+                    }}
+                    placeholder="Naam..."
+                    maxLength={20}
+                    autoFocus
+                    className="w-24 bg-transparent text-xs font-bold text-navy placeholder:font-normal placeholder:text-gray-400 focus:outline-none dark:text-white"
+                  />
+                  <button
+                    onClick={handleToevoegen}
+                    disabled={!nieuweNaam.trim()}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white transition-all hover:bg-accent/90 active:scale-90 disabled:opacity-50"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
                       setToevoegenOpen(false);
                       setNieuweNaam("");
-                    }
-                  }}
-                  placeholder="Naam..."
-                  maxLength={20}
-                  autoFocus
-                  className="w-24 bg-transparent text-xs font-bold text-navy placeholder:font-normal placeholder:text-gray-400 focus:outline-none dark:text-white"
-                />
-                <button
-                  onClick={handleToevoegen}
-                  disabled={!nieuweNaam.trim()}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white transition-all hover:bg-accent/90 active:scale-90 disabled:opacity-50"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => {
-                    setToevoegenOpen(false);
-                    setNieuweNaam("");
-                  }}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-300 text-white transition-all hover:bg-gray-400 active:scale-90"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-300 text-white transition-all hover:bg-gray-400 active:scale-90"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            <span className="font-bold">Actief:</span>{" "}
-            producten die je toevoegt komen op de lijst van{" "}
-            <span className="font-extrabold" style={{ color: allePersonen.find(p => p.id === actievePersoon)?.kleur }}>
-              {allePersonen.find((p) => p.id === actievePersoon)?.naam ?? "iemand"}
-            </span>
-          </p>
-        </>
+        </div>
       )}
     </div>
   );

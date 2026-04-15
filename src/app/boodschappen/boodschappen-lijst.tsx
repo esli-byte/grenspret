@@ -39,6 +39,7 @@ import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import { EigenProductModal } from "./eigen-product-modal";
 import { PersonenBeheer } from "./personen-beheer";
 import { VerdelingDashboard } from "./verdeling-dashboard";
+import { ActieveShopperBanner } from "./actieve-shopper-banner";
 
 // Union type for products in the list (regular or user-added)
 type ProductOfEigen = Product | EigenProduct;
@@ -518,6 +519,15 @@ export function BoodschappenLijst() {
           </button>
         )}
       </div>
+
+      {/* Actieve shopper banner (alleen in groepsmodus) */}
+      {groepsmodus && (
+        <ActieveShopperBanner
+          actievePersoon={actievePersoon}
+          personen={personen}
+          mijnNaam={mijnNaam}
+        />
+      )}
 
       {/* Product tegels grid */}
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
