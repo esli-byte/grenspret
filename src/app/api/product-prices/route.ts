@@ -179,7 +179,9 @@ async function zoekAHPrijs(query: string): Promise<number | null> {
   if (!token) return null;
 
   try {
-    const url = `https://api.ah.nl/mobile-services/product/search/v2?query=${encodeURIComponent(query)}&size=5&sortOn=RELEVANCE`;
+    // Sortering op prijs ascending — pak de goedkoopste (= meestal de
+    // standaard verpakking, niet een multipack of XL-formaat)
+    const url = `https://api.ah.nl/mobile-services/product/search/v2?query=${encodeURIComponent(query)}&size=10&sortOn=PRICELOWHIGH`;
     const res = await fetch(url, {
       headers: {
         ...BROWSER_HEADERS,
@@ -211,18 +213,25 @@ async function zoekAHPrijs(query: string): Promise<number | null> {
       ) ||
       [];
 
+    // Verzamel alle geldige prijzen
+    const prijzen: number[] = [];
     for (const product of products) {
       const prijs =
         product?.priceBeforeBonus ??
         product?.currentPrice ??
         product?.price?.now ??
         null;
-      if (typeof prijs === "number" && prijs > 0) {
-        return Math.round(prijs * 100) / 100;
+      if (typeof prijs === "number" && prijs > 0.3 && prijs < 50) {
+        prijzen.push(prijs);
       }
     }
 
-    return null;
+    if (prijzen.length === 0) return null;
+
+    // Pak de mediaan om uitschieters (mini-formaten of multipacks) te vermijden
+    prijzen.sort((a, b) => a - b);
+    const mediaan = prijzen[Math.floor(prijzen.length / 2)];
+    return Math.round(mediaan * 100) / 100;
   } catch (err) {
     scrapeFouten.ah = {
       fase: "search",
@@ -232,100 +241,88 @@ async function zoekAHPrijs(query: string): Promise<number | null> {
   }
 }
 
-// ===== Lidl DE — search API met realistische browser headers =====
-async function zoekLidlDEPrijs(query: string): Promise<number | null> {
-  try {
-    const url = `https://www.lidl.de/p/api/gridboxes/DE/de/?searchKey=${encodeURIComponent(query)}&fetchsize=5`;
-    const res = await fetch(url, {
-      headers: {
-        ...BROWSER_HEADERS,
-        Referer: "https://www.lidl.de/",
-        Origin: "https://www.lidl.de",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+// ===== Lidl — Algol search API =====
+// De "/p/api/gridboxes" was verkeerd. Lidl gebruikt nu een Algolia-achtige
+// search via /p/api/discover/{country}/{lang}/search?q=...
+async function zoekLidlPrijs(
+  baseUrl: string,
+  country: string,
+  lang: string,
+  query: string,
+  scraperKey: "lidlDe" | "lidlBe",
+): Promise<number | null> {
+  const candidatePaths = [
+    `/p/api/discover/${country}/${lang}/search?q=${encodeURIComponent(query)}&hitsPerPage=5`,
+    `/q/api/search/v2/${lang}_${country}/products?searchKey=${encodeURIComponent(query)}&offset=0&limit=5`,
+    `/p/api/v1/${country}/${lang}/products?query=${encodeURIComponent(query)}&limit=5`,
+  ];
 
-    if (!res.ok) {
-      scrapeFouten.lidlDe = {
-        fase: "search",
-        status: res.status,
-        bericht: `HTTP ${res.status}`,
-      };
-      return null;
-    }
+  let laatsteFout = "";
+  for (const path of candidatePaths) {
+    try {
+      const url = baseUrl + path;
+      const res = await fetch(url, {
+        headers: {
+          ...BROWSER_HEADERS,
+          Referer: `${baseUrl}/`,
+          Origin: baseUrl,
+        },
+        signal: AbortSignal.timeout(8000),
+      });
 
-    const data = await res.json();
-    const items: Array<{
-      price?: { price?: number };
-      pricing?: { currentRetailPrice?: number };
-    }> = data?.items || data?.gridboxes || data?.results || [];
-
-    for (const item of items) {
-      const prijs =
-        item?.price?.price ??
-        item?.pricing?.currentRetailPrice ??
-        null;
-      if (typeof prijs === "number" && prijs > 0 && prijs < 100) {
-        return Math.round(prijs * 100) / 100;
+      if (!res.ok) {
+        laatsteFout = `${path} → HTTP ${res.status}`;
+        continue;
       }
-    }
 
-    return null;
-  } catch (err) {
-    scrapeFouten.lidlDe = {
-      fase: "search",
-      bericht: err instanceof Error ? err.message : String(err),
-    };
-    return null;
+      const data = await res.json();
+      const items: Array<{
+        price?: { price?: number; currentRetailPrice?: number };
+        pricing?: { currentRetailPrice?: number };
+      }> =
+        data?.hits ||
+        data?.items ||
+        data?.products ||
+        data?.gridboxes ||
+        data?.results ||
+        [];
+
+      const prijzen: number[] = [];
+      for (const item of items) {
+        const prijs =
+          item?.price?.price ??
+          item?.price?.currentRetailPrice ??
+          item?.pricing?.currentRetailPrice ??
+          null;
+        if (typeof prijs === "number" && prijs > 0.3 && prijs < 50) {
+          prijzen.push(prijs);
+        }
+      }
+
+      if (prijzen.length > 0) {
+        prijzen.sort((a, b) => a - b);
+        return Math.round(prijzen[Math.floor(prijzen.length / 2)] * 100) / 100;
+      }
+
+      laatsteFout = `${path} → 200 maar geen prijzen`;
+    } catch (err) {
+      laatsteFout = `${path} → ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
+
+  scrapeFouten[scraperKey] = {
+    fase: "search",
+    bericht: `Alle endpoints faalden. Laatste: ${laatsteFout}`,
+  };
+  return null;
 }
 
-// ===== Lidl BE =====
+async function zoekLidlDEPrijs(query: string): Promise<number | null> {
+  return zoekLidlPrijs("https://www.lidl.de", "DE", "de", query, "lidlDe");
+}
+
 async function zoekLidlBEPrijs(query: string): Promise<number | null> {
-  try {
-    const url = `https://www.lidl.be/p/api/gridboxes/BE/nl/?searchKey=${encodeURIComponent(query)}&fetchsize=5`;
-    const res = await fetch(url, {
-      headers: {
-        ...BROWSER_HEADERS,
-        Referer: "https://www.lidl.be/",
-        Origin: "https://www.lidl.be",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (!res.ok) {
-      scrapeFouten.lidlBe = {
-        fase: "search",
-        status: res.status,
-        bericht: `HTTP ${res.status}`,
-      };
-      return null;
-    }
-
-    const data = await res.json();
-    const items: Array<{
-      price?: { price?: number };
-      pricing?: { currentRetailPrice?: number };
-    }> = data?.items || data?.gridboxes || data?.results || [];
-
-    for (const item of items) {
-      const prijs =
-        item?.price?.price ??
-        item?.pricing?.currentRetailPrice ??
-        null;
-      if (typeof prijs === "number" && prijs > 0 && prijs < 100) {
-        return Math.round(prijs * 100) / 100;
-      }
-    }
-
-    return null;
-  } catch (err) {
-    scrapeFouten.lidlBe = {
-      fase: "search",
-      bericht: err instanceof Error ? err.message : String(err),
-    };
-    return null;
-  }
+  return zoekLidlPrijs("https://www.lidl.be", "BE", "nl", query, "lidlBe");
 }
 
 // ===== Fallback prijzen (handmatig onderzocht, april 2026) =====
