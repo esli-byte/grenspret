@@ -106,93 +106,224 @@ type CacheData = {
   versie: number;
 };
 
-// ===== Albert Heijn API (NL) =====
+// Realistische browser headers voor Cloudflare bypass bij Lidl
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+  Accept: "application/json,text/plain,*/*",
+  "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-origin",
+};
+
+// Foutmeldingen per scraper (voor debug)
+type ScrapeFout = { fase: string; status?: number; bericht: string };
+const scrapeFouten: { ah?: ScrapeFout; lidlDe?: ScrapeFout; lidlBe?: ScrapeFout } = {};
+
+// ===== Albert Heijn — anonymous OAuth + product search =====
+
+let ahTokenCache: { token: string; expires: number } | null = null;
+
+async function getAHToken(): Promise<string | null> {
+  if (ahTokenCache && ahTokenCache.expires > Date.now()) {
+    return ahTokenCache.token;
+  }
+  try {
+    const res = await fetch(
+      "https://api.ah.nl/mobile-auth/v1/auth/token/anonymous",
+      {
+        method: "POST",
+        headers: {
+          ...BROWSER_HEADERS,
+          "x-application": "AHWEBSHOP",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ clientId: "appie" }),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) {
+      scrapeFouten.ah = {
+        fase: "token",
+        status: res.status,
+        bericht: `Token ophalen mislukt: HTTP ${res.status}`,
+      };
+      return null;
+    }
+    const data = await res.json();
+    const token = data?.access_token;
+    if (typeof token !== "string") {
+      scrapeFouten.ah = {
+        fase: "token",
+        status: res.status,
+        bericht: "Geen access_token in response",
+      };
+      return null;
+    }
+    // Cache 30 minuten (token is meestal langer geldig)
+    ahTokenCache = { token, expires: Date.now() + 30 * 60 * 1000 };
+    return token;
+  } catch (err) {
+    scrapeFouten.ah = {
+      fase: "token",
+      bericht: err instanceof Error ? err.message : String(err),
+    };
+    return null;
+  }
+}
+
 async function zoekAHPrijs(query: string): Promise<number | null> {
+  const token = await getAHToken();
+  if (!token) return null;
+
   try {
     const url = `https://api.ah.nl/mobile-services/product/search/v2?query=${encodeURIComponent(query)}&size=5&sortOn=RELEVANCE`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Grenspret/1.0",
+        ...BROWSER_HEADERS,
+        Authorization: `Bearer ${token}`,
         "x-application": "AHWEBSHOP",
       },
       signal: AbortSignal.timeout(8000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      scrapeFouten.ah = {
+        fase: "search",
+        status: res.status,
+        bericht: `Search mislukt: HTTP ${res.status}`,
+      };
+      return null;
+    }
 
     const data = await res.json();
-    const products = data?.products || data?.cards?.flatMap((c: { products?: { priceBeforeBonus?: number; currentPrice?: number }[] }) => c.products || []) || [];
+    const products: Array<{
+      priceBeforeBonus?: number;
+      currentPrice?: number;
+      price?: { now?: number };
+    }> =
+      data?.products ||
+      data?.cards?.flatMap(
+        (c: { products?: Array<{ priceBeforeBonus?: number; currentPrice?: number }> }) =>
+          c.products || [],
+      ) ||
+      [];
 
-    // Zoek het eerste product met een geldige prijs
     for (const product of products) {
-      const prijs = product?.priceBeforeBonus ?? product?.currentPrice ?? product?.price?.now ?? null;
+      const prijs =
+        product?.priceBeforeBonus ??
+        product?.currentPrice ??
+        product?.price?.now ??
+        null;
       if (typeof prijs === "number" && prijs > 0) {
         return Math.round(prijs * 100) / 100;
       }
     }
 
     return null;
-  } catch {
+  } catch (err) {
+    scrapeFouten.ah = {
+      fase: "search",
+      bericht: err instanceof Error ? err.message : String(err),
+    };
     return null;
   }
 }
 
-// ===== Lidl DE API =====
+// ===== Lidl DE — search API met realistische browser headers =====
 async function zoekLidlDEPrijs(query: string): Promise<number | null> {
   try {
-    const url = `https://www.lidl.de/q/api/search/v1/de_DE/search?query=${encodeURIComponent(query)}&offset=0&limit=5`;
+    const url = `https://www.lidl.de/p/api/gridboxes/DE/de/?searchKey=${encodeURIComponent(query)}&fetchsize=5`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
-        "Accept": "application/json",
+        ...BROWSER_HEADERS,
+        Referer: "https://www.lidl.de/",
+        Origin: "https://www.lidl.de",
       },
       signal: AbortSignal.timeout(8000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      scrapeFouten.lidlDe = {
+        fase: "search",
+        status: res.status,
+        bericht: `HTTP ${res.status}`,
+      };
+      return null;
+    }
 
     const data = await res.json();
-    const items = data?.items || data?.results || [];
+    const items: Array<{
+      price?: { price?: number };
+      pricing?: { currentRetailPrice?: number };
+    }> = data?.items || data?.gridboxes || data?.results || [];
 
     for (const item of items) {
-      const prijs = item?.price?.price ?? item?.pricing?.currentRetailPrice ?? item?.price ?? null;
-      if (typeof prijs === "number" && prijs > 0) {
+      const prijs =
+        item?.price?.price ??
+        item?.pricing?.currentRetailPrice ??
+        null;
+      if (typeof prijs === "number" && prijs > 0 && prijs < 100) {
         return Math.round(prijs * 100) / 100;
       }
     }
 
     return null;
-  } catch {
+  } catch (err) {
+    scrapeFouten.lidlDe = {
+      fase: "search",
+      bericht: err instanceof Error ? err.message : String(err),
+    };
     return null;
   }
 }
 
-// ===== Lidl BE API =====
+// ===== Lidl BE =====
 async function zoekLidlBEPrijs(query: string): Promise<number | null> {
   try {
-    const url = `https://www.lidl.be/q/api/search/v1/nl_BE/search?query=${encodeURIComponent(query)}&offset=0&limit=5`;
+    const url = `https://www.lidl.be/p/api/gridboxes/BE/nl/?searchKey=${encodeURIComponent(query)}&fetchsize=5`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
-        "Accept": "application/json",
+        ...BROWSER_HEADERS,
+        Referer: "https://www.lidl.be/",
+        Origin: "https://www.lidl.be",
       },
       signal: AbortSignal.timeout(8000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      scrapeFouten.lidlBe = {
+        fase: "search",
+        status: res.status,
+        bericht: `HTTP ${res.status}`,
+      };
+      return null;
+    }
 
     const data = await res.json();
-    const items = data?.items || data?.results || [];
+    const items: Array<{
+      price?: { price?: number };
+      pricing?: { currentRetailPrice?: number };
+    }> = data?.items || data?.gridboxes || data?.results || [];
 
     for (const item of items) {
-      const prijs = item?.price?.price ?? item?.pricing?.currentRetailPrice ?? item?.price ?? null;
-      if (typeof prijs === "number" && prijs > 0) {
+      const prijs =
+        item?.price?.price ??
+        item?.pricing?.currentRetailPrice ??
+        null;
+      if (typeof prijs === "number" && prijs > 0 && prijs < 100) {
         return Math.round(prijs * 100) / 100;
       }
     }
 
     return null;
-  } catch {
+  } catch (err) {
+    scrapeFouten.lidlBe = {
+      fase: "search",
+      bericht: err instanceof Error ? err.message : String(err),
+    };
     return null;
   }
 }
@@ -311,25 +442,37 @@ async function haalAllePrijzenOp(): Promise<CacheData> {
 }
 
 // ===== API Route =====
-export async function GET() {
+export async function GET(request: Request) {
+  const debugMode = new URL(request.url).searchParams.get("debug") === "1";
   try {
-    // Check cache eerst
-    const cached = leesCache();
-    if (cached) {
-      return NextResponse.json({
-        ...cached,
-        bron: bepaalBron(cached.prijzen),
-      });
+    // Check cache eerst (alleen als geen debug)
+    if (!debugMode) {
+      const cached = leesCache();
+      if (cached) {
+        return NextResponse.json({
+          ...cached,
+          bron: bepaalBron(cached.prijzen),
+        });
+      }
     }
 
     // Vers ophalen
     const data = await haalAllePrijzenOp();
-    schrijfCache(data);
+    if (!debugMode) schrijfCache(data);
 
-    return NextResponse.json({
+    const response: Record<string, unknown> = {
       ...data,
       bron: bepaalBron(data.prijzen),
-    });
+    };
+    if (debugMode) {
+      response.debug = {
+        scrapeFouten,
+        eersteResultaat: data.prijzen[0],
+        ahTokenVerkregen: !!ahTokenCache,
+      };
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     // Noodoplossing: geef fallback prijzen terug
     const fallbackData: CacheData = {
