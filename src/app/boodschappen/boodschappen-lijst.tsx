@@ -17,8 +17,28 @@ import {
   slaaEigenProductenOp,
   leesEigenProducten,
 } from "@/lib/opslag";
+import {
+  MIJ_ID,
+  MIJ_KLEUR,
+  leesPersonen,
+  slaaPersonenOp,
+  leesToewijzingen,
+  slaaToewijzingenOp,
+  leesGroepsmodus,
+  slaaGroepsmodusOp,
+  leesActievePersoon,
+  slaaActievePersoonOp,
+  voegToeVoorPersoon,
+  haalWegVoorPersoon,
+  verwijderProductToewijzing,
+  type Persoon,
+  type Toewijzingen,
+} from "@/lib/personen";
+import { useAuth } from "@/lib/AuthContext";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import { EigenProductModal } from "./eigen-product-modal";
+import { PersonenBeheer } from "./personen-beheer";
+import { VerdelingDashboard } from "./verdeling-dashboard";
 
 // Union type for products in the list (regular or user-added)
 type ProductOfEigen = Product | EigenProduct;
@@ -49,6 +69,9 @@ type PrijsStatus = {
 const CATEGORIEEN = Object.keys(CATEGORIE_LABELS) as Categorie[];
 
 export function BoodschappenLijst() {
+  const { user } = useAuth();
+  const mijnNaam = user?.displayName?.split(" ")[0] || "Ik";
+
   const [geselecteerd, setGeselecteerd] = useState<Map<string, number>>(new Map());
   const [postcode, setPostcode] = useState("");
   const [zoekterm, setZoekterm] = useState("");
@@ -56,6 +79,12 @@ export function BoodschappenLijst() {
   const [merkFilter, setMerkFilter] = useState<MerkType | "alle">("alle");
   const [eigenProducten, setEigenProducten] = useState<EigenProduct[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Samen boodschappen state
+  const [groepsmodus, setGroepsmodus] = useState(false);
+  const [personen, setPersonen] = useState<Persoon[]>([]);
+  const [toewijzingen, setToewijzingen] = useState<Toewijzingen>({});
+  const [actievePersoon, setActievePersoon] = useState<string>(MIJ_ID);
 
   // Live prijzen state
   const [livePrijzen, setLivePrijzen] = useState<LivePrijzen>({});
@@ -115,7 +144,7 @@ export function BoodschappenLijst() {
     laadPrijzen();
   }, [laadPrijzen]);
 
-  // Laad opgeslagen selectie, eigen producten en postcode bij mount
+  // Laad opgeslagen state bij mount
   useEffect(() => {
     const selectie = leesBoodschappenSelectie();
     if (selectie?.producten) {
@@ -131,12 +160,24 @@ export function BoodschappenLijst() {
     if (opgeslagenEigen.length > 0) {
       setEigenProducten(opgeslagenEigen as EigenProduct[]);
     }
+
+    // Samen-boodschappen state
+    setGroepsmodus(leesGroepsmodus());
+    setPersonen(leesPersonen());
+    setToewijzingen(leesToewijzingen());
+    setActievePersoon(leesActievePersoon());
   }, []);
 
   // Sla eigen producten op bij wijziging
   useEffect(() => {
     slaaEigenProductenOp(eigenProducten);
   }, [eigenProducten]);
+
+  // Sla samen-boodschappen state op
+  useEffect(() => { slaaGroepsmodusOp(groepsmodus); }, [groepsmodus]);
+  useEffect(() => { slaaPersonenOp(personen); }, [personen]);
+  useEffect(() => { slaaToewijzingenOp(toewijzingen); }, [toewijzingen]);
+  useEffect(() => { slaaActievePersoonOp(actievePersoon); }, [actievePersoon]);
 
   function voegEigenProductToe(product: EigenProduct) {
     setEigenProducten((prev) => [...prev, product]);
@@ -157,15 +198,6 @@ export function BoodschappenLijst() {
     });
   }
 
-  // Sla selectie op bij wijziging
-  useEffect(() => {
-    if (geselecteerd.size > 0) {
-      const obj: Record<string, number> = {};
-      geselecteerd.forEach((qty, id) => { obj[id] = qty; });
-      slaaBoodschappenSelectieOp(obj);
-    }
-  }, [geselecteerd]);
-
   // Producten met (eventueel) live prijzen + eigen producten erbij
   const productenMetPrijzen = useMemo<ProductOfEigen[]>(() => {
     const regulier = PRODUCTEN.map((p) => {
@@ -182,26 +214,82 @@ export function BoodschappenLijst() {
   }, [livePrijzen, eigenProducten]);
 
   function incrementQuantity(id: string) {
-    setGeselecteerd((prev) => {
-      const next = new Map(prev);
-      const current = next.get(id) ?? 0;
-      next.set(id, current + 1);
-      return next;
-    });
+    if (groepsmodus) {
+      // Toewijzing aan actieve persoon
+      setToewijzingen((prev) => voegToeVoorPersoon(prev, id, actievePersoon));
+    } else {
+      // Oude logica: directe quantity
+      setGeselecteerd((prev) => {
+        const next = new Map(prev);
+        const current = next.get(id) ?? 0;
+        next.set(id, current + 1);
+        return next;
+      });
+    }
   }
 
   function decrementQuantity(id: string) {
-    setGeselecteerd((prev) => {
-      const next = new Map(prev);
-      const current = next.get(id) ?? 0;
-      if (current > 1) {
-        next.set(id, current - 1);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
+    if (groepsmodus) {
+      setToewijzingen((prev) => haalWegVoorPersoon(prev, id, actievePersoon));
+    } else {
+      setGeselecteerd((prev) => {
+        const next = new Map(prev);
+        const current = next.get(id) ?? 0;
+        if (current > 1) {
+          next.set(id, current - 1);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+    }
   }
+
+  // Als groepsmodus wisselt, synchroniseer de twee modellen
+  useEffect(() => {
+    if (groepsmodus) {
+      // Zet `geselecteerd` om naar toewijzingen voor "mij" (als er nog niks is)
+      if (Object.keys(toewijzingen).length === 0 && geselecteerd.size > 0) {
+        const nieuw: Toewijzingen = {};
+        geselecteerd.forEach((qty, id) => {
+          nieuw[id] = { [MIJ_ID]: qty };
+        });
+        setToewijzingen(nieuw);
+      }
+    } else {
+      // Terug naar simpele modus: neem totale quantities mee
+      if (Object.keys(toewijzingen).length > 0) {
+        const map = new Map<string, number>();
+        for (const [id, perPersoon] of Object.entries(toewijzingen)) {
+          const totaal = Object.values(perPersoon).reduce((s, n) => s + n, 0);
+          if (totaal > 0) map.set(id, totaal);
+        }
+        setGeselecteerd(map);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groepsmodus]);
+
+  // In groepsmodus: `geselecteerd` is afgeleide van `toewijzingen` (voor totalen)
+  const effectieveSelectie = useMemo(() => {
+    if (!groepsmodus) return geselecteerd;
+    const map = new Map<string, number>();
+    for (const [id, perPersoon] of Object.entries(toewijzingen)) {
+      const totaal = Object.values(perPersoon).reduce((s, n) => s + n, 0);
+      if (totaal > 0) map.set(id, totaal);
+    }
+    return map;
+  }, [groepsmodus, geselecteerd, toewijzingen]);
+
+  // Sla selectie op bij wijziging
+  useEffect(() => {
+    if (effectieveSelectie.size > 0) {
+      const obj: Record<string, number> = {};
+      effectieveSelectie.forEach((qty, id) => { obj[id] = qty; });
+      slaaBoodschappenSelectieOp(obj);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectieveSelectie.size]);
 
   const gefilterd = useMemo(() => {
     return productenMetPrijzen.filter((p) => {
@@ -221,7 +309,7 @@ export function BoodschappenLijst() {
     let be = 0;
 
     for (const product of productenMetPrijzen) {
-      const quantity = geselecteerd.get(product.id) ?? 0;
+      const quantity = effectieveSelectie.get(product.id) ?? 0;
       if (quantity > 0) {
         nl += product.prijsNL * quantity;
         de += product.prijsDE * quantity;
@@ -236,28 +324,28 @@ export function BoodschappenLijst() {
       besparingDE: nl - de,
       besparingBE: nl - be,
     };
-  }, [productenMetPrijzen, geselecteerd]);
+  }, [productenMetPrijzen, effectieveSelectie]);
 
   // Bereken A-merk vs huismerk besparing
   const merkVergelijking = useMemo(() => {
-    const selected = productenMetPrijzen.filter((p) => geselecteerd.has(p.id));
+    const selected = productenMetPrijzen.filter((p) => effectieveSelectie.has(p.id));
     const aMerken = selected.filter((p) => p.merkType === "a-merk");
     const huisMerken = selected.filter((p) => p.merkType === "huismerk");
     return {
-      aantalAMerk: aMerken.reduce((s, p) => s + (geselecteerd.get(p.id) ?? 0), 0),
-      aantalHuismerk: huisMerken.reduce((s, p) => s + (geselecteerd.get(p.id) ?? 0), 0),
-      totaalAMerkNL: aMerken.reduce((s, p) => s + p.prijsNL * (geselecteerd.get(p.id) ?? 0), 0),
-      totaalHuismerkNL: huisMerken.reduce((s, p) => s + p.prijsNL * (geselecteerd.get(p.id) ?? 0), 0),
+      aantalAMerk: aMerken.reduce((s, p) => s + (effectieveSelectie.get(p.id) ?? 0), 0),
+      aantalHuismerk: huisMerken.reduce((s, p) => s + (effectieveSelectie.get(p.id) ?? 0), 0),
+      totaalAMerkNL: aMerken.reduce((s, p) => s + p.prijsNL * (effectieveSelectie.get(p.id) ?? 0), 0),
+      totaalHuismerkNL: huisMerken.reduce((s, p) => s + p.prijsNL * (effectieveSelectie.get(p.id) ?? 0), 0),
     };
-  }, [productenMetPrijzen, geselecteerd]);
+  }, [productenMetPrijzen, effectieveSelectie]);
 
   const totalAantalItems = useMemo(() => {
     let total = 0;
-    for (const quantity of geselecteerd.values()) {
+    for (const quantity of effectieveSelectie.values()) {
       total += quantity;
     }
     return total;
-  }, [geselecteerd]);
+  }, [effectieveSelectie]);
 
   useEffect(() => {
     if (totalAantalItems === 0) return;
@@ -274,8 +362,41 @@ export function BoodschappenLijst() {
   const aantalAMerk = productenMetPrijzen.filter((p) => p.merkType === "a-merk").length;
   const aantalHuismerk = productenMetPrijzen.filter((p) => p.merkType === "huismerk").length;
 
+  function voegPersoonToe(p: Persoon) {
+    setPersonen((prev) => [...prev, p]);
+    setActievePersoon(p.id);
+  }
+
+  function verwijderPersoon(id: string) {
+    setPersonen((prev) => prev.filter((p) => p.id !== id));
+    // Haal alle toewijzingen van deze persoon weg
+    setToewijzingen((prev) => {
+      const nieuw: Toewijzingen = {};
+      for (const [productId, perPersoon] of Object.entries(prev)) {
+        const { [id]: _verwijderd, ...rest } = perPersoon;
+        void _verwijderd;
+        if (Object.keys(rest).length > 0) nieuw[productId] = rest;
+      }
+      return nieuw;
+    });
+    // Als actieve persoon verwijderd, val terug op "mij"
+    if (actievePersoon === id) setActievePersoon(MIJ_ID);
+  }
+
   return (
     <div className="space-y-5">
+      {/* Samen boodschappen beheer */}
+      <PersonenBeheer
+        personen={personen}
+        mijnNaam={mijnNaam}
+        actievePersoon={actievePersoon}
+        groepsmodus={groepsmodus}
+        onActiveerPersoon={setActievePersoon}
+        onToevoegen={voegPersoonToe}
+        onVerwijder={verwijderPersoon}
+        onGroepsmodusToggle={setGroepsmodus}
+      />
+
       {/* Prijsstatus indicator */}
       <PrijsStatusBalk status={prijsStatus} onHerlaad={laadPrijzen} />
 
@@ -387,7 +508,10 @@ export function BoodschappenLijst() {
         </p>
         {totalAantalItems > 0 && (
           <button
-            onClick={() => setGeselecteerd(new Map())}
+            onClick={() => {
+              setGeselecteerd(new Map());
+              setToewijzingen({});
+            }}
             className="rounded-full bg-red-50 px-3.5 py-1.5 text-xs font-extrabold text-red-500 transition-all hover:bg-red-100 active:scale-95 dark:bg-red-900/20 dark:text-red-400"
           >
             Wis selectie
@@ -403,13 +527,23 @@ export function BoodschappenLijst() {
           <ProductTegel
             key={product.id}
             product={product}
-            quantity={geselecteerd.get(product.id) ?? 0}
+            quantity={effectieveSelectie.get(product.id) ?? 0}
             onIncrement={() => incrementQuantity(product.id)}
             onDecrement={() => decrementQuantity(product.id)}
             onVerwijder={
               "isEigen" in product && product.isEigen
-                ? () => verwijderEigenProduct(product.id)
+                ? () => {
+                    verwijderEigenProduct(product.id);
+                    if (groepsmodus) {
+                      setToewijzingen((prev) => verwijderProductToewijzing(prev, product.id));
+                    }
+                  }
                 : undefined
+            }
+            personenDotsInfo={
+              groepsmodus
+                ? buildPersoonDots(toewijzingen[product.id] ?? {}, personen, mijnNaam)
+                : null
             }
           />
         ))}
@@ -479,10 +613,40 @@ export function BoodschappenLijst() {
       {/* Compacte sticky besparing balk */}
       <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} />
 
+      {/* Verdeling dashboard (alleen als groepsmodus actief en items) */}
+      {groepsmodus && totalAantalItems > 0 && (
+        <VerdelingDashboard
+          personen={personen}
+          mijnNaam={mijnNaam}
+          toewijzingen={toewijzingen}
+          producten={productenMetPrijzen}
+        />
+      )}
+
       {/* Volledig overzicht onderaan */}
       <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
     </div>
   );
+}
+
+// Maak een lijstje met gekleurde dots per persoon op basis van hun aantal
+type PersoonDot = { id: string; kleur: string; aantal: number; naam: string };
+
+function buildPersoonDots(
+  perPersoon: Record<string, number>,
+  personen: Persoon[],
+  mijnNaam: string,
+): PersoonDot[] {
+  const naamMap = new Map(personen.map((p) => [p.id, p.naam]));
+  const kleurMap = new Map(personen.map((p) => [p.id, p.kleur]));
+  return Object.entries(perPersoon)
+    .filter(([, n]) => n > 0)
+    .map(([id, aantal]) => ({
+      id,
+      aantal,
+      kleur: id === MIJ_ID ? MIJ_KLEUR : kleurMap.get(id) ?? "#94a3b8",
+      naam: id === MIJ_ID ? mijnNaam : naamMap.get(id) ?? "?",
+    }));
 }
 
 function EigenProductTegel({ onKlik }: { onKlik: () => void }) {
@@ -512,12 +676,14 @@ function ProductTegel({
   onIncrement,
   onDecrement,
   onVerwijder,
+  personenDotsInfo,
 }: {
   product: ProductOfEigen;
   quantity: number;
   onIncrement: () => void;
   onDecrement: () => void;
   onVerwijder?: () => void;
+  personenDotsInfo: PersoonDot[] | null;
 }) {
   const besparing = Math.max(product.prijsNL - product.prijsDE, product.prijsNL - product.prijsBE);
   const { kleur } = CATEGORIE_LABELS[product.categorie];
@@ -626,6 +792,24 @@ function ProductTegel({
       {besparing > 0.05 && (
         <div className="mt-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-extrabold text-accent">
           -{euro(besparing)}
+        </div>
+      )}
+
+      {/* Persoon dots (alleen in groepsmodus) */}
+      {personenDotsInfo && personenDotsInfo.length > 0 && (
+        <div className="mt-1 flex items-center justify-center gap-0.5" title={personenDotsInfo.map(d => `${d.naam}: ${d.aantal}`).join(" • ")}>
+          {personenDotsInfo.slice(0, 4).map((d) => (
+            <div
+              key={d.id}
+              className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[8px] font-black text-white"
+              style={{ backgroundColor: d.kleur }}
+            >
+              {d.aantal}
+            </div>
+          ))}
+          {personenDotsInfo.length > 4 && (
+            <span className="text-[8px] font-bold text-gray-400">+{personenDotsInfo.length - 4}</span>
+          )}
         </div>
       )}
     </button>
