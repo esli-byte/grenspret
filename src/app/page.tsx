@@ -107,10 +107,33 @@ export default function Home() {
         </div>
 
         {/* Trust indicators — bolder, card-style */}
-        <div className="mt-8 grid grid-cols-3 gap-3 text-center">
-          <TrustBadge label="RDW" sublabel="Officiële voertuigdata" />
-          <TrustBadge label="3" sublabel="Landen vergeleken" />
-          <TrustBadge label="150+" sublabel="Producten" />
+        <div className="mt-8">
+          <p className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+            Betrouwbare bronnen
+          </p>
+          <div className="grid grid-cols-2 gap-2.5 text-center sm:grid-cols-4">
+            <TrustBadge
+              icon="🚗"
+              label="RDW"
+              sublabel="Voertuigdata"
+            />
+            <TrustBadge
+              icon="🗺️"
+              label="Google Maps"
+              sublabel="Route & navigatie"
+            />
+            <TrustBadge
+              icon="🛒"
+              label="Marktprijzen"
+              sublabel="NL, DE & BE"
+            />
+            <TrustBadge
+              icon="📦"
+              label="150+"
+              sublabel="Producten"
+              highlight
+            />
+          </div>
         </div>
       </main>
     </div>
@@ -144,7 +167,7 @@ function FeatureCard({
         <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-2xl shadow-lg transition-transform duration-200 group-hover:scale-110 group-active:scale-95`}>
           {icon}
         </div>
-        <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-black text-navy shadow-md ring-2 ring-white dark:bg-navy dark:text-white dark:ring-navy">
+        <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-black text-white shadow-md ring-[1.5px] ring-white/90 dark:ring-navy">
           {stap}
         </div>
       </div>
@@ -170,11 +193,26 @@ function FeatureCard({
   );
 }
 
-function TrustBadge({ label, sublabel }: { label: string; sublabel: string }) {
+function TrustBadge({
+  icon,
+  label,
+  sublabel,
+  highlight,
+}: {
+  icon: string;
+  label: string;
+  sublabel: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="card-bold p-4">
-      <div className="text-2xl font-extrabold text-accent">{label}</div>
-      <div className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">{sublabel}</div>
+    <div className={`card-bold flex flex-col items-center justify-center p-3.5 ${highlight ? "border-accent/30 bg-accent/5" : ""}`}>
+      <span className="text-xl leading-none">{icon}</span>
+      <div className={`mt-1.5 text-sm font-extrabold ${highlight ? "text-accent" : "text-navy dark:text-white"}`}>
+        {label}
+      </div>
+      <div className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+        {sublabel}
+      </div>
     </div>
   );
 }
