@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MIJ_ID, MIJ_KLEUR, type Persoon, type Toewijzingen } from "@/lib/personen";
 import type { Product, EigenProduct } from "./producten";
+import { leesTanken, type TankenOpslag } from "@/lib/opslag";
 
 type ProductOfEigen = Product | EigenProduct;
 
@@ -17,26 +18,57 @@ function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
 }
 
-type BesteldItem = {
-  aantal: number;
-  naam: string;
-};
+type BesteldItem = { aantal: number; naam: string };
 
 type VerdelingPerPersoon = {
   id: string;
   naam: string;
   kleur: string;
   isMij: boolean;
-  totaalNL: number;
-  totaalBuitenland: number;
-  totaalDE: number;
-  totaalBE: number;
+  totaalBoodschappenNL: number;
+  totaalBoodschappenBuitenland: number;
+  reiskostenAandeel: number;
+  totaalTeBetalen: number;
   aantalProducten: number;
   bestelling: BesteldItem[];
 };
 
+const DEEL_REISKOSTEN_KEY = "grensbesparing_deel_reiskosten";
+
+function leesDeelReiskosten(): boolean {
+  try {
+    return localStorage.getItem(DEEL_REISKOSTEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function slaaDeelReiskostenOp(aan: boolean) {
+  try {
+    localStorage.setItem(DEEL_REISKOSTEN_KEY, aan ? "1" : "0");
+  } catch {
+    /* no-op */
+  }
+}
+
 export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten }: Props) {
   const [gekopieerd, setGekopieerd] = useState<string | null>(null);
+  const [tanken, setTanken] = useState<TankenOpslag | null>(null);
+  const [deelReiskosten, setDeelReiskosten] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage pas na hydration
+    setTanken(leesTanken());
+    setDeelReiskosten(leesDeelReiskosten());
+  }, []);
+
+  // Beste route = laagste reiskosten
+  const reiskostenTotaal = useMemo(() => {
+    if (!tanken?.route || tanken.route.length === 0) return 0;
+    return Math.min(...tanken.route.map((r) => r.reiskosten ?? 0));
+  }, [tanken]);
+
+  const heeftReiskosten = reiskostenTotaal > 0;
 
   const verdeling = useMemo<VerdelingPerPersoon[]>(() => {
     const alle: { id: string; naam: string; kleur: string; isMij: boolean }[] = [
@@ -45,6 +77,14 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
     ];
 
     const productMap = new Map(producten.map((p) => [p.id, p]));
+
+    // Alleen mensen die ECHT producten hebben tellen mee voor reiskosten verdeling
+    const personenMetProducten = alle.filter((pers) =>
+      Object.values(toewijzingen).some((perPersoon) => (perPersoon[pers.id] ?? 0) > 0),
+    );
+    const aantalDelers = Math.max(personenMetProducten.length, 1);
+    const reiskostenAandeel =
+      deelReiskosten && heeftReiskosten ? reiskostenTotaal / aantalDelers : 0;
 
     return alle.map((pers) => {
       let totaalNL = 0;
@@ -62,60 +102,83 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
         totaalDE += product.prijsDE * qty;
         totaalBE += product.prijsBE * qty;
         aantalProducten += qty;
-        // Productnaam voor in de bestelling: merk + naam, of alleen naam
-        const label = product.merk && product.merk !== product.naam
-          ? `${product.merk} ${product.naam.toLowerCase()}`
-          : product.naam;
+        const label =
+          product.merk && product.merk !== product.naam
+            ? `${product.merk} ${product.naam.toLowerCase()}`
+            : product.naam;
         bestelling.push({ aantal: qty, naam: label });
       }
 
+      const totaalBuitenland = Math.min(totaalDE, totaalBE);
+      const aandeel = aantalProducten > 0 ? reiskostenAandeel : 0;
+
       return {
         ...pers,
-        totaalNL,
-        totaalDE,
-        totaalBE,
-        totaalBuitenland: Math.min(totaalDE, totaalBE),
+        totaalBoodschappenNL: totaalNL,
+        totaalBoodschappenBuitenland: totaalBuitenland,
+        reiskostenAandeel: aandeel,
+        totaalTeBetalen: totaalBuitenland + aandeel,
         aantalProducten,
         bestelling,
       };
     });
-  }, [personen, mijnNaam, toewijzingen, producten]);
+  }, [
+    personen,
+    mijnNaam,
+    toewijzingen,
+    producten,
+    deelReiskosten,
+    reiskostenTotaal,
+    heeftReiskosten,
+  ]);
 
   const totalen = useMemo(() => {
     return verdeling.reduce(
       (acc, v) => ({
-        nl: acc.nl + v.totaalNL,
-        buitenland: acc.buitenland + v.totaalBuitenland,
+        nl: acc.nl + v.totaalBoodschappenNL,
+        buitenland: acc.buitenland + v.totaalBoodschappenBuitenland,
         aantal: acc.aantal + v.aantalProducten,
       }),
       { nl: 0, buitenland: 0, aantal: 0 },
     );
   }, [verdeling]);
 
-  async function kopieerBericht(v: VerdelingPerPersoon) {
-    const bedrag = v.totaalBuitenland.toFixed(2).replace(".", ",");
+  function handleToggle(aan: boolean) {
+    setDeelReiskosten(aan);
+    slaaDeelReiskostenOp(aan);
+  }
 
-    // Bouw bestelling op als natuurlijke zin (korte lijst) of als opsomming (lange lijst)
+  async function kopieerBericht(v: VerdelingPerPersoon) {
+    const totaal = v.totaalTeBetalen.toFixed(2).replace(".", ",");
     const items = v.bestelling.map((b) => `${b.aantal}x ${b.naam}`);
     let bestellingTekst: string;
     if (items.length === 0) {
       bestellingTekst = "";
     } else if (items.length <= 4) {
-      // Korte lijst met komma's en "en"
       const alleBehalveLaatste = items.slice(0, -1).join(", ");
       const laatste = items[items.length - 1];
-      bestellingTekst = items.length === 1
-        ? items[0]
-        : `${alleBehalveLaatste} en ${laatste}`;
+      bestellingTekst =
+        items.length === 1
+          ? items[0]
+          : `${alleBehalveLaatste} en ${laatste}`;
     } else {
-      // Lange lijst op aparte regels, geen streepjes, gewoon per regel
       bestellingTekst = items.join("\n");
     }
+
+    const reiskostenRegel =
+      deelReiskosten && v.reiskostenAandeel > 0
+        ? `\n\nWaarvan boodschappen €${v.totaalBoodschappenBuitenland
+            .toFixed(2)
+            .replace(".", ",")} en gedeelde reiskosten €${v.reiskostenAandeel
+            .toFixed(2)
+            .replace(".", ",")}`
+        : "";
 
     const bericht =
       `Hoi ${v.naam} 👋\n\n` +
       `Vandaag voor jou meegenomen over de grens:\n${bestellingTekst}\n\n` +
-      `Jouw deel komt op €${bedrag}. Je kunt het overmaken wanneer het je uitkomt.\n\n` +
+      `Jouw deel komt op €${totaal}.${reiskostenRegel}\n\n` +
+      `Je kunt het overmaken wanneer het je uitkomt.\n\n` +
       `Berekend met Grenspret, grenspret.nl`;
 
     try {
@@ -161,7 +224,6 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
           const isGekopieerd = gekopieerd === v.id;
           return (
             <div key={v.id} className="flex items-center gap-3 p-4">
-              {/* Avatar */}
               <div
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black text-white shadow-md"
                 style={{ backgroundColor: v.kleur }}
@@ -169,7 +231,6 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
                 {v.naam[0]?.toUpperCase()}
               </div>
 
-              {/* Info */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate text-sm font-extrabold text-navy dark:text-white">
@@ -179,20 +240,22 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
                     className="shrink-0 text-lg font-extrabold tabular-nums"
                     style={{ color: v.kleur }}
                   >
-                    {euro(v.totaalBuitenland)}
+                    {euro(v.totaalTeBetalen)}
                   </span>
                 </div>
                 <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[11px]">
                   <span className="text-gray-500 dark:text-gray-400">
                     {v.aantalProducten} product{v.aantalProducten !== 1 ? "en" : ""}
+                    {deelReiskosten && v.reiskostenAandeel > 0 && (
+                      <> · +{euro(v.reiskostenAandeel)} reis</>
+                    )}
                   </span>
                   <span className="text-gray-400 line-through tabular-nums">
-                    {euro(v.totaalNL)}
+                    {euro(v.totaalBoodschappenNL)}
                   </span>
                 </div>
               </div>
 
-              {/* Kopieer Tikkie-knop (alleen voor anderen) */}
               {!v.isMij && (
                 <button
                   onClick={() => kopieerBericht(v)}
@@ -224,6 +287,37 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
           );
         })}
       </div>
+
+      {/* Reiskosten verdelen toggle (alleen als er reiskosten zijn én anderen meedoen) */}
+      {heeftReiskosten && hebbenAndersen && (
+        <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-navy dark:text-white">
+              <svg className="h-4 w-4 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-3.75M16.5 12.75h3.75m0 0V8.25m0 0H17.25" />
+              </svg>
+              <span>Reiskosten meeverdelen</span>
+            </div>
+            <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              Verdeel {euro(reiskostenTotaal)} eerlijk over alle {actievePersonen.length} personen
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={deelReiskosten}
+            onClick={() => handleToggle(!deelReiskosten)}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full px-0.5 transition-colors ${
+              deelReiskosten ? "bg-accent" : "bg-gray-300 dark:bg-gray-600"
+            }`}
+          >
+            <span
+              className={`inline-block h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                deelReiskosten ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Totaal groepsbesparing */}
       {totalen.aantal > 0 && (

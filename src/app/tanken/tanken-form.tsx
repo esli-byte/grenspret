@@ -166,8 +166,13 @@ export function TankenForm() {
       besparingBE: berekening.besparingen.find((b) => b.land === "België")?.besparing ?? 0,
       route: routes.map((route) => {
         const besparing = berekening.besparingen.find((b) => b.land === route.land);
-        const brandstofRetour = (route.afstandRetour / 100) * berekening.verbruik;
-        const reiskosten = brandstofRetour * nlPrijs;
+        // Slimste route: heenreis op laatste NL benzine, daar volgetankt,
+        // terugreis op goedkopere DE/BE benzine
+        const buitenlandPrijs = besparing?.prijsPerLiter ?? nlPrijs;
+        const brandstofEnkel = (route.afstandEnkel / 100) * berekening.verbruik;
+        const reiskostenHeen = brandstofEnkel * nlPrijs;
+        const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
+        const reiskosten = reiskostenHeen + reiskostenTerug;
         const netto = (besparing?.besparing ?? 0) - reiskosten;
         return {
           land: route.land,
@@ -766,8 +771,12 @@ function NettoBesparingOverzicht({
     .map((route) => {
       const besparing = berekening.besparingen.find((b) => b.land === route.land);
       if (!besparing) return null;
-      const brandstofRetour = (route.afstandRetour / 100) * berekening.verbruik;
-      const reiskosten = isLeaseAuto ? 0 : brandstofRetour * nlPrijs;
+      // Slimste route: heen op laatste NL benzine, terug volgetankt in DE/BE
+      const brandstofEnkel = (route.afstandEnkel / 100) * berekening.verbruik;
+      const brandstofRetour = brandstofEnkel * 2;
+      const reiskostenHeen = brandstofEnkel * nlPrijs;
+      const reiskostenTerug = brandstofEnkel * besparing.prijsPerLiter;
+      const reiskosten = isLeaseAuto ? 0 : reiskostenHeen + reiskostenTerug;
       const extraBesparing = extraLiters * (nlPrijs - besparing.prijsPerLiter);
       const netto = besparing.besparing + extraBesparing - reiskosten;
       return { ...route, besparing, brandstofRetour, reiskosten, extraBesparing, netto };
