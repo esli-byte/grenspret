@@ -81,6 +81,25 @@ type PrijsData = {
   bronBE: "lidl-api" | "fallback";
 };
 
+/**
+ * Bepaal eerlijke status: 'live' alleen als ALLE prijzen via een API kwamen,
+ * 'cache' bij gemengd, 'fallback' als alles handmatig.
+ */
+function bepaalBron(prijzen: PrijsData[]): "live" | "cache" | "fallback" {
+  if (prijzen.length === 0) return "fallback";
+  let live = 0;
+  let totaal = 0;
+  for (const p of prijzen) {
+    totaal += 3;
+    if (p.bronNL !== "fallback") live++;
+    if (p.bronDE !== "fallback") live++;
+    if (p.bronBE !== "fallback") live++;
+  }
+  if (live === totaal) return "live";
+  if (live === 0) return "fallback";
+  return "cache";
+}
+
 type CacheData = {
   prijzen: PrijsData[];
   bijgewerkt: string;
@@ -299,7 +318,7 @@ export async function GET() {
     if (cached) {
       return NextResponse.json({
         ...cached,
-        bron: "cache",
+        bron: bepaalBron(cached.prijzen),
       });
     }
 
@@ -309,7 +328,7 @@ export async function GET() {
 
     return NextResponse.json({
       ...data,
-      bron: "live",
+      bron: bepaalBron(data.prijzen),
     });
   } catch (error) {
     // Noodoplossing: geef fallback prijzen terug
