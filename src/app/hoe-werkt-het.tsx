@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export function HoeWerktHet() {
@@ -68,6 +69,19 @@ export function HoeWerktHet() {
                 Je voortgang wordt automatisch opgeslagen. Je kunt altijd terug
                 naar een eerdere stap via het menu onderaan het scherm.
               </p>
+            </div>
+
+            {/* Subtiele link naar volledige FAQ */}
+            <div className="mt-4 text-center">
+              <Link
+                href="/veelgestelde-vragen"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400 transition-colors hover:text-accent"
+              >
+                Meest gestelde vragen
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>
