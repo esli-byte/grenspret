@@ -1,20 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   haalNederlandsePrijzen,
   haalBelgischePrijzen,
   haalDuitsePrijzen,
 } from "./sources";
 
-/**
- * Brandstofprijzen API.
- *
- * Combineert live data uit meerdere bronnen en valt gracieus terug
- * op handmatig bijgehouden fallback-prijzen als een bron niet
- * bereikbaar is.
- */
-
-// Tijdelijk force-dynamic voor debuggen van de scrapers.
-// Later terug naar `export const revalidate = 3600;`
 export const dynamic = "force-dynamic";
 
 type LandPrijs = {
@@ -29,70 +19,77 @@ type LandPrijs = {
 export type FuelPricesResponse = {
   prijzen: LandPrijs[];
   bijgewerkt: string;
-  // Deprecated veld, voor backwards compatibility met bestaande UI
   bron: "live" | "cache" | "fallback";
+  debug?: unknown;
 };
 
-// Fallback-prijzen als laatste redmiddel.
-// Laatste handmatige update: april 2026.
 const NL_FALLBACK = { euro95: 2.15, diesel: 1.79 };
 const DE_FALLBACK = { euro95: 1.73, diesel: 1.60 };
 const BE_FALLBACK = { euro95: 1.81, diesel: 1.68 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const timestamp = Date.now();
-  const nietNull = <T>(x: T | null | undefined, fallback: T): T => (x != null ? x : fallback);
+  const debugMode = request.nextUrl.searchParams.get("debug") === "1";
 
-  // Alle drie bronnen parallel ophalen
   const apiKey = process.env.TANKERKOENIG_API_KEY;
-  console.log(`[fuel] Scrape gestart. TANKERKOENIG_API_KEY aanwezig: ${!!apiKey}`);
   const [nl, be, de] = await Promise.all([
     haalNederlandsePrijzen(),
     haalBelgischePrijzen(),
     apiKey ? haalDuitsePrijzen(apiKey) : Promise.resolve(null),
   ]);
-  console.log(`[fuel] Resultaten: NL=${nl ? JSON.stringify(nl) : "null"}, BE=${be ? JSON.stringify(be) : "null"}, DE=${de ? JSON.stringify(de) : "null"}`);
 
-  // Per land: combineer live data met fallback waar nodig
   const prijzen: LandPrijs[] = [
     {
       land: "Nederland",
       vlag: "🇳🇱",
-      euro95: nietNull(nl?.euro95, NL_FALLBACK.euro95),
-      diesel: nietNull(nl?.diesel, NL_FALLBACK.diesel),
-      bron: nl?.bron ?? "handmatig",
+      euro95: nl?.euro95 ?? NL_FALLBACK.euro95,
+      diesel: nl?.diesel ?? NL_FALLBACK.diesel,
+      bron: nl && (nl.euro95 !== null || nl.diesel !== null) ? nl.bron : "handmatig",
       bronUrl: nl?.bronUrl,
     },
     {
       land: "Duitsland",
       vlag: "🇩🇪",
-      euro95: nietNull(de?.euro95, DE_FALLBACK.euro95),
-      diesel: nietNull(de?.diesel, DE_FALLBACK.diesel),
-      bron: de?.bron ?? "handmatig",
+      euro95: de?.euro95 ?? DE_FALLBACK.euro95,
+      diesel: de?.diesel ?? DE_FALLBACK.diesel,
+      bron: de && (de.euro95 !== null || de.diesel !== null) ? de.bron : "handmatig",
       bronUrl: de?.bronUrl,
     },
     {
       land: "België",
       vlag: "🇧🇪",
-      euro95: nietNull(be?.euro95, BE_FALLBACK.euro95),
-      diesel: nietNull(be?.diesel, BE_FALLBACK.diesel),
-      bron: be?.bron ?? "handmatig",
+      euro95: be?.euro95 ?? BE_FALLBACK.euro95,
+      diesel: be?.diesel ?? BE_FALLBACK.diesel,
+      bron: be && (be.euro95 !== null || be.diesel !== null) ? be.bron : "handmatig",
       bronUrl: be?.bronUrl,
     },
   ];
 
-  // Deprecated 'bron' veld voor de bestaande UI
-  const alleLive = nl && be && (de || !apiKey);
-  const geenLive = !nl && !be && !de;
+  const alleLive =
+    nl && nl.euro95 !== null &&
+    be && be.euro95 !== null &&
+    (de ? de.euro95 !== null : !apiKey);
+  const geenLive = prijzen.every((p) => p.bron === "handmatig");
   const combi: FuelPricesResponse["bron"] = alleLive
     ? "live"
     : geenLive
       ? "fallback"
       : "cache";
 
-  return NextResponse.json({
+  const response: FuelPricesResponse = {
     prijzen,
     bijgewerkt: new Date(timestamp).toISOString(),
     bron: combi,
-  } satisfies FuelPricesResponse);
+  };
+
+  if (debugMode) {
+    response.debug = {
+      tankerkoenigKeyAanwezig: !!apiKey,
+      nl: nl?.debug ?? "haalNederlandsePrijzen returned null",
+      be: be?.debug ?? "haalBelgischePrijzen returned null",
+      de: de?.debug ?? (apiKey ? "haalDuitsePrijzen returned null" : "geen API key"),
+    };
+  }
+
+  return NextResponse.json(response);
 }
