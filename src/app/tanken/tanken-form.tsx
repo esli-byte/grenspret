@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { zoekVoertuig, type VoertuigData } from "./actions";
 import {
@@ -436,13 +437,8 @@ export function TankenForm() {
             )}
           </button>
         </div>
-        <p className="mt-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-          <span className="inline-flex items-center gap-1">
-            <svg className="h-3 w-3 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-            </svg>
-            Tip: tik op <strong className="font-extrabold text-accent">Huidige locatie</strong> om je postcode automatisch in te vullen
-          </span>
+        <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+          Of tik op <span className="font-bold text-accent">Huidige locatie</span> om het automatisch in te vullen
         </p>
       </div>
 
@@ -517,6 +513,31 @@ export function TankenForm() {
       {/* Alleen bruto besparing als er geen postcode is */}
       {berekening && !routes && (
         <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} isLeaseAuto={isLeaseAuto} />
+      )}
+
+      {/* Volgende stap knop */}
+      {berekening && (
+        <Link
+          href="/boodschappen"
+          className="group flex items-center justify-between rounded-3xl bg-gradient-to-br from-accent to-emerald-500 p-5 shadow-lg shadow-accent/25 transition-all hover:shadow-xl hover:shadow-accent/30 active:scale-[0.98]"
+        >
+          <div className="text-left">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70">
+              Stap 2 van 3
+            </p>
+            <p className="mt-0.5 text-base font-extrabold text-white">
+              Boodschappen toevoegen
+            </p>
+            <p className="mt-0.5 text-xs text-white/80">
+              Bereken ook je besparing op boodschappen
+            </p>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-1">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </div>
+        </Link>
       )}
     </div>
   );

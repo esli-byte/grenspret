@@ -17,6 +17,11 @@ function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
 }
 
+type BesteldItem = {
+  aantal: number;
+  naam: string;
+};
+
 type VerdelingPerPersoon = {
   id: string;
   naam: string;
@@ -27,6 +32,7 @@ type VerdelingPerPersoon = {
   totaalDE: number;
   totaalBE: number;
   aantalProducten: number;
+  bestelling: BesteldItem[];
 };
 
 export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten }: Props) {
@@ -45,6 +51,7 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
       let totaalDE = 0;
       let totaalBE = 0;
       let aantalProducten = 0;
+      const bestelling: BesteldItem[] = [];
 
       for (const [productId, perPersoon] of Object.entries(toewijzingen)) {
         const qty = perPersoon[pers.id] ?? 0;
@@ -55,6 +62,11 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
         totaalDE += product.prijsDE * qty;
         totaalBE += product.prijsBE * qty;
         aantalProducten += qty;
+        // Productnaam voor in de bestelling: merk + naam, of alleen naam
+        const label = product.merk && product.merk !== product.naam
+          ? `${product.merk} ${product.naam.toLowerCase()}`
+          : product.naam;
+        bestelling.push({ aantal: qty, naam: label });
       }
 
       return {
@@ -64,6 +76,7 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
         totaalBE,
         totaalBuitenland: Math.min(totaalDE, totaalBE),
         aantalProducten,
+        bestelling,
       };
     });
   }, [personen, mijnNaam, toewijzingen, producten]);
@@ -80,13 +93,30 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
   }, [verdeling]);
 
   async function kopieerBericht(v: VerdelingPerPersoon) {
-    const bedrag = v.totaalBuitenland.toFixed(2);
+    const bedrag = v.totaalBuitenland.toFixed(2).replace(".", ",");
+
+    // Bouw bestelling op als natuurlijke zin (korte lijst) of als opsomming (lange lijst)
+    const items = v.bestelling.map((b) => `${b.aantal}x ${b.naam}`);
+    let bestellingTekst: string;
+    if (items.length === 0) {
+      bestellingTekst = "";
+    } else if (items.length <= 4) {
+      // Korte lijst met komma's en "en"
+      const alleBehalveLaatste = items.slice(0, -1).join(", ");
+      const laatste = items[items.length - 1];
+      bestellingTekst = items.length === 1
+        ? items[0]
+        : `${alleBehalveLaatste} en ${laatste}`;
+    } else {
+      // Lange lijst op aparte regels, geen streepjes, gewoon per regel
+      bestellingTekst = items.join("\n");
+    }
+
     const bericht =
-      `Hoi ${v.naam}! 👋\n\n` +
-      `Ik heb vandaag boodschappen over de grens gedaan en ${v.aantalProducten} product${v.aantalProducten !== 1 ? "en" : ""} voor jou meegenomen.\n\n` +
-      `💰 Jouw deel: €${bedrag}\n\n` +
-      `Je mag het overmaken wanneer het jou uitkomt.\n\n` +
-      `— Berekend met Grenspret (grenspret.nl)`;
+      `Hoi ${v.naam} 👋\n\n` +
+      `Vandaag voor jou meegenomen over de grens:\n${bestellingTekst}\n\n` +
+      `Jouw deel komt op €${bedrag}. Je kunt het overmaken wanneer het je uitkomt.\n\n` +
+      `Berekend met Grenspret, grenspret.nl`;
 
     try {
       await navigator.clipboard.writeText(bericht);
