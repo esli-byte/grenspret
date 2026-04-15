@@ -11,12 +11,11 @@ import {
  * Combineert live data uit meerdere bronnen en valt gracieus terug
  * op handmatig bijgehouden fallback-prijzen als een bron niet
  * bereikbaar is.
- *
- * Cache: Next.js fetch-cache (1 uur revalidate) zorgt dat we de
- * externe bronnen max 1× per uur bevragen, ook op Vercel serverless.
  */
 
-export const revalidate = 3600; // seconds
+// Tijdelijk force-dynamic voor debuggen van de scrapers.
+// Later terug naar `export const revalidate = 3600;`
+export const dynamic = "force-dynamic";
 
 type LandPrijs = {
   land: string;
@@ -46,11 +45,13 @@ export async function GET() {
 
   // Alle drie bronnen parallel ophalen
   const apiKey = process.env.TANKERKOENIG_API_KEY;
+  console.log(`[fuel] Scrape gestart. TANKERKOENIG_API_KEY aanwezig: ${!!apiKey}`);
   const [nl, be, de] = await Promise.all([
     haalNederlandsePrijzen(),
     haalBelgischePrijzen(),
     apiKey ? haalDuitsePrijzen(apiKey) : Promise.resolve(null),
   ]);
+  console.log(`[fuel] Resultaten: NL=${nl ? JSON.stringify(nl) : "null"}, BE=${be ? JSON.stringify(be) : "null"}, DE=${de ? JSON.stringify(de) : "null"}`);
 
   // Per land: combineer live data met fallback waar nodig
   const prijzen: LandPrijs[] = [
