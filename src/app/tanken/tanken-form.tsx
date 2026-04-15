@@ -347,8 +347,36 @@ export function TankenForm() {
 
       {/* Error */}
       {error && (
-        <div className="card-bold border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300 animate-slide-in-bottom">
-          {error}
+        <div className="card-bold border-red-200 bg-red-50 p-4 animate-slide-in-bottom dark:border-red-800/50 dark:bg-red-950/30">
+          <div className="flex items-start gap-2.5">
+            <svg className="h-5 w-5 shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            <div className="flex-1 text-sm font-medium text-red-700 dark:text-red-300">
+              <p className="font-extrabold">Er ging iets mis</p>
+              <p className="mt-0.5">{error}</p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {kenteken.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleKentekenZoek}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-xs font-extrabold text-white transition-all hover:bg-red-700 active:scale-95"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                    </svg>
+                    Opnieuw proberen
+                  </button>
+                )}
+                <a
+                  href="/veelgestelde-vragen"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-red-600 underline-offset-2 hover:underline dark:text-red-400"
+                >
+                  Hulp nodig?
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
