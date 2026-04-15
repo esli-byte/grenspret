@@ -46,46 +46,18 @@ export function LocatieKaartjes({
     if (cleaned.length < 4) return null;
     const origin = postcodeNaarCoordinaat(postcode);
     if (!origin) return null;
+    // Gesorteerd op afstand (oplopend): dichtstbijzijnde bovenaan,
+    // ongeacht welk land
     return zoekDichtstbijzijnde(origin, type, 3);
   }, [postcode, type]);
 
-  if (!locaties) return null;
-
-  const deLocaties = locaties.filter((l) => l.land === "Duitsland");
-  const beLocaties = locaties.filter((l) => l.land === "België");
+  if (!locaties || locaties.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <h2 className="text-sm font-bold text-gray-900 dark:text-white">
         {titel}
       </h2>
-
-      {deLocaties.length > 0 && (
-        <LandGroep land="Duitsland" vlag="🇩🇪" locaties={deLocaties} />
-      )}
-
-      {beLocaties.length > 0 && (
-        <LandGroep land="België" vlag="🇧🇪" locaties={beLocaties} />
-      )}
-    </div>
-  );
-}
-
-function LandGroep({
-  land,
-  vlag,
-  locaties,
-}: {
-  land: string;
-  vlag: string;
-  locaties: LocatieMetAfstand[];
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-        <span>{vlag}</span>
-        <span>{land}</span>
-      </div>
       <div className="grid gap-2.5">
         {locaties.map((loc, i) => (
           <LocatieKaart key={loc.id} locatie={loc} rank={i + 1} />
@@ -143,7 +115,7 @@ function LocatieKaart({
 
       {/* Info */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-bold text-gray-900 dark:text-white">
             {locatie.naam}
           </span>
@@ -151,6 +123,9 @@ function LocatieKaart({
             className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ketenKleur}`}
           >
             {locatie.keten}
+          </span>
+          <span className="text-xs" aria-label={locatie.land}>
+            {locatie.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
           </span>
         </div>
         <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">

@@ -162,7 +162,7 @@ export default function ShopPage() {
               <div>
                 <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
                   Het is wettelijk toegestaan om maximaal 10 liter brandstof in een
-                  goedgekeurde jerrycan mee te nemen over de grens. Prijzen zijn indicatief.
+                  goedgekeurde jerrycan mee te nemen over de grens.
                 </p>
               </div>
             </div>

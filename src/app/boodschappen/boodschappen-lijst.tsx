@@ -880,16 +880,9 @@ function PrijsStatusBalk({ status, onHerlaad }: { status: PrijsStatus; onHerlaad
           isLive ? "text-accent" : "text-amber-700 dark:text-amber-300"
         }`}>
           {isLive ? (
-            <>
-              Actuele prijzen
-              {status.aantalLive > 0 && (
-                <span className="ml-1 opacity-60">
-                  ({status.aantalLive} live, {status.aantalFallback} geschat)
-                </span>
-              )}
-            </>
+            <>Actuele prijzen</>
           ) : (
-            "Geschatte prijzen (API niet bereikbaar)"
+            "Referentieprijzen"
           )}
         </span>
       </div>
