@@ -76,6 +76,7 @@ export function TankenForm() {
   const [extraLiters, setExtraLiters] = useState(0);
   const [isLeaseAuto, setIsLeaseAuto] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [geoTip, setGeoTip] = useState<string | null>(null);
   const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
   const [elektrischPercentage, setElektrischPercentage] = useState(50);
   const [geselecteerdStation, setGeselecteerdStation] = useState<LocatieMetAfstand | null>(null);
@@ -262,42 +263,51 @@ export function TankenForm() {
 
   async function handleGeolocate() {
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
+      setGeoTip("Je browser ondersteunt geen locatiebepaling. Vul je postcode handmatig in.");
       return;
     }
 
     setGeoLoading(true);
     setError(null);
+    setGeoTip(null);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // Use Nominatim reverse geocoding (free, no API key needed)
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
           );
           const data = await response.json();
 
-          // Extract postcode from address
           if (data.address && data.address.postcode) {
             const pc = data.address.postcode.toUpperCase();
-            // Format as Dutch postcode (####AB format)
             const formatted = pc.replace(/\s/g, "").slice(0, 7);
             setPostcode(formatted);
+            setGeoTip(null);
           } else {
-            setError("Postcode niet gevonden op deze locatie");
+            setGeoTip("Postcode niet gevonden. Vul je postcode handmatig in hieronder.");
           }
-        } catch (err) {
-          setError("Kon postcode niet bepalen. Probeer het handmatig in te voeren.");
+        } catch {
+          setGeoTip("Kon je locatie niet omzetten naar een postcode. Vul je postcode handmatig in.");
         } finally {
           setGeoLoading(false);
         }
       },
-      (error) => {
-        setError(`Locatie bericht: ${error.message}`);
+      (geoError) => {
         setGeoLoading(false);
-      }
+        if (geoError.code === 1) {
+          // PERMISSION_DENIED
+          setGeoTip("locatie_geweigerd");
+        } else if (geoError.code === 2) {
+          // POSITION_UNAVAILABLE
+          setGeoTip("Locatie kon niet bepaald worden. Vul je postcode handmatig in.");
+        } else {
+          // TIMEOUT or unknown
+          setGeoTip("Locatiebepaling duurde te lang. Vul je postcode handmatig in.");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
   }
 
@@ -669,9 +679,60 @@ export function TankenForm() {
             )}
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
-          Of tik op <span className="font-bold text-accent">Huidige locatie</span> om het automatisch in te vullen
-        </p>
+        {!geoTip && (
+          <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+            Of tik op <span className="font-bold text-accent">Huidige locatie</span> om het automatisch in te vullen
+          </p>
+        )}
+
+        {/* Locatie geweigerd — vriendelijke uitleg */}
+        {geoTip === "locatie_geweigerd" && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 animate-slide-in-bottom dark:border-amber-800/30 dark:bg-amber-950/30">
+            <div className="flex items-start gap-2.5">
+              <span className="text-base">📍</span>
+              <div className="flex-1">
+                <p className="text-xs font-extrabold text-amber-800 dark:text-amber-200">
+                  Locatie staat uit
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-amber-700/80 dark:text-amber-300/80">
+                  Geen probleem! Vul gewoon je postcode hierboven in (bv. 3221AB) en we berekenen alles voor je.
+                </p>
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer text-[11px] font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400">
+                    Toch locatie gebruiken? Zo zet je het aan
+                  </summary>
+                  <div className="mt-2 space-y-1.5 text-[11px] text-amber-700/80 dark:text-amber-300/80">
+                    <p><strong>iPhone:</strong> Instellingen → Privacy en beveiliging → Locatievoorzieningen → Safari (of je browser) → Zet aan</p>
+                    <p><strong>Android:</strong> Instellingen → Locatie → Zet aan. Open daarna de browser opnieuw.</p>
+                    <p><strong>Chrome:</strong> Tik op het slotje naast de URL → Sitemachtigingen → Locatie → Toestaan</p>
+                  </div>
+                </details>
+              </div>
+              <button
+                onClick={() => setGeoTip(null)}
+                className="shrink-0 rounded-full p-1 text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                aria-label="Sluiten"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Andere geo-tips (niet-geweigerd) */}
+        {geoTip && geoTip !== "locatie_geweigerd" && (
+          <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2.5 dark:bg-blue-950/30">
+            <span className="text-xs">💡</span>
+            <p className="flex-1 text-[11px] text-blue-700 dark:text-blue-300">{geoTip}</p>
+            <button onClick={() => setGeoTip(null)} className="shrink-0 text-blue-400 hover:text-blue-600">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Extra liters meenemen — boven tankstations */}
