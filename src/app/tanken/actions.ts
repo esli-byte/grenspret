@@ -8,6 +8,8 @@ export type VoertuigData = {
   eersteKleur: string;
   aantalCilinders: string;
   cilinderinhoud: string;
+  /** Datum eerste toelating in formaat YYYYMMDD */
+  eersteToelating: string;
 };
 
 export type VoertuigResult =
@@ -97,6 +99,7 @@ export async function zoekVoertuig(kenteken: string): Promise<VoertuigResult> {
         eersteKleur: v.eerste_kleur ?? "Onbekend",
         aantalCilinders: v.aantal_cilinders ?? "-",
         cilinderinhoud: v.cilinderinhoud ? `${v.cilinderinhoud} cc` : "-",
+        eersteToelating: v.datum_eerste_toelating ?? "",
       },
     };
   } catch (err: unknown) {

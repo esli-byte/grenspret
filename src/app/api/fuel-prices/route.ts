@@ -13,15 +13,29 @@ import {
  * - 🇩🇪 Duitsland: Tankerkoenig API (live per station, grens-gebied)
  * - 🇧🇪 België: FOD Economie (dagelijks officieel max - 3ct)
  *
+ * Euro 98 (Super Plus):
+ * - CBS publiceert geen aparte Euro 98 prijs
+ * - Tankerkoenig heeft geen apart Super Plus veld
+ * - We berekenen Euro 98 als Euro 95 + landspecifieke opslag
+ *   (gebaseerd op gemiddeld marktprijsverschil)
+ *
  * Cache 1 uur om externe API-rate-limits te respecteren.
  */
 
 export const revalidate = 3600;
 
+// Euro 98 opslag per land (gemiddeld prijsverschil t.o.v. Euro 95)
+const EURO98_OPSLAG = {
+  NL: 0.14, // ~14 cent duurder in Nederland
+  DE: 0.14, // ~14 cent duurder in Duitsland
+  BE: 0.12, // ~12 cent duurder in België
+};
+
 type LandPrijs = {
   land: string;
   vlag: string;
   euro95: number;
+  euro98: number;
   diesel: number;
   bron: string;
   bronUrl?: string;
@@ -52,11 +66,16 @@ export async function GET(request: NextRequest) {
     haalBelgischePrijzen(),
   ]);
 
+  const nlE95 = nl?.euro95 ?? NL_FALLBACK.euro95;
+  const deE95 = de?.euro95 ?? DE_FALLBACK.euro95;
+  const beE95 = be?.euro95 ?? BE_FALLBACK.euro95;
+
   const prijzen: LandPrijs[] = [
     {
       land: "Nederland",
       vlag: "🇳🇱",
-      euro95: nl?.euro95 ?? NL_FALLBACK.euro95,
+      euro95: nlE95,
+      euro98: Math.round((nlE95 + EURO98_OPSLAG.NL) * 1000) / 1000,
       diesel: nl?.diesel ?? NL_FALLBACK.diesel,
       bron: nl && (nl.euro95 !== null || nl.diesel !== null) ? nl.bron : "handmatig",
       bronUrl: nl?.bronUrl,
@@ -64,7 +83,8 @@ export async function GET(request: NextRequest) {
     {
       land: "Duitsland",
       vlag: "🇩🇪",
-      euro95: de?.euro95 ?? DE_FALLBACK.euro95,
+      euro95: deE95,
+      euro98: Math.round((deE95 + EURO98_OPSLAG.DE) * 1000) / 1000,
       diesel: de?.diesel ?? DE_FALLBACK.diesel,
       bron: de && (de.euro95 !== null || de.diesel !== null) ? de.bron : "handmatig",
       bronUrl: de?.bronUrl,
@@ -72,7 +92,8 @@ export async function GET(request: NextRequest) {
     {
       land: "België",
       vlag: "🇧🇪",
-      euro95: be?.euro95 ?? BE_FALLBACK.euro95,
+      euro95: beE95,
+      euro98: Math.round((beE95 + EURO98_OPSLAG.BE) * 1000) / 1000,
       diesel: be?.diesel ?? BE_FALLBACK.diesel,
       bron: be && (be.euro95 !== null || be.diesel !== null) ? be.bron : "handmatig",
       bronUrl: be?.bronUrl,
@@ -92,6 +113,7 @@ export async function GET(request: NextRequest) {
   if (debugMode) {
     response.debug = {
       tankerkoenigKeyAanwezig: !!apiKey,
+      euro98Opslag: EURO98_OPSLAG,
       nl: nl?.debug ?? "haalNederlandsePrijzen returned null",
       de: de?.debug ?? (apiKey ? "haalDuitsePrijzen returned null" : "geen API key"),
       be: be?.debug ?? "haalBelgischePrijzen returned null",

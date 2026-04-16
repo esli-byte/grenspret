@@ -7,6 +7,7 @@ import {
   FALLBACK_PRIJZEN,
   berekenBesparingen,
   mapBrandstofSoort,
+  detecteerEuro98,
   schattingTankgrootte,
   type BrandstofSoort,
   type LandPrijzen,
@@ -76,6 +77,7 @@ export function TankenForm() {
   const [extraLiters, setExtraLiters] = useState(0);
   const [isLeaseAuto, setIsLeaseAuto] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
 
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
@@ -126,23 +128,47 @@ export function TankenForm() {
     return () => { cancelled = true; };
   }, []);
 
+  // Euro 98 detectie op basis van RDW-gegevens
+  const euro98Advies = useMemo(() => {
+    if (!voertuig) return null;
+    const basisSoort = mapBrandstofSoort(voertuig.brandstof);
+    if (!basisSoort || basisSoort !== "euro95") return null;
+    const { aanbevolen, reden } = detecteerEuro98(
+      basisSoort,
+      voertuig.eersteToelating,
+      voertuig.cilinderinhoud,
+      voertuig.merk,
+      voertuig.handelsbenaming,
+    );
+    if (aanbevolen === "euro98" && reden) return reden;
+    return null;
+  }, [voertuig]);
+
   const berekening = useMemo(() => {
     if (!voertuig) return null;
-    const soort = mapBrandstofSoort(voertuig.brandstof);
-    if (!soort) return null;
+    const basisSoort = mapBrandstofSoort(voertuig.brandstof);
+    if (!basisSoort) return null;
+    // Gebruik override als de gebruiker Euro 98 kiest
+    const soort = brandstofOverride ?? basisSoort;
     const ccMatch = voertuig.cilinderinhoud.match(/(\d+)/);
     const cc = ccMatch ? parseInt(ccMatch[1], 10) : 1600;
     const tankGrootte = schattingTankgrootte(cc);
-    const verbruik = schattingVerbruik(cc, soort);
+    const verbruik = schattingVerbruik(cc, soort === "euro98" ? "euro95" : soort);
+    const soortLabels: Record<BrandstofSoort, string> = {
+      euro95: "Euro 95",
+      euro98: "Euro 98",
+      diesel: "Diesel",
+    };
     return {
       soort,
-      soortLabel: soort === "diesel" ? "Diesel" : "Euro 95",
+      basisSoort,
+      soortLabel: soortLabels[soort],
       tankGrootte,
       verbruik,
       cc,
       besparingen: berekenBesparingen(soort, tankGrootte, prijzen),
     };
-  }, [voertuig, prijzen]);
+  }, [voertuig, prijzen, brandstofOverride]);
 
   const routes = useMemo(() => {
     if (!postcode || postcode.replace(/\s/g, "").length < 4) return null;
@@ -407,6 +433,16 @@ export function TankenForm() {
               <dd className="font-bold text-navy dark:text-white">{voertuig.aantalCilinders}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Inhoud</dt>
               <dd className="font-bold text-navy dark:text-white">{voertuig.cilinderinhoud}</dd>
+              {voertuig.eersteToelating && (
+                <>
+                  <dt className="text-gray-500 dark:text-gray-400">Bouwjaar</dt>
+                  <dd className="font-bold text-navy dark:text-white">
+                    {voertuig.eersteToelating.length >= 4
+                      ? voertuig.eersteToelating.slice(0, 4)
+                      : voertuig.eersteToelating}
+                  </dd>
+                </>
+              )}
             </dl>
             {berekening && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -421,6 +457,49 @@ export function TankenForm() {
                 </span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Euro 98 advies */}
+      {voertuig && euro98Advies && berekening && (
+        <div className="card-bold overflow-hidden border-amber-300 bg-amber-50 dark:border-amber-700/30 dark:bg-amber-950/30 animate-slide-in-bottom">
+          <div className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-lg dark:bg-amber-900/30">
+                ⛽
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-extrabold text-amber-800 dark:text-amber-200">
+                  Euro 98 aanbevolen
+                </h3>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/80">
+                  {euro98Advies}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => setBrandstofOverride("euro98")}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-extrabold transition-all active:scale-95 ${
+                      berekening.soort === "euro98"
+                        ? "bg-amber-600 text-white shadow-md shadow-amber-600/25"
+                        : "border border-amber-300 bg-white text-amber-700 hover:border-amber-400 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                    }`}
+                  >
+                    Euro 98
+                  </button>
+                  <button
+                    onClick={() => setBrandstofOverride(null)}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-extrabold transition-all active:scale-95 ${
+                      berekening.soort === "euro95"
+                        ? "bg-accent text-white shadow-md shadow-accent/25"
+                        : "border border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                    }`}
+                  >
+                    Euro 95
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

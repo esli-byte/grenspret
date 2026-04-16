@@ -1,9 +1,10 @@
-export type BrandstofSoort = "euro95" | "diesel";
+export type BrandstofSoort = "euro95" | "euro98" | "diesel";
 
 export type LandPrijzen = {
   land: string;
   vlag: string;
   euro95: number;
+  euro98: number;
   diesel: number;
   bron?: string;
   bronUrl?: string;
@@ -11,9 +12,9 @@ export type LandPrijzen = {
 
 /** Fallback prijzen als de API niet beschikbaar is — april 2026 */
 export const FALLBACK_PRIJZEN: LandPrijzen[] = [
-  { land: "Nederland", vlag: "🇳🇱", euro95: 2.15, diesel: 1.79, bron: "handmatig" },
-  { land: "Duitsland", vlag: "🇩🇪", euro95: 1.73, diesel: 1.60, bron: "handmatig" },
-  { land: "België", vlag: "🇧🇪", euro95: 1.81, diesel: 1.68, bron: "handmatig" },
+  { land: "Nederland", vlag: "🇳🇱", euro95: 2.15, euro98: 2.29, diesel: 1.79, bron: "handmatig" },
+  { land: "Duitsland", vlag: "🇩🇪", euro95: 1.73, euro98: 1.87, diesel: 1.60, bron: "handmatig" },
+  { land: "België", vlag: "🇧🇪", euro95: 1.81, euro98: 1.95, diesel: 1.68, bron: "handmatig" },
 ];
 
 /** Gemiddelde tankgrootte op basis van cilinderinhoud */
@@ -38,6 +39,91 @@ export function mapBrandstofSoort(
   )
     return "euro95";
   return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EURO 98 DETECTIE
+//
+//  Adviseert Euro 98 wanneer:
+//  1. Oudere auto (eerste toelating vóór 2000) met benzinemotor
+//  2. Prestatiemotor: grote cilinderinhoud (>2500cc) benzine
+//  3. Sportmerken die Euro 98 aanbevelen (Porsche, BMW M, AMG, etc.)
+// ═══════════════════════════════════════════════════════════
+
+const SPORTMERKEN_KEYWORDS = [
+  "porsche", "maserati", "ferrari", "lamborghini", "aston martin",
+  "mclaren", "lotus", "alpine", "cupra",
+];
+
+const SPORT_MODEL_KEYWORDS = [
+  "amg", " m ", " m3", " m4", " m5", " m6", " m8",
+  " rs ", " rs3", " rs4", " rs5", " rs6", " rs7",
+  " gti", " gts", " gt ", " r32", "type r", "type-r",
+  " vrs", " sti", "wrx", "nismo", " trd",
+  "turbo", "compressor",
+];
+
+/**
+ * Bepaal of Euro 98 wordt aanbevolen op basis van voertuiggegevens.
+ * Retourneert "euro98" als aanbevolen, anders de huidige brandstofsoort.
+ */
+export function detecteerEuro98(
+  basisSoort: BrandstofSoort,
+  eersteToelating: string,
+  cilinderinhoudStr: string,
+  merk: string,
+  handelsbenaming: string,
+): { aanbevolen: BrandstofSoort; reden: string | null } {
+  // Alleen relevant voor benzineauto's
+  if (basisSoort !== "euro95") {
+    return { aanbevolen: basisSoort, reden: null };
+  }
+
+  const merkModel = `${merk} ${handelsbenaming}`.toLowerCase();
+
+  // Check 1: Sportmerk
+  for (const keyword of SPORTMERKEN_KEYWORDS) {
+    if (merkModel.includes(keyword)) {
+      return {
+        aanbevolen: "euro98",
+        reden: `${merk} adviseert Euro 98 (Super Plus) voor optimale prestaties`,
+      };
+    }
+  }
+
+  // Check 2: Sportmodel
+  // Voeg spaties toe aan begin/eind zodat we " m " matchen in "BMW M3"
+  const merkModelPadded = ` ${merkModel} `;
+  for (const keyword of SPORT_MODEL_KEYWORDS) {
+    if (merkModelPadded.includes(keyword)) {
+      return {
+        aanbevolen: "euro98",
+        reden: `${handelsbenaming} is een prestatiemodel — Euro 98 aanbevolen`,
+      };
+    }
+  }
+
+  // Check 3: Grote cilinderinhoud (>2500cc) bij benzine = waarschijnlijk prestatiemotor
+  const cc = parseInt(cilinderinhoudStr.replace(/\D/g, ""), 10);
+  if (!isNaN(cc) && cc > 2500) {
+    return {
+      aanbevolen: "euro98",
+      reden: `Grote motor (${cc} cc) — Euro 98 wordt aanbevolen`,
+    };
+  }
+
+  // Check 4: Oudere auto (vóór 2000)
+  if (eersteToelating && eersteToelating.length >= 4) {
+    const jaar = parseInt(eersteToelating.slice(0, 4), 10);
+    if (!isNaN(jaar) && jaar < 2000) {
+      return {
+        aanbevolen: "euro98",
+        reden: `Bouwjaar ${jaar} — oudere motoren presteren beter op Euro 98`,
+      };
+    }
+  }
+
+  return { aanbevolen: "euro95", reden: null };
 }
 
 export type Besparing = {
