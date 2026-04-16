@@ -5,6 +5,14 @@ import { slaaFlowOp, type BerekeningsFlow } from "@/lib/opslag";
 
 const OPTIES: { flow: BerekeningsFlow; icon: string; titel: string; beschrijving: string; href: string; gradient: string }[] = [
   {
+    flow: "beide",
+    icon: "⛽🛒",
+    titel: "Tanken + boodschappen",
+    beschrijving: "Bereken je totale besparing op één trip",
+    href: "/tanken",
+    gradient: "from-cta to-orange-600",
+  },
+  {
     flow: "tanken",
     icon: "⛽",
     titel: "Alleen tanken",
@@ -19,14 +27,6 @@ const OPTIES: { flow: BerekeningsFlow; icon: string; titel: string; beschrijving
     beschrijving: "Vergelijk 150+ producten in NL, DE en BE",
     href: "/boodschappen",
     gradient: "from-teal-500 to-cyan-600",
-  },
-  {
-    flow: "beide",
-    icon: "⛽🛒",
-    titel: "Tanken + boodschappen",
-    beschrijving: "Bereken je totale besparing op één trip",
-    href: "/tanken",
-    gradient: "from-cta to-orange-600",
   },
 ];
 
