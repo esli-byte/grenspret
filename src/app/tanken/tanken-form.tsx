@@ -654,12 +654,12 @@ export function TankenForm() {
         />
       )}
 
-      {/* Dichtstbijzijnde tankstations */}
+      {/* Kies je tanklocatie */}
       {postcode && (
         <LocatieKaartjes
           postcode={postcode}
           type="tankstation"
-          titel="Dichtstbijzijnde tankstations"
+          titel="Kies je tanklocatie"
           geselecteerdId={geselecteerdStation?.id}
           onSelect={setGeselecteerdStation}
         />
