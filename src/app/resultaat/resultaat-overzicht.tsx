@@ -484,7 +484,7 @@ function LandKaart({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-gray-400">reiskosten p/hh</div>
+                <div className="text-[11px] text-gray-400">reiskosten p/hh</div>
                 <div className="text-xs font-bold text-gray-600 dark:text-gray-400 tabular-nums">
                   {euro(r.reiskostenPerHH)}
                 </div>

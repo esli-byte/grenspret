@@ -98,7 +98,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 pt-3 transition-all duration-200 ${
+              className={`relative flex flex-1 flex-col items-center gap-0.5 py-3 min-h-[48px] transition-all duration-200 ${
                 active
                   ? "text-accent"
                   : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
@@ -117,7 +117,7 @@ export function BottomNav() {
                   </span>
                 )}
               </div>
-              <span className={`text-[9px] transition-all duration-200 ${active ? "font-extrabold" : "font-medium"}`}>
+              <span className={`text-[10px] leading-tight transition-all duration-200 ${active ? "font-extrabold" : "font-medium"}`}>
                 {item.label}
               </span>
               {active && (

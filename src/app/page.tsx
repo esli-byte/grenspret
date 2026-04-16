@@ -46,10 +46,10 @@ export default function Home() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
         {/* Wat wil je berekenen? */}
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/15 text-[10px] font-black text-accent">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-xs font-black text-accent">
             ?
           </div>
-          <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-gray-500 dark:text-gray-400">
             Wat wil je berekenen?
           </p>
           <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
@@ -59,7 +59,7 @@ export default function Home() {
 
         {/* Trust indicators — bolder, card-style */}
         <div className="mt-8">
-          <p className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+          <p className="mb-3 text-center text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
             Betrouwbare bronnen
           </p>
           <div className="grid grid-cols-2 gap-2.5 text-center sm:grid-cols-4">
@@ -103,12 +103,12 @@ function TrustBadge({
   highlight?: boolean;
 }) {
   return (
-    <div className={`card-bold flex flex-col items-center justify-center p-3.5 ${highlight ? "border-accent/30 bg-accent/5" : ""}`}>
+    <div className={`card-bold flex flex-col items-center justify-center p-3 sm:p-3.5 ${highlight ? "border-accent/30 bg-accent/5" : ""}`}>
       <span className="text-xl leading-none">{icon}</span>
       <div className={`mt-1.5 text-sm font-extrabold ${highlight ? "text-accent" : "text-navy dark:text-white"}`}>
         {label}
       </div>
-      <div className="mt-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+      <div className="mt-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
         {sublabel}
       </div>
     </div>

@@ -293,7 +293,7 @@ export function TankenForm() {
             {/* Dutch license plate styling */}
             <div className="pointer-events-none absolute inset-y-0 left-0 flex h-full items-center rounded-l-xl bg-[#003399] px-1.5">
               <div className="flex flex-col items-center">
-                <div className="text-[10px] font-extrabold leading-none text-yellow-300">★★★</div>
+                <div className="text-[10px] font-extrabold leading-none text-yellow-300 select-none">★★★</div>
                 <div className="text-xs font-extrabold text-yellow-300">NL</div>
               </div>
             </div>
@@ -621,13 +621,13 @@ export function TankenForm() {
             onChange={(e) =>
               setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
             }
-            className="flex-1 rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
+            className="min-w-0 flex-1 rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white"
             autoComplete="postal-code"
           />
           <button
             onClick={handleGeolocate}
             disabled={geoLoading}
-            className="flex items-center gap-2 rounded-2xl border-2 border-accent/30 bg-accent/5 px-4 py-3.5 text-sm font-extrabold text-accent transition-all hover:bg-accent/10 hover:border-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex shrink-0 items-center gap-2 rounded-2xl border-2 border-accent/30 bg-accent/5 px-3 py-3.5 text-sm font-extrabold text-accent transition-all hover:bg-accent/10 hover:border-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             title="Gebruik huidige locatie om postcode automatisch in te vullen"
           >
             {geoLoading ? (
@@ -699,7 +699,7 @@ export function TankenForm() {
             </table>
           </div>
           {prijzenBijgewerkt && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">
               <span>
                 Bijgewerkt{" "}
                 {new Date(prijzenBijgewerkt).toLocaleString("nl-NL", {
@@ -768,7 +768,7 @@ function VolgendeStapKnop() {
       }`}
     >
       <div className="text-left">
-        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+        <p className={`text-[11px] font-extrabold uppercase tracking-widest ${
           naarResultaat ? "text-white/70 dark:text-navy/70" : "text-white/70"
         }`}>
           {naarResultaat ? "Bekijk resultaat" : "Stap 2 van 2"}

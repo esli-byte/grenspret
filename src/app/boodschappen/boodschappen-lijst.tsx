@@ -532,7 +532,7 @@ export function BoodschappenLijst() {
       )}
 
       {/* Product tegels grid */}
-      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
         {/* Eigen-product toevoegen knop (altijd zichtbaar) */}
         <EigenProductTegel onKlik={() => setModalOpen(true)} />
         {gefilterd.map((product) => (
@@ -707,10 +707,10 @@ function EigenProductTegel({ onKlik }: { onKlik: () => void }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       </div>
-      <span className="text-center text-[11px] font-extrabold leading-tight text-accent">
+      <span className="text-center text-xs font-extrabold leading-tight text-accent">
         Eigen product
       </span>
-      <span className="mt-0.5 text-[9px] font-medium text-accent/70">
+      <span className="mt-0.5 text-[10px] font-medium text-accent/70">
         toevoegen
       </span>
     </button>
@@ -749,7 +749,7 @@ function ProductTegel({
     >
       {/* Quantity badge */}
       {isSelected && (
-        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white font-extrabold text-xs animate-bounce-in">
+        <div className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white font-extrabold text-[11px] animate-bounce-in">
           {quantity}
         </div>
       )}
@@ -761,7 +761,7 @@ function ProductTegel({
             e.stopPropagation();
             onDecrement();
           }}
-          className="absolute bottom-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-90 transition-all"
+          className="absolute bottom-1 left-1 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-90 transition-all"
           title="Hoeveelheid verminderen"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
@@ -792,7 +792,7 @@ function ProductTegel({
             e.stopPropagation();
             if (confirm(`"${product.naam}" verwijderen?`)) onVerwijder();
           }}
-          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-white transition-all hover:bg-red-500 active:scale-90"
+          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-300 text-white transition-all hover:bg-red-500 active:scale-90"
           title="Verwijder eigen product"
         >
           <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
@@ -815,19 +815,19 @@ function ProductTegel({
 
       {/* Subnaam als merk anders is dan naam */}
       {product.merk && product.merk !== product.naam && (
-        <span className="text-center text-[9px] font-medium text-gray-400 dark:text-gray-500">
+        <span className="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 truncate max-w-full">
           {product.naam}
         </span>
       )}
 
       {/* Eenheid */}
-      <span className="mt-0.5 text-[9px] font-medium text-gray-400 dark:text-gray-500">
+      <span className="mt-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-500">
         {product.eenheid}
       </span>
 
       {/* Prijs */}
       <div className="mt-1 flex items-baseline gap-1">
-        <span className="text-[10px] tabular-nums font-medium text-gray-400 line-through dark:text-gray-500">
+        <span className="text-[11px] tabular-nums font-medium text-gray-400 line-through dark:text-gray-500">
           {euro(product.prijsNL)}
         </span>
         <span className="text-xs font-extrabold tabular-nums text-accent">
@@ -837,7 +837,7 @@ function ProductTegel({
 
       {/* Besparing badge */}
       {besparing > 0.05 && (
-        <div className="mt-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-extrabold text-accent">
+        <div className="mt-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-extrabold text-accent">
           -{euro(besparing)}
         </div>
       )}
@@ -949,7 +949,7 @@ function CompactBesparingBar({
     totalen.besparingDE >= totalen.besparingBE ? "🇩🇪" : "🇧🇪";
 
   return (
-    <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 -mt-5 bg-gradient-to-r from-accent to-emerald-500 px-4 py-3.5 shadow-[0_-4px_20px_rgba(0,210,106,0.2)] sm:static sm:mx-0 sm:mt-0 sm:rounded-2xl sm:shadow-lg sm:shadow-accent/15 animate-slide-up">
+    <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 bg-gradient-to-r from-accent to-emerald-500 px-4 py-3.5 shadow-[0_-4px_20px_rgba(0,210,106,0.2)] sm:static sm:mx-0 sm:rounded-2xl sm:shadow-lg sm:shadow-accent/15 animate-slide-up">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="text-lg">💰</span>

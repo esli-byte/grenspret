@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   themeColor: "#0A1628",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
   viewportFit: "cover",
 };
 
@@ -55,7 +55,7 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="min-h-full flex flex-col pb-20 pt-[env(safe-area-inset-top)]">
+      <body className="min-h-full flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-[env(safe-area-inset-top)]">
         <Providers>
           <div className="animate-page flex flex-1 flex-col">{children}</div>
           <BottomNav />
