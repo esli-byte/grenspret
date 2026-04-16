@@ -48,10 +48,10 @@ export type FuelPricesResponse = {
   debug?: unknown;
 };
 
-// Handmatige fallbacks (april 2026) als een bron niet bereikbaar is
-const NL_FALLBACK = { euro95: 2.15, diesel: 1.79 };
-const DE_FALLBACK = { euro95: 1.73, diesel: 1.6 };
-const BE_FALLBACK = { euro95: 1.81, diesel: 1.68 };
+// Handmatige fallbacks (bijgewerkt 16 april 2026) als een bron niet bereikbaar is
+const NL_FALLBACK = { euro95: 2.57, diesel: 2.73 };
+const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 };
+const BE_FALLBACK = { euro95: 1.26, diesel: 1.68 };
 
 export async function GET(request: NextRequest) {
   const timestamp = Date.now();
