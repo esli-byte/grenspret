@@ -292,8 +292,7 @@ export function BoodschappenLijst() {
       effectieveSelectie.forEach((qty, id) => { obj[id] = qty; });
       slaaBoodschappenSelectieOp(obj);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectieveSelectie.size]);
+  }, [effectieveSelectie]);
 
   const gefilterd = useMemo(() => {
     return productenMetPrijzen.filter((p) => {
@@ -363,8 +362,8 @@ export function BoodschappenLijst() {
     });
   }, [totalen, totalAantalItems]);
 
-  const aantalAMerk = productenMetPrijzen.filter((p) => p.merkType === "a-merk").length;
-  const aantalHuismerk = productenMetPrijzen.filter((p) => p.merkType === "huismerk").length;
+  const aantalAMerk = useMemo(() => productenMetPrijzen.filter((p) => p.merkType === "a-merk").length, [productenMetPrijzen]);
+  const aantalHuismerk = useMemo(() => productenMetPrijzen.filter((p) => p.merkType === "huismerk").length, [productenMetPrijzen]);
 
   function voegPersoonToe(p: Persoon) {
     setPersonen((prev) => [...prev, p]);
@@ -708,16 +707,18 @@ function buildPersoonDots(
   personen: Persoon[],
   mijnNaam: string,
 ): PersoonDot[] {
-  const naamMap = new Map(personen.map((p) => [p.id, p.naam]));
-  const kleurMap = new Map(personen.map((p) => [p.id, p.kleur]));
+  const persoonMap = new Map(personen.map((p) => [p.id, p]));
   return Object.entries(perPersoon)
     .filter(([, n]) => n > 0)
-    .map(([id, aantal]) => ({
-      id,
-      aantal,
-      kleur: id === MIJ_ID ? MIJ_KLEUR : kleurMap.get(id) ?? "#94a3b8",
-      naam: id === MIJ_ID ? mijnNaam : naamMap.get(id) ?? "?",
-    }));
+    .map(([id, aantal]) => {
+      const p = persoonMap.get(id);
+      return {
+        id,
+        aantal,
+        kleur: id === MIJ_ID ? MIJ_KLEUR : p?.kleur ?? "#94a3b8",
+        naam: id === MIJ_ID ? mijnNaam : p?.naam ?? "?",
+      };
+    });
 }
 
 function EigenProductTegel({ onKlik }: { onKlik: () => void }) {
