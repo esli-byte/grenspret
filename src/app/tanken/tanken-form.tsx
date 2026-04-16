@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zoekVoertuig, type VoertuigData } from "./actions";
 import {
   FALLBACK_PRIJZEN,
@@ -79,6 +79,7 @@ export function TankenForm() {
   const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
   const [elektrischPercentage, setElektrischPercentage] = useState(50);
   const [geselecteerdStation, setGeselecteerdStation] = useState<LocatieMetAfstand | null>(null);
+  const besparingRef = useRef<HTMLDivElement>(null);
 
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
@@ -732,15 +733,29 @@ export function TankenForm() {
         />
       )}
 
-      {/* Besparingsoverzicht — gecombineerd met geselecteerd station */}
+      {/* Sticky besparingsbalk — verschijnt bij stationselectie */}
       {berekening && geselecteerdStation && (
-        <BesparingsBlok
+        <StickyBesparingsBalk
           berekening={berekening}
           station={geselecteerdStation}
           prijzen={prijzen}
           extraLiters={extraLiters}
           isLeaseAuto={isLeaseAuto}
+          onTap={() => besparingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
         />
+      )}
+
+      {/* Besparingsoverzicht — gecombineerd met geselecteerd station */}
+      {berekening && geselecteerdStation && (
+        <div ref={besparingRef}>
+          <BesparingsBlok
+            berekening={berekening}
+            station={geselecteerdStation}
+            prijzen={prijzen}
+            extraLiters={extraLiters}
+            isLeaseAuto={isLeaseAuto}
+          />
+        </div>
       )}
 
       {/* Bruto besparing als er nog geen station geselecteerd is */}
@@ -751,6 +766,73 @@ export function TankenForm() {
       {/* Volgende stap knop — dynamisch op basis van gekozen flow */}
       {berekening && <VolgendeStapKnop />}
     </div>
+  );
+}
+
+function StickyBesparingsBalk({
+  berekening,
+  station,
+  prijzen,
+  extraLiters,
+  isLeaseAuto,
+  onTap,
+}: {
+  berekening: {
+    soort: BrandstofSoort;
+    tankGrootte: number;
+    verbruik: number;
+    besparingen: Besparing[];
+  };
+  station: LocatieMetAfstand;
+  prijzen: LandPrijzen[];
+  extraLiters: number;
+  isLeaseAuto: boolean;
+  onTap: () => void;
+}) {
+  const nlPrijs = prijzen[0][berekening.soort];
+  const besparing = berekening.besparingen.find((b) => b.land === station.land);
+  if (!besparing) return null;
+
+  const buitenlandPrijs = besparing.prijsPerLiter;
+  const brandstofEnkel = (station.afstandKm / 100) * berekening.verbruik;
+  const reiskostenHeen = brandstofEnkel * nlPrijs;
+  const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
+  const reiskosten = isLeaseAuto ? 0 : reiskostenHeen + reiskostenTerug;
+  const extraBesparing = extraLiters * (nlPrijs - buitenlandPrijs);
+  const netto = besparing.besparing + extraBesparing - reiskosten;
+  const loont = netto > 0;
+  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
+
+  return (
+    <button
+      onClick={onTap}
+      className={`sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 w-[calc(100%+2rem)] px-4 py-3.5 shadow-[0_-4px_20px_rgba(0,210,106,0.2)] transition-all active:scale-[0.99] sm:static sm:mx-0 sm:w-full sm:rounded-2xl sm:shadow-lg animate-slide-up ${
+        loont
+          ? "bg-gradient-to-r from-accent to-emerald-500 sm:shadow-accent/15"
+          : "bg-gradient-to-r from-red-500 to-rose-500 sm:shadow-red-500/15"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5 text-left">
+          <span className="text-lg">{vlag}</span>
+          <div>
+            <div className="text-[11px] font-bold text-white/80">
+              {station.naam} · {station.afstandKm * 2} km retour
+            </div>
+            <div className="text-lg font-extrabold tabular-nums text-white">
+              {loont ? "Bespaar " : ""}
+              {loont ? "+" : ""}{euro(netto)}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-white/80">
+          <span className="text-[11px] font-bold">Details</span>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </div>
+      </div>
+    </button>
   );
 }
 
