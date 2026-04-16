@@ -7,225 +7,149 @@ type Vraag = {
   antwoord: React.ReactNode;
 };
 
+/* ─── Zo werkt het — compact stappenblok ─── */
+function ZoWerktHet() {
+  return (
+    <div className="card-bold border-accent/20 bg-gradient-to-br from-accent/5 to-emerald-50/30 p-5 dark:from-accent/10 dark:to-emerald-950/20 dark:border-accent/10">
+      <h2 className="text-sm font-extrabold text-navy dark:text-white">
+        Zo werkt Grenspret
+      </h2>
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        Kies wat je wilt berekenen en volg de stappen.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {/* Stap 1 */}
+        <div className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-black text-white">1</span>
+          <div>
+            <p className="text-xs font-extrabold text-navy dark:text-white">Kies je berekening</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Alleen tanken, alleen boodschappen, of allebei tegelijk.
+            </p>
+          </div>
+        </div>
+
+        {/* Stap 2 */}
+        <div className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-black text-white">2</span>
+          <div>
+            <p className="text-xs font-extrabold text-navy dark:text-white">Vul je gegevens in</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Kenteken + postcode voor tanken. Kies producten voor boodschappen.
+            </p>
+          </div>
+        </div>
+
+        {/* Stap 3 */}
+        <div className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-black text-white">3</span>
+          <div>
+            <p className="text-xs font-extrabold text-navy dark:text-white">Selecteer een locatie</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Wij zoeken de dichtstbijzijnde tankstations en supermarkten in Duitsland of België.
+            </p>
+          </div>
+        </div>
+
+        {/* Stap 4 */}
+        <div className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-black text-white">4</span>
+          <div>
+            <p className="text-xs font-extrabold text-navy dark:text-white">Bekijk je besparing</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Je ziet precies wat je bespaart, inclusief reiskosten. Deel het met vrienden via WhatsApp.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div className="mt-4 rounded-xl bg-white/60 p-3 dark:bg-white/5">
+        <p className="text-[11px] font-bold text-accent">💡 Tips</p>
+        <ul className="mt-1 space-y-0.5 text-[11px] text-gray-600 dark:text-gray-400">
+          <li>• Combi (tanken + boodschappen) geeft de meeste besparing</li>
+          <li>• Dicht bij de grens? Dan loont het bijna altijd</li>
+          <li>• Ga samen met buren of vrienden voor nog meer voordeel</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/* ─── FAQ vragen — kort en bondig ─── */
 const VRAGEN: Vraag[] = [
   {
     vraag: "Wat kost Grenspret?",
-    antwoord: (
-      <>
-        <p>
-          Helemaal niets. Grenspret is volledig gratis te gebruiken en je hoeft
-          ook geen account aan te maken voor de berekening. Een account is
-          alleen handig als je je lijstjes wilt bewaren over meerdere apparaten.
-        </p>
-        <p className="mt-2">
-          We verdienen op termijn geld met partnerlinks naar jerrycans en
-          supermarkt-bezorgdiensten, niet met je data of reclame.
-        </p>
-      </>
-    ),
+    antwoord: "Helemaal gratis. Geen account nodig. We verdienen op termijn via partnerlinks, niet met je data.",
   },
   {
-    vraag: "Hoeveel brandstof mag ik wettelijk meenemen over de grens?",
-    antwoord: (
-      <>
-        <p>
-          In een auto mag je <strong>10 liter per persoon</strong> meenemen in
-          een goedgekeurde jerrycan, bovenop wat er in je tank zit. Met vier
-          personen in de auto mag je dus tot 40 liter extra meenemen.
-        </p>
-        <p className="mt-2">
-          De jerrycan moet een <strong>UN-goedgekeurde metalen jerrycan</strong> zijn.
-          Plastic jerrycans zijn <strong>niet</strong> toegestaan voor benzine.
-          Voor diesel gelden soepelere regels, maar metaal blijft de veiligste keuze.
-        </p>
-      </>
-    ),
+    vraag: "Hoeveel brandstof mag ik meenemen?",
+    antwoord: "10 liter per persoon in een UN-goedgekeurde metalen jerrycan, bovenop wat in je tank zit. Met 4 personen dus 40 liter extra.",
   },
   {
     vraag: "Welke jerrycan moet ik kopen?",
+    antwoord: "Een UN-goedgekeurde metalen jerrycan. Groen = diesel, rood = benzine. Plastic is niet toegestaan voor benzine.",
+  },
+  {
+    vraag: "Mijn kenteken wordt niet gevonden",
+    antwoord: "Voer het in zonder streepjes (bv. AB123C). Alle Nederlandse kentekens via RDW werken. Geïmporteerde auto? Vul tankgrootte en verbruik handmatig in.",
+  },
+  {
+    vraag: "Kan ik Grenspret als app installeren?",
     antwoord: (
       <>
-        <p>
-          Kies een <strong>UN-goedgekeurde metalen jerrycan</strong>, meestal herkenbaar
-          aan een UN-stempel op de zijkant. Groene jerrycans zijn voor diesel,
-          rode voor benzine. Zorg dat hij een stevige sluiting heeft en test
-          hem voor gebruik op lekkage.
-        </p>
-        <p className="mt-2">
-          Losse tuiten voor schoner overtanken zijn los te koop. Bewaar je
-          jerrycan na gebruik altijd goed geventileerd, niet in je auto.
-        </p>
+        <strong>iPhone:</strong> Deel-icoon → &ldquo;Zet op beginscherm&rdquo;.{" "}
+        <strong>Android:</strong> Menu (⋮) → &ldquo;App installeren&rdquo;.
       </>
     ),
   },
   {
-    vraag: "Mijn kenteken wordt niet gevonden, wat nu?",
-    antwoord: (
-      <>
-        <p>
-          Controleer eerst of je het kenteken zonder streepjes of spaties hebt
-          ingevoerd, bijvoorbeeld <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-navy dark:bg-gray-800 dark:text-white">AB123C</code>.
-          Grenspret haalt voertuigen op via de RDW, dus alle auto&apos;s met een
-          Nederlands kenteken zouden moeten werken.
-        </p>
-        <p className="mt-2">
-          Heb je een geïmporteerde auto, een oldtimer of een lease-auto waarvan
-          de exacte gegevens ontbreken? Probeer dan je berekening zonder
-          kenteken en vul zelf je tankgrootte en verbruik in. We werken aan een
-          handmatige invoer-optie.
-        </p>
-      </>
-    ),
+    vraag: "Product staat niet in de lijst?",
+    antwoord: "Tik op '+ Eigen product' bovenin het grid. Vul naam en NL-prijs in, wij schatten de buitenlandse prijs automatisch.",
   },
   {
-    vraag: "Kan ik Grenspret als app op mijn telefoon zetten?",
-    antwoord: (
-      <>
-        <p>
-          Ja, Grenspret is een Progressive Web App. Je kunt hem met twee tikken
-          op je beginscherm zetten:
-        </p>
-        <p className="mt-2">
-          <strong>iPhone (Safari):</strong> tik op het delen-icoon onderaan
-          (vierkantje met pijltje omhoog) en kies &ldquo;Zet op beginscherm&rdquo;.
-        </p>
-        <p className="mt-2">
-          <strong>Android (Chrome):</strong> tik op het menu (drie puntjes rechtsboven)
-          en kies &ldquo;App installeren&rdquo; of &ldquo;Toevoegen aan startscherm&rdquo;.
-        </p>
-        <p className="mt-2">
-          Daarna staat Grenspret als icoon op je telefoon, net als een gewone app.
-        </p>
-      </>
-    ),
+    vraag: "Wordt mijn data opgeslagen?",
+    antwoord: "Alles blijft lokaal op jouw telefoon. Niets gaat naar onze servers. Geen tracking, geen reclame.",
   },
   {
-    vraag: "Hoe werkt samen boodschappen doen?",
-    antwoord: (
-      <>
-        <p>
-          Op de boodschappen-pagina staat bovenaan een schakelaar &ldquo;Samen
-          boodschappen&rdquo;. Zet die aan en voeg de mensen toe voor wie je ook
-          gaat shoppen. Iedere persoon krijgt een eigen kleur.
-        </p>
-        <p className="mt-2">
-          Tik op een naam om de &ldquo;actieve shopper&rdquo; te wisselen. Producten
-          die je daarna aanvinkt komen op diens lijst. Onderaan verschijnt een
-          overzicht met per persoon het te betalen bedrag.
-        </p>
-        <p className="mt-2">
-          Achteraf kopieer je met één tik een Tikkie-bericht per persoon,
-          inclusief de producten die je voor ze hebt meegenomen.
-        </p>
-      </>
-    ),
+    vraag: "Loont het altijd om over de grens te gaan?",
+    antwoord: "Niet altijd. Woon je ver van de grens en koop je weinig, dan wegen de reiskosten zwaarder. Grenspret geeft eerlijk aan wanneer het niet loont.",
   },
   {
-    vraag: "Wat als een product niet in de lijst staat?",
-    antwoord: (
-      <>
-        <p>
-          Boven in het productgrid staat een gestippelde tegel &ldquo;+ Eigen
-          product toevoegen&rdquo;. Klik daarop, vul de naam, de Nederlandse
-          prijs en een categorie in. Wij schatten automatisch de prijs in
-          Duitsland en België op basis van het gemiddelde prijsverschil van die
-          categorie.
-        </p>
-        <p className="mt-2">
-          Je eigen producten blijven bewaard en worden meegenomen in je totale
-          besparing, net als de producten uit onze catalogus.
-        </p>
-      </>
-    ),
+    vraag: "Werkt het voor elektrische auto's?",
+    antwoord: "Ja, maar de tankbesparing is dan niet relevant. Grenspret herkent dit via je kenteken en berekent alleen de boodschappenbesparing.",
   },
   {
-    vraag: "Wordt mijn informatie opgeslagen of gedeeld?",
-    antwoord: (
-      <>
-        <p>
-          Je kenteken, postcode, boodschappenlijst en personen worden alleen
-          lokaal op jouw apparaat bewaard. Ze worden <strong>niet</strong> naar
-          onze servers gestuurd en <strong>niet</strong> gedeeld met derden.
-        </p>
-        <p className="mt-2">
-          Als je inlogt met Google slaan we alleen een anonieme gebruikers-ID
-          en je e-mailadres op, zodat we je lijstjes later kunnen synchroniseren
-          over apparaten. Je kunt je account op elk moment verwijderen.
-        </p>
-      </>
-    ),
-  },
-  {
-    vraag: "Loont het echt altijd om over de grens te shoppen?",
-    antwoord: (
-      <>
-        <p>
-          Nee, dat hangt helemaal af van je situatie. Als je dicht bij de grens
-          woont, met meerdere mensen reist of veel producten koopt die over de
-          grens flink goedkoper zijn (zoals alcohol, drogisterij of tabak),
-          dan is de besparing vaak tientallen euro&apos;s per rit.
-        </p>
-        <p className="mt-2">
-          Woon je ver van de grens of neem je maar een paar producten mee? Dan
-          wegen de reiskosten soms zwaarder dan de besparing. Grenspret geeft
-          eerlijk aan wanneer het niet loont, ook al is dat niet wat je wilt
-          horen.
-        </p>
-      </>
-    ),
-  },
-  {
-    vraag: "Werkt Grenspret ook voor elektrische auto&apos;s?",
-    antwoord: (
-      <>
-        <p>
-          Voor elektrische auto&apos;s is de tankbesparing niet relevant, want
-          je laadt thuis of onderweg op. Grenspret herkent dat automatisch aan
-          de hand van je kenteken en berekent alleen de boodschappenbesparing
-          en reiskosten.
-        </p>
-        <p className="mt-2">
-          Vergeet niet dat laadkosten onderweg ook reiskosten zijn. Als we
-          elektrische laadkosten in de toekomst gaan meenemen in de berekening,
-          zie je dat hier eerst.
-        </p>
-      </>
-    ),
-  },
-  {
-    vraag: "Hoe kan ik mijn besparing delen met vrienden?",
-    antwoord: (
-      <>
-        <p>
-          Op de resultaat-pagina staan drie deel-knoppen: WhatsApp, Afbeelding
-          en Kopieer tekst. WhatsApp stuurt een bericht met je besparing en de
-          opbouw. De afbeelding-knop maakt een mooie visuele kaart die je in
-          Instagram stories of op sociale media kunt plaatsen.
-        </p>
-        <p className="mt-2">
-          Hoe meer mensen de app gebruiken, hoe beter we de prijsdata kunnen
-          maken. Dus bedankt alvast voor het delen.
-        </p>
-      </>
-    ),
+    vraag: "Hoe deel ik mijn besparing?",
+    antwoord: "Op de resultaat-pagina staan drie knoppen: WhatsApp, Afbeelding en Kopieer tekst.",
   },
 ];
 
 export function FAQLijst() {
-  const [open, setOpen] = useState<number | null>(0); // Eerste vraag default open
+  const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <div className="space-y-2.5">
-      {VRAGEN.map((v, i) => (
-        <FAQItem
-          key={i}
-          index={i}
-          vraag={v.vraag}
-          antwoord={v.antwoord}
-          isOpen={open === i}
-          onToggle={() => setOpen(open === i ? null : i)}
-        />
-      ))}
+    <div className="space-y-5">
+      {/* Zo werkt het blok */}
+      <ZoWerktHet />
+
+      {/* FAQ lijst */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-extrabold text-navy dark:text-white px-1">
+          Vragen & antwoorden
+        </h2>
+        {VRAGEN.map((v, i) => (
+          <FAQItem
+            key={i}
+            index={i}
+            vraag={v.vraag}
+            antwoord={v.antwoord}
+            isOpen={open === i}
+            onToggle={() => setOpen(open === i ? null : i)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -280,7 +204,7 @@ function FAQItem({
       </button>
 
       {isOpen && (
-        <div className="animate-fade-in border-t border-gray-100 bg-gray-50/50 px-4 py-4 pl-14 text-sm leading-relaxed text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
+        <div className="animate-fade-in border-t border-gray-100 bg-gray-50/50 px-4 py-3 pl-14 text-xs leading-relaxed text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300">
           {antwoord}
         </div>
       )}
