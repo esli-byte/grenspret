@@ -85,7 +85,7 @@ const VRAGEN: Vraag[] = [
   },
   {
     vraag: "Hoeveel brandstof mag ik meenemen?",
-    antwoord: "10 liter per persoon in een UN-goedgekeurde metalen jerrycan, bovenop wat in je tank zit. Met 4 personen dus 40 liter extra.",
+    antwoord: "Je volle tank is altijd belastingvrij. Daarnaast mag je 10 liter extra per voertuig meenemen in een goedgekeurde jerrycan zonder accijns te betalen. Meer meenemen mag (tot 240 liter volgens EU-vervoersregels), maar dan ben je verplicht Nederlandse accijns af te dragen.",
   },
   {
     vraag: "Welke jerrycan moet ik kopen?",
