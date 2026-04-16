@@ -629,20 +629,42 @@ export function BoodschappenLijst() {
       {/* Volgende stap knop naar resultaat */}
       {totalAantalItems > 0 && <BoodschappenVolgendeStap />}
 
-      {/* Floating knop naar overzicht */}
+      {/* Floating knop naar overzicht — verdwijnt als overzicht in beeld is */}
       {totalAantalItems > 0 && (
-        <button
-          onClick={() => totaalRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="fixed bottom-24 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-navy text-white shadow-lg shadow-navy/30 transition-all hover:scale-105 active:scale-95 dark:bg-white dark:text-navy dark:shadow-white/20"
-          title="Ga naar overzicht"
-          aria-label="Scroll naar overzicht"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+        <ScrollNaarOverzichtKnop targetRef={totaalRef} />
       )}
     </div>
+  );
+}
+
+function ScrollNaarOverzichtKnop({ targetRef }: { targetRef: React.RefObject<HTMLDivElement | null> }) {
+  const [zichtbaar, setZichtbaar] = useState(false);
+
+  useEffect(() => {
+    const el = targetRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setZichtbaar(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [targetRef]);
+
+  // Verberg als overzicht al in beeld is
+  if (zichtbaar) return null;
+
+  return (
+    <button
+      onClick={() => targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-navy/90 text-white shadow-lg shadow-navy/30 backdrop-blur-sm transition-all hover:scale-105 active:scale-95 dark:bg-white/90 dark:text-navy dark:shadow-white/20"
+      title="Ga naar overzicht"
+      aria-label="Scroll naar overzicht"
+    >
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+      </svg>
+    </button>
   );
 }
 
