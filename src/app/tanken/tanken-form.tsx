@@ -764,7 +764,7 @@ export function TankenForm() {
       )}
 
       {/* Volgende stap knop — dynamisch op basis van gekozen flow */}
-      {berekening && <VolgendeStapKnop />}
+      {berekening && <VolgendeStapKnop stationGeselecteerd={!!geselecteerdStation} />}
     </div>
   );
 }
@@ -836,12 +836,44 @@ function StickyBesparingsBalk({
   );
 }
 
-function VolgendeStapKnop() {
+function VolgendeStapKnop({ stationGeselecteerd }: { stationGeselecteerd: boolean }) {
   const flow = leesFlow();
 
   // Flow "tanken" → direct naar resultaat (skip boodschappen)
-  // Flow "beide" → naar boodschappen
+  // Flow "beide" → naar boodschappen (alleen als station geselecteerd)
   const naarResultaat = flow === "tanken";
+  const isUitgeschakeld = flow === "beide" && !stationGeselecteerd;
+
+  if (isUitgeschakeld) {
+    return (
+      <div className="space-y-2">
+        <div
+          className="flex items-center justify-between rounded-3xl bg-gray-200 p-5 opacity-50 dark:bg-gray-800"
+          aria-disabled="true"
+        >
+          <div className="text-left">
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              Stap 2 van 2
+            </p>
+            <p className="mt-0.5 text-base font-extrabold text-gray-400 dark:text-gray-500">
+              Boodschappen toevoegen
+            </p>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+              Selecteer eerst een tankstation hierboven
+            </p>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-300/50 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-center text-[11px] font-medium text-amber-600 dark:text-amber-400">
+          ☝️ Selecteer een tankstation om verder te gaan
+        </p>
+      </div>
+    );
+  }
 
   return (
     <Link

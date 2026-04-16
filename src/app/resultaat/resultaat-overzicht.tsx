@@ -280,6 +280,29 @@ export function ResultaatOverzicht() {
         </svg>
       </Link>
 
+      {/* Hanova werkkleding banner */}
+      <a
+        href="https://www.hanova.nl"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group card-bold flex items-center gap-4 border-blue-200/60 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-4 dark:from-blue-950/20 dark:to-indigo-950/20 dark:border-blue-800/20"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-xl transition-transform group-hover:scale-110 dark:bg-blue-900/40">
+          👷
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-extrabold text-navy dark:text-white">
+            Werkkleding nodig?
+          </div>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            Bekijk hier exclusieve acties!
+          </p>
+        </div>
+        <svg className="h-5 w-5 shrink-0 text-blue-500 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </a>
+
       {/* Footer */}
       <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] font-medium text-gray-400 dark:text-gray-500">
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
