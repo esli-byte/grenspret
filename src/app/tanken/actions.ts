@@ -1,5 +1,13 @@
 "use server";
 
+/**
+ * Hybride classificatie uit RDW brandstof-endpoint.
+ * - "geen"     → gewone verbrandingsmotor
+ * - "NOVC-HEV" → hybride (niet plug-in, bijv. Toyota Yaris Hybrid)
+ * - "OVC-HEV"  → plug-in hybride (PHEV, bijv. Mitsubishi Outlander PHEV)
+ */
+export type HybrideKlasse = "geen" | "NOVC-HEV" | "OVC-HEV";
+
 export type VoertuigData = {
   kenteken: string;
   merk: string;
@@ -10,6 +18,8 @@ export type VoertuigData = {
   cilinderinhoud: string;
   /** Datum eerste toelating in formaat YYYYMMDD */
   eersteToelating: string;
+  /** Hybride classificatie — "geen" als het geen hybride is */
+  hybrideKlasse: HybrideKlasse;
 };
 
 export type VoertuigResult =
@@ -87,7 +97,29 @@ export async function zoekVoertuig(kenteken: string): Promise<VoertuigResult> {
     }
 
     const v = voertuigen[0];
-    const b = Array.isArray(brandstoffen) ? brandstoffen[0] : undefined;
+    const brandstofArray = Array.isArray(brandstoffen) ? brandstoffen : [];
+    const b = brandstofArray[0];
+
+    // Hybride detectie: check klasse_hybride_elektrisch_voertuig in alle brandstofrecords
+    let hybrideKlasse: HybrideKlasse = "geen";
+    for (const brandstofRecord of brandstofArray) {
+      const klasse = brandstofRecord.klasse_hybride_elektrisch_voertuig;
+      if (klasse === "OVC-HEV") {
+        hybrideKlasse = "OVC-HEV";
+        break; // PHEV is de specifiekste match
+      }
+      if (klasse === "NOVC-HEV") {
+        hybrideKlasse = "NOVC-HEV";
+      }
+    }
+
+    // Voor hybrides: pak het benzine/diesel record (niet het elektriciteit-record)
+    const brandstofRecord =
+      brandstofArray.find(
+        (r: Record<string, string>) =>
+          r.brandstof_omschrijving?.toLowerCase().includes("benzine") ||
+          r.brandstof_omschrijving?.toLowerCase().includes("diesel"),
+      ) ?? b;
 
     return {
       success: true,
@@ -95,11 +127,12 @@ export async function zoekVoertuig(kenteken: string): Promise<VoertuigResult> {
         kenteken: v.kenteken,
         merk: v.merk ?? "Onbekend",
         handelsbenaming: v.handelsbenaming ?? "Onbekend",
-        brandstof: b?.brandstof_omschrijving ?? "Onbekend",
+        brandstof: brandstofRecord?.brandstof_omschrijving ?? "Onbekend",
         eersteKleur: v.eerste_kleur ?? "Onbekend",
         aantalCilinders: v.aantal_cilinders ?? "-",
         cilinderinhoud: v.cilinderinhoud ? `${v.cilinderinhoud} cc` : "-",
         eersteToelating: v.datum_eerste_toelating ?? "",
+        hybrideKlasse,
       },
     };
   } catch (err: unknown) {

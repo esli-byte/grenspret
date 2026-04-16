@@ -9,13 +9,15 @@ import {
   mapBrandstofSoort,
   detecteerEuro98,
   schattingTankgrootte,
+  hybrideVerbruiksFactor,
+  hybrideLabel,
   type BrandstofSoort,
   type LandPrijzen,
   type Besparing,
 } from "./brandstofprijzen";
 import {
   schatAfstand,
-  schattingVerbruik,
+  schattingVerbruikHybride,
   type RouteSchatting,
 } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
@@ -78,6 +80,7 @@ export function TankenForm() {
   const [isLeaseAuto, setIsLeaseAuto] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
+  const [elektrischPercentage, setElektrischPercentage] = useState(50);
 
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
@@ -153,7 +156,12 @@ export function TankenForm() {
     const ccMatch = voertuig.cilinderinhoud.match(/(\d+)/);
     const cc = ccMatch ? parseInt(ccMatch[1], 10) : 1600;
     const tankGrootte = schattingTankgrootte(cc);
-    const verbruik = schattingVerbruik(cc, soort === "euro98" ? "euro95" : soort);
+    // Hybride-correctie op verbruik
+    const hFactor = hybrideVerbruiksFactor(
+      voertuig.hybrideKlasse,
+      voertuig.hybrideKlasse === "OVC-HEV" ? elektrischPercentage : 0,
+    );
+    const verbruik = schattingVerbruikHybride(cc, soort === "euro98" ? "euro95" : soort, hFactor);
     const soortLabels: Record<BrandstofSoort, string> = {
       euro95: "Euro 95",
       euro98: "Euro 98",
@@ -166,9 +174,10 @@ export function TankenForm() {
       tankGrootte,
       verbruik,
       cc,
+      hybrideKlasse: voertuig.hybrideKlasse,
       besparingen: berekenBesparingen(soort, tankGrootte, prijzen),
     };
-  }, [voertuig, prijzen, brandstofOverride]);
+  }, [voertuig, prijzen, brandstofOverride, elektrischPercentage]);
 
   const routes = useMemo(() => {
     if (!postcode || postcode.replace(/\s/g, "").length < 4) return null;
@@ -433,6 +442,16 @@ export function TankenForm() {
               <dd className="font-bold text-navy dark:text-white">{voertuig.aantalCilinders}</dd>
               <dt className="text-gray-500 dark:text-gray-400">Inhoud</dt>
               <dd className="font-bold text-navy dark:text-white">{voertuig.cilinderinhoud}</dd>
+              {voertuig.hybrideKlasse !== "geen" && (
+                <>
+                  <dt className="text-gray-500 dark:text-gray-400">Type</dt>
+                  <dd className="font-bold text-navy dark:text-white">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-extrabold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      ⚡ {hybrideLabel(voertuig.hybrideKlasse)}
+                    </span>
+                  </dd>
+                </>
+              )}
               {voertuig.eersteToelating && (
                 <>
                   <dt className="text-gray-500 dark:text-gray-400">Bouwjaar</dt>
@@ -497,6 +516,87 @@ export function TankenForm() {
                   >
                     Euro 95
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hybride melding voor NOVC-HEV */}
+      {voertuig && voertuig.hybrideKlasse === "NOVC-HEV" && berekening && (
+        <div className="card-bold overflow-hidden border-emerald-300 bg-emerald-50 dark:border-emerald-700/30 dark:bg-emerald-950/30 animate-slide-in-bottom">
+          <div className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg dark:bg-emerald-900/30">
+                ⚡
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
+                  Hybride gedetecteerd
+                </h3>
+                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300/80">
+                  Je {voertuig.merk} {voertuig.handelsbenaming} is een hybride. Het verbruik is automatisch ~35% lager berekend ({berekening.verbruik} l/100km).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHEV slider voor elektrisch percentage */}
+      {voertuig && voertuig.hybrideKlasse === "OVC-HEV" && berekening && (
+        <div className="card-bold overflow-hidden border-emerald-300 bg-emerald-50 dark:border-emerald-700/30 dark:bg-emerald-950/30 animate-slide-in-bottom">
+          <div className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg dark:bg-emerald-900/30">
+                🔌
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
+                  Plug-in Hybride gedetecteerd
+                </h3>
+                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300/80">
+                  Je {voertuig.merk} {voertuig.handelsbenaming} is een plug-in hybride. Geef aan hoeveel procent van je ritten je elektrisch rijdt.
+                </p>
+              </div>
+            </div>
+
+            {/* Percentage slider */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  🛢️ Altijd benzine
+                </span>
+                <span className="rounded-full bg-emerald-200 px-3 py-1 text-sm font-extrabold text-emerald-800 dark:bg-emerald-800/50 dark:text-emerald-200">
+                  {elektrischPercentage}% elektrisch
+                </span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  ⚡ Altijd elektrisch
+                </span>
+              </div>
+              <div className="relative mt-2">
+                <div className="h-3 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className="h-3 rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all"
+                    style={{ width: `${elektrischPercentage}%` }}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={10}
+                  value={elektrischPercentage}
+                  onChange={(e) => setElektrischPercentage(parseInt(e.target.value, 10))}
+                  className="absolute inset-0 h-3 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-3 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-lg"
+                />
+              </div>
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/60 p-3 dark:bg-gray-800/40">
+                <span className="text-sm">⛽</span>
+                <div className="flex-1 text-xs">
+                  <span className="font-medium text-gray-500 dark:text-gray-400">Geschat verbruik:</span>{" "}
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-300">{berekening.verbruik} l/100km</span>
                 </div>
               </div>
             </div>

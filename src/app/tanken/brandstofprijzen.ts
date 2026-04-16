@@ -126,6 +126,62 @@ export function detecteerEuro98(
   return { aanbevolen: "euro95", reden: null };
 }
 
+// ═══════════════════════════════════════════════════════════
+//  HYBRIDE VERBRUIKSAANPASSING
+//
+//  Hybrides (NOVC-HEV) verbruiken typisch ~35% minder brandstof
+//  dankzij de elektromotor die meehelpt.
+//
+//  Plug-in hybrides (OVC-HEV) verbruiken minder afhankelijk van
+//  hoe vaak de bestuurder de batterij oplaadt:
+//  - 100% elektrisch rijden → bijna geen brandstof
+//  - 0% elektrisch rijden  → ~25% minder dan puur benzine
+//  - De gebruiker kiest een percentage via een slider
+// ═══════════════════════════════════════════════════════════
+
+import type { HybrideKlasse } from "./actions";
+
+/**
+ * Bereken de hybride verbruiksfactor (vermenigvuldiger voor basisverbruik).
+ *
+ * @param klasse - Hybride classificatie uit RDW
+ * @param elektrischPercentage - Alleen voor PHEV: 0-100% van ritten op elektrisch
+ * @returns factor 0-1 waarmee het basisverbruik vermenigvuldigd wordt
+ */
+export function hybrideVerbruiksFactor(
+  klasse: HybrideKlasse,
+  elektrischPercentage = 0,
+): number {
+  switch (klasse) {
+    case "NOVC-HEV":
+      // Gewone hybride: ~35% zuiniger
+      return 0.65;
+
+    case "OVC-HEV": {
+      // Plug-in hybride: van 75% verbruik (nooit laden) tot ~5% (altijd elektrisch)
+      const pct = Math.max(0, Math.min(100, elektrischPercentage));
+      // Bij 0% elektrisch → 0.75 (25% zuiniger dan normaal dankzij recuperatie)
+      // Bij 100% elektrisch → 0.05 (bijna geen benzine, alleen voor verwarming etc.)
+      return 0.75 - (pct / 100) * 0.7;
+    }
+
+    default:
+      return 1; // Geen hybride → geen aanpassing
+  }
+}
+
+/** Leesbare label voor hybride type */
+export function hybrideLabel(klasse: HybrideKlasse): string | null {
+  switch (klasse) {
+    case "NOVC-HEV":
+      return "Hybride";
+    case "OVC-HEV":
+      return "Plug-in Hybride";
+    default:
+      return null;
+  }
+}
+
 export type Besparing = {
   land: string;
   vlag: string;

@@ -186,7 +186,7 @@ export function schatAfstand(postcode: string): RouteSchatting[] | null {
   return result.sort((a, b) => a.afstandEnkel - b.afstandEnkel);
 }
 
-/** Schat verbruik in l/100km op basis van cilinderinhoud en brandstofsoort */
+/** Schat basisverbruik in l/100km op basis van cilinderinhoud en brandstofsoort */
 export function schattingVerbruik(
   cilinderinhoudCc: number,
   brandstof: "euro95" | "diesel"
@@ -197,4 +197,17 @@ export function schattingVerbruik(
   if (cilinderinhoudCc <= 2000) return isDiesel ? 5.5 : 7.5;
   if (cilinderinhoudCc <= 3000) return isDiesel ? 6.5 : 9.0;
   return isDiesel ? 8.0 : 11.0;
+}
+
+/**
+ * Schat verbruik met hybride-correctie.
+ * Past de hybride verbruiksfactor toe op het basisverbruik.
+ */
+export function schattingVerbruikHybride(
+  cilinderinhoudCc: number,
+  brandstof: "euro95" | "diesel",
+  hybrideFactor: number,
+): number {
+  const basis = schattingVerbruik(cilinderinhoudCc, brandstof);
+  return Math.round(basis * hybrideFactor * 10) / 10;
 }
