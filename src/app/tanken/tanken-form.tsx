@@ -15,14 +15,13 @@ import {
   type LandPrijzen,
   type Besparing,
 } from "./brandstofprijzen";
-import {
-  schatAfstand,
-  schattingVerbruikHybride,
-  type RouteSchatting,
-} from "./afstand";
+import { schattingVerbruikHybride } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
+import type { RouteResponse } from "@/app/api/routes/route";
+
+type RouteSchatting = RouteResponse["routes"][number];
 
 function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
@@ -179,9 +178,45 @@ export function TankenForm() {
     };
   }, [voertuig, prijzen, brandstofOverride, elektrischPercentage]);
 
-  const routes = useMemo(() => {
-    if (!postcode || postcode.replace(/\s/g, "").length < 4) return null;
-    return schatAfstand(postcode);
+  const [routes, setRoutes] = useState<RouteSchatting[] | null>(null);
+  const [routesBron, setRoutesBron] = useState<"osrm" | "schatting" | null>(null);
+  const [routesLaden, setRoutesLaden] = useState(false);
+
+  // Fetch echte routes via OSRM API wanneer postcode verandert
+  useEffect(() => {
+    const cleaned = postcode.replace(/\s/g, "");
+    if (cleaned.length < 4) {
+      setRoutes(null);
+      setRoutesBron(null);
+      return;
+    }
+
+    let cancelled = false;
+    async function fetchRoutes() {
+      setRoutesLaden(true);
+      try {
+        const res = await fetch(`/api/routes?postcode=${encodeURIComponent(cleaned)}`);
+        if (!res.ok) throw new Error("Route API error");
+        const data: RouteResponse = await res.json();
+        if (cancelled) return;
+        setRoutes(data.routes);
+        setRoutesBron(data.bron);
+      } catch {
+        if (!cancelled) {
+          setRoutes(null);
+          setRoutesBron(null);
+        }
+      } finally {
+        if (!cancelled) setRoutesLaden(false);
+      }
+    }
+
+    // Debounce: wacht 500ms na laatste toetsaanslag
+    const timer = setTimeout(fetchRoutes, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [postcode]);
 
   useEffect(() => {
@@ -684,6 +719,7 @@ export function TankenForm() {
                 <tr className="border-b-2 border-gray-100 dark:border-gray-800">
                   <th className="pb-2.5 text-left text-xs font-bold text-gray-400 dark:text-gray-500">Land</th>
                   <th className="pb-2.5 text-right text-xs font-bold text-gray-400 dark:text-gray-500">Euro 95</th>
+                  <th className="pb-2.5 text-right text-xs font-bold text-gray-400/60 dark:text-gray-500/60">E98</th>
                   <th className="pb-2.5 text-right text-xs font-bold text-gray-400 dark:text-gray-500">Diesel</th>
                 </tr>
               </thead>
@@ -692,6 +728,7 @@ export function TankenForm() {
                   <tr key={land.land}>
                     <td className="py-3.5 font-bold text-navy dark:text-white">{land.vlag} {land.land}</td>
                     <td className="py-3.5 text-right tabular-nums font-semibold text-gray-600 dark:text-gray-400">{euro(land.euro95)}</td>
+                    <td className="py-3.5 text-right tabular-nums text-xs font-medium text-gray-400 dark:text-gray-500">{euro(land.euro98)}</td>
                     <td className="py-3.5 text-right tabular-nums font-semibold text-gray-600 dark:text-gray-400">{euro(land.diesel)}</td>
                   </tr>
                 ))}
@@ -735,13 +772,23 @@ export function TankenForm() {
         />
       )}
 
+      {/* Routes laden indicator */}
+      {routesLaden && berekening && (
+        <div className="card-bold p-5 animate-slide-in-bottom">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent/20 border-t-accent" />
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Route berekenen...</p>
+          </div>
+        </div>
+      )}
+
       {/* Netto besparingsoverzicht */}
-      {berekening && routes && (
-        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} isLeaseAuto={isLeaseAuto} />
+      {berekening && routes && !routesLaden && (
+        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} isLeaseAuto={isLeaseAuto} routesBron={routesBron} />
       )}
 
       {/* Alleen bruto besparing als er geen postcode is */}
-      {berekening && !routes && (
+      {berekening && !routes && !routesLaden && (
         <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} isLeaseAuto={isLeaseAuto} />
       )}
 
@@ -958,6 +1005,7 @@ function NettoBesparingOverzicht({
   prijzen,
   extraLiters,
   isLeaseAuto,
+  routesBron,
 }: {
   berekening: {
     soort: BrandstofSoort;
@@ -970,6 +1018,7 @@ function NettoBesparingOverzicht({
   prijzen: LandPrijzen[];
   extraLiters: number;
   isLeaseAuto: boolean;
+  routesBron: "osrm" | "schatting" | null;
 }) {
   const nlPrijs = prijzen[0][berekening.soort];
   const kaarten = routes
@@ -1090,10 +1139,19 @@ function NettoBesparingOverzicht({
         })}
       </div>
       <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500">
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-        </svg>
-        Gekoppeld met de RDW en OpenStreetMap voor betrouwbare data
+        {routesBron === "osrm" ? (
+          <>
+            <div className="h-2 w-2 rounded-full bg-accent animate-glow" />
+            Echte wegafstanden via OpenStreetMap
+          </>
+        ) : (
+          <>
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+            </svg>
+            Geschatte afstanden · RDW + OpenStreetMap
+          </>
+        )}
       </div>
     </div>
   );
