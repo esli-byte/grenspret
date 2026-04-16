@@ -18,10 +18,8 @@ import {
 import { schattingVerbruikHybride } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
+import type { LocatieMetAfstand } from "@/lib/grenslocaties";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
-import type { RouteResponse } from "@/app/api/routes/route";
-
-type RouteSchatting = RouteResponse["routes"][number];
 
 function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
@@ -80,6 +78,7 @@ export function TankenForm() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
   const [elektrischPercentage, setElektrischPercentage] = useState(50);
+  const [geselecteerdStation, setGeselecteerdStation] = useState<LocatieMetAfstand | null>(null);
 
   // Live prijzen
   const [prijzen, setPrijzen] = useState<LandPrijzen[]>(FALLBACK_PRIJZEN);
@@ -178,50 +177,16 @@ export function TankenForm() {
     };
   }, [voertuig, prijzen, brandstofOverride, elektrischPercentage]);
 
-  const [routes, setRoutes] = useState<RouteSchatting[] | null>(null);
-  const [routesBron, setRoutesBron] = useState<"osrm" | "schatting" | null>(null);
-  const [routesLaden, setRoutesLaden] = useState(false);
-
-  // Fetch echte routes via OSRM API wanneer postcode verandert
   useEffect(() => {
-    const cleaned = postcode.replace(/\s/g, "");
-    if (cleaned.length < 4) {
-      setRoutes(null);
-      setRoutesBron(null);
-      return;
-    }
-
-    let cancelled = false;
-    async function fetchRoutes() {
-      setRoutesLaden(true);
-      try {
-        const res = await fetch(`/api/routes?postcode=${encodeURIComponent(cleaned)}`);
-        if (!res.ok) throw new Error("Route API error");
-        const data: RouteResponse = await res.json();
-        if (cancelled) return;
-        setRoutes(data.routes);
-        setRoutesBron(data.bron);
-      } catch {
-        if (!cancelled) {
-          setRoutes(null);
-          setRoutesBron(null);
-        }
-      } finally {
-        if (!cancelled) setRoutesLaden(false);
-      }
-    }
-
-    // Debounce: wacht 500ms na laatste toetsaanslag
-    const timer = setTimeout(fetchRoutes, 500);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [postcode]);
-
-  useEffect(() => {
-    if (!voertuig || !berekening || !routes) return;
+    if (!voertuig || !berekening || !geselecteerdStation) return;
     const nlPrijs = prijzen[0][berekening.soort];
+    const besparing = berekening.besparingen.find((b) => b.land === geselecteerdStation.land);
+    const buitenlandPrijs = besparing?.prijsPerLiter ?? nlPrijs;
+    const brandstofEnkel = (geselecteerdStation.afstandKm / 100) * berekening.verbruik;
+    const reiskostenHeen = brandstofEnkel * nlPrijs;
+    const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
+    const reiskosten = reiskostenHeen + reiskostenTerug;
+    const netto = (besparing?.besparing ?? 0) - reiskosten;
     slaaTankenOp({
       voertuig: {
         merk: voertuig.merk,
@@ -234,28 +199,17 @@ export function TankenForm() {
       verbruik: berekening.verbruik,
       besparingDE: berekening.besparingen.find((b) => b.land === "Duitsland")?.besparing ?? 0,
       besparingBE: berekening.besparingen.find((b) => b.land === "België")?.besparing ?? 0,
-      route: routes.map((route) => {
-        const besparing = berekening.besparingen.find((b) => b.land === route.land);
-        // Slimste route: heenreis op laatste NL benzine, daar volgetankt,
-        // terugreis op goedkopere DE/BE benzine
-        const buitenlandPrijs = besparing?.prijsPerLiter ?? nlPrijs;
-        const brandstofEnkel = (route.afstandEnkel / 100) * berekening.verbruik;
-        const reiskostenHeen = brandstofEnkel * nlPrijs;
-        const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
-        const reiskosten = reiskostenHeen + reiskostenTerug;
-        const netto = (besparing?.besparing ?? 0) - reiskosten;
-        return {
-          land: route.land,
-          bestemming: route.bestemming,
-          afstandEnkel: route.afstandEnkel,
-          afstandRetour: route.afstandRetour,
-          rijtijdMinuten: route.rijtijdMinuten,
-          reiskosten,
-          netto,
-        };
-      }),
+      route: [{
+        land: geselecteerdStation.land,
+        bestemming: geselecteerdStation.naam,
+        afstandEnkel: geselecteerdStation.afstandKm,
+        afstandRetour: geselecteerdStation.afstandKm * 2,
+        rijtijdMinuten: geselecteerdStation.rijtijdMin * 2,
+        reiskosten,
+        netto,
+      }],
     });
-  }, [voertuig, berekening, routes, prijzen]);
+  }, [voertuig, berekening, geselecteerdStation, prijzen]);
 
   async function handleKentekenZoek() {
     if (!kenteken.trim()) return;
@@ -691,7 +645,13 @@ export function TankenForm() {
 
       {/* Dichtstbijzijnde tankstations */}
       {postcode && (
-        <LocatieKaartjes postcode={postcode} type="tankstation" titel="Dichtstbijzijnde tankstations" />
+        <LocatieKaartjes
+          postcode={postcode}
+          type="tankstation"
+          titel="Dichtstbijzijnde tankstations"
+          geselecteerdId={geselecteerdStation?.id}
+          onSelect={setGeselecteerdStation}
+        />
       )}
 
       {/* Brandstofprijzen overzicht */}
@@ -772,23 +732,19 @@ export function TankenForm() {
         />
       )}
 
-      {/* Routes laden indicator */}
-      {routesLaden && berekening && (
-        <div className="card-bold p-5 animate-slide-in-bottom">
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent/20 border-t-accent" />
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Route berekenen...</p>
-          </div>
-        </div>
+      {/* Besparingsoverzicht — gecombineerd met geselecteerd station */}
+      {berekening && geselecteerdStation && (
+        <BesparingsBlok
+          berekening={berekening}
+          station={geselecteerdStation}
+          prijzen={prijzen}
+          extraLiters={extraLiters}
+          isLeaseAuto={isLeaseAuto}
+        />
       )}
 
-      {/* Netto besparingsoverzicht */}
-      {berekening && routes && !routesLaden && (
-        <NettoBesparingOverzicht berekening={berekening} routes={routes} prijzen={prijzen} extraLiters={extraLiters} isLeaseAuto={isLeaseAuto} routesBron={routesBron} />
-      )}
-
-      {/* Alleen bruto besparing als er geen postcode is */}
-      {berekening && !routes && !routesLaden && (
+      {/* Bruto besparing als er nog geen station geselecteerd is */}
+      {berekening && !geselecteerdStation && (
         <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} isLeaseAuto={isLeaseAuto} />
       )}
 
@@ -999,13 +955,12 @@ function ExtraLitersSlider({
   );
 }
 
-function NettoBesparingOverzicht({
+function BesparingsBlok({
   berekening,
-  routes,
+  station,
   prijzen,
   extraLiters,
   isLeaseAuto,
-  routesBron,
 }: {
   berekening: {
     soort: BrandstofSoort;
@@ -1014,145 +969,143 @@ function NettoBesparingOverzicht({
     verbruik: number;
     besparingen: Besparing[];
   };
-  routes: RouteSchatting[];
+  station: LocatieMetAfstand;
   prijzen: LandPrijzen[];
   extraLiters: number;
   isLeaseAuto: boolean;
-  routesBron: "osrm" | "schatting" | null;
 }) {
   const nlPrijs = prijzen[0][berekening.soort];
-  const kaarten = routes
-    .map((route) => {
-      const besparing = berekening.besparingen.find((b) => b.land === route.land);
-      if (!besparing) return null;
-      // Slimste route: heen op laatste NL benzine, terug volgetankt in DE/BE
-      const brandstofEnkel = (route.afstandEnkel / 100) * berekening.verbruik;
-      const brandstofRetour = brandstofEnkel * 2;
-      const reiskostenHeen = brandstofEnkel * nlPrijs;
-      const reiskostenTerug = brandstofEnkel * besparing.prijsPerLiter;
-      const reiskosten = isLeaseAuto ? 0 : reiskostenHeen + reiskostenTerug;
-      const extraBesparing = extraLiters * (nlPrijs - besparing.prijsPerLiter);
-      const netto = besparing.besparing + extraBesparing - reiskosten;
-      return { ...route, besparing, brandstofRetour, reiskosten, extraBesparing, netto };
-    })
-    .filter(Boolean) as Array<{
-    land: string;
-    bestemming: string;
-    afstandEnkel: number;
-    afstandRetour: number;
-    rijtijdMinuten: number;
-    besparing: Besparing;
-    brandstofRetour: number;
-    reiskosten: number;
-    extraBesparing: number;
-    netto: number;
-  }>;
+  const besparing = berekening.besparingen.find((b) => b.land === station.land);
+  if (!besparing) return null;
 
-  const bestNetto = Math.max(...kaarten.map((k) => k.netto));
+  const buitenlandPrijs = besparing.prijsPerLiter;
+  const afstandRetourKm = station.afstandKm * 2;
+  const rijtijdRetourMin = station.rijtijdMin * 2;
+
+  // Brandstofkosten: heen op dure NL prijs (tank nog NL), terug op goedkope buitenland prijs
+  const brandstofEnkel = (station.afstandKm / 100) * berekening.verbruik;
+  const reiskostenHeen = brandstofEnkel * nlPrijs;
+  const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
+  const reiskosten = isLeaseAuto ? 0 : reiskostenHeen + reiskostenTerug;
+
+  const extraBesparing = extraLiters * (nlPrijs - buitenlandPrijs);
+  const netto = besparing.besparing + extraBesparing - reiskosten;
+  const loont = netto > 0;
+
+  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
+  const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${station.adres}, ${station.land}`)}&travelmode=driving`;
 
   return (
-    <div className="space-y-4 animate-slide-in-bottom">
-      <h2 className="text-sm font-extrabold text-navy dark:text-white">Totale netto besparing</h2>
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-        {berekening.soortLabel} &middot; {berekening.tankGrootte}L tank
-        {extraLiters > 0 && <> + {extraLiters}L jerrycan</>}
-        {" "}&middot; {berekening.verbruik} l/100km
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {kaarten.map((k) => {
-          const loont = k.netto > 0;
-          const isBest = k.netto === bestNetto && loont;
-          return (
-            <div
-              key={k.land}
-              className={`card-bold relative overflow-hidden transition-all ${
-                loont
-                  ? isBest
-                    ? "border-accent bg-gradient-to-br from-accent/5 to-emerald-50 dark:from-accent/10 dark:to-emerald-950/30"
-                    : "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30"
-                  : "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30"
-              }`}
-            >
-              {isBest && (
-                <span className="absolute -top-px right-4 rounded-b-xl bg-accent px-3.5 py-1.5 text-xs font-extrabold text-white shadow-md animate-badge-pop">
-                  Beste keuze
+    <div className="animate-slide-in-bottom space-y-3">
+      <h2 className="text-sm font-extrabold text-navy dark:text-white">
+        Jouw besparing
+      </h2>
+
+      <div className={`card-bold relative overflow-hidden transition-all ${
+        loont
+          ? "border-accent bg-gradient-to-br from-accent/5 to-emerald-50 dark:from-accent/10 dark:to-emerald-950/30"
+          : "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30"
+      }`}>
+        <div className="p-5">
+          {/* Station header */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{vlag}</span>
+                <span className="text-sm font-extrabold text-navy dark:text-white">
+                  {station.naam}
                 </span>
-              )}
-              <div className="p-5">
-                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                  {k.besparing.vlag} {k.land}
-                </div>
-                <div className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">{k.bestemming}</div>
-                <div className={`mt-3 text-3xl font-extrabold ${
-                  loont ? "text-accent" : "text-red-500 dark:text-red-400"
-                }`}>
-                  {loont ? "+" : ""}{euro(k.netto)}
-                </div>
-                <div className={`text-xs font-bold ${
-                  loont ? "text-accent/70" : "text-red-400"
-                }`}>
-                  {loont ? "netto besparing" : "het loont niet"}
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 border-t-2 border-gray-200/50 pt-4 text-xs dark:border-gray-700/50">
-                  <div className="rounded-xl bg-white/60 p-2.5 dark:bg-gray-800/40">
-                    <div className="text-gray-400 font-medium">Enkele reis</div>
-                    <div className="mt-0.5 font-extrabold text-navy dark:text-white">{k.afstandEnkel} km</div>
-                  </div>
-                  <div className="rounded-xl bg-white/60 p-2.5 dark:bg-gray-800/40">
-                    <div className="text-gray-400 font-medium">Rijtijd retour</div>
-                    <div className="mt-0.5 font-extrabold text-navy dark:text-white">{formatRijtijd(k.rijtijdMinuten)}</div>
-                  </div>
-                </div>
-                <div className="mt-3 space-y-1.5 border-t-2 border-gray-200/50 pt-3 text-xs dark:border-gray-700/50">
-                  <div className="flex justify-between text-gray-500">
-                    <span className="font-medium">Besparing volle tank</span>
-                    <span className="tabular-nums font-bold text-accent">+{euro(k.besparing.besparing)}</span>
-                  </div>
-                  {extraLiters > 0 && (
-                    <div className="flex justify-between text-gray-500">
-                      <span className="font-medium">Extra {extraLiters}L jerrycan</span>
-                      <span className="tabular-nums font-bold text-accent">+{euro(k.extraBesparing)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-gray-500">
-                    <span className="font-medium">Reiskosten ({k.afstandRetour} km)</span>
-                    <span className="tabular-nums font-bold text-red-500">-{euro(k.reiskosten)}</span>
-                  </div>
-                  <div className={`flex justify-between border-t-2 pt-1.5 font-extrabold ${
-                    loont ? "border-accent/20 text-accent" : "border-red-200 text-red-500"
-                  }`}>
-                    <span>Netto totaal</span>
-                    <span className="tabular-nums">{loont ? "+" : ""}{euro(k.netto)}</span>
-                  </div>
-                </div>
-                {isLeaseAuto && (
-                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
-                    <span className="text-xs">🚙</span>
-                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                      Lease-auto: brandstof door werkgever
-                    </span>
-                  </div>
-                )}
+              </div>
+              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                {station.adres}
+              </p>
+            </div>
+            {/* Compact retour info */}
+            <div className="shrink-0 rounded-xl bg-white/60 px-3 py-2 text-center dark:bg-gray-800/40">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">Retour</div>
+              <div className="mt-0.5 text-xs font-extrabold text-navy dark:text-white">
+                {afstandRetourKm} km
+              </div>
+              <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                {formatRijtijd(rijtijdRetourMin)}
               </div>
             </div>
-          );
-        })}
-      </div>
-      <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500">
-        {routesBron === "osrm" ? (
-          <>
-            <div className="h-2 w-2 rounded-full bg-accent animate-glow" />
-            Echte wegafstanden via OpenStreetMap
-          </>
-        ) : (
-          <>
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </div>
+
+          {/* Besparing headline */}
+          <div className="mt-4">
+            <div className={`text-3xl font-extrabold ${
+              loont ? "text-accent" : "text-red-500 dark:text-red-400"
+            }`}>
+              {loont ? "+" : ""}{euro(netto)}
+            </div>
+            <div className={`text-xs font-bold ${
+              loont ? "text-accent/70" : "text-red-400"
+            }`}>
+              {loont ? "netto besparing" : "het loont (nog) niet"}
+            </div>
+          </div>
+
+          {/* Breakdown */}
+          <div className="mt-4 space-y-1.5 border-t-2 border-gray-200/50 pt-3 text-xs dark:border-gray-700/50">
+            <div className="flex justify-between text-gray-500 dark:text-gray-400">
+              <span className="font-medium">Volle tank ({berekening.tankGrootte}L)</span>
+              <span className="tabular-nums font-bold text-accent">+{euro(besparing.besparing)}</span>
+            </div>
+            {extraLiters > 0 && (
+              <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                <span className="font-medium">Jerrycan ({extraLiters}L)</span>
+                <span className="tabular-nums font-bold text-accent">+{euro(extraBesparing)}</span>
+              </div>
+            )}
+            {!isLeaseAuto && (
+              <>
+                <div className="flex justify-between text-gray-400 dark:text-gray-500">
+                  <span className="font-medium">Heen ({station.afstandKm} km, NL-prijs)</span>
+                  <span className="tabular-nums font-medium text-red-400">-{euro(reiskostenHeen)}</span>
+                </div>
+                <div className="flex justify-between text-gray-400 dark:text-gray-500">
+                  <span className="font-medium">Terug ({station.afstandKm} km, {station.land.slice(0, 2)}-prijs)</span>
+                  <span className="tabular-nums font-medium text-red-400">-{euro(reiskostenTerug)}</span>
+                </div>
+              </>
+            )}
+            <div className={`flex justify-between border-t-2 pt-2 font-extrabold ${
+              loont ? "border-accent/20 text-accent" : "border-red-200 text-red-500"
+            }`}>
+              <span>Netto totaal</span>
+              <span className="tabular-nums">{loont ? "+" : ""}{euro(netto)}</span>
+            </div>
+          </div>
+
+          {isLeaseAuto && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
+              <span className="text-xs">🚙</span>
+              <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                Lease-auto: reiskosten €0 (werkgever betaalt brandstof)
+              </span>
+            </div>
+          )}
+
+          {/* Navigeer knop */}
+          <a
+            href={routeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-sm font-extrabold text-white shadow-md shadow-accent/25 transition-all hover:shadow-lg hover:shadow-accent/30 active:scale-[0.98]"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
             </svg>
-            Geschatte afstanden · RDW + OpenStreetMap
-          </>
-        )}
+            Navigeer naar {station.naam}
+          </a>
+        </div>
       </div>
+
+      {/* Info line */}
+      <p className="text-center text-[11px] font-medium text-gray-400 dark:text-gray-500">
+        {berekening.soortLabel} · {berekening.verbruik} l/100km · Geschatte afstanden
+      </p>
     </div>
   );
 }

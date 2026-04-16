@@ -36,18 +36,20 @@ export function LocatieKaartjes({
   postcode,
   type,
   titel,
+  geselecteerdId,
+  onSelect,
 }: {
   postcode: string;
   type: "tankstation" | "supermarkt";
   titel: string;
+  geselecteerdId?: string | null;
+  onSelect?: (locatie: LocatieMetAfstand) => void;
 }) {
   const locaties = useMemo(() => {
     const cleaned = postcode.replace(/\s/g, "");
     if (cleaned.length < 4) return null;
     const origin = postcodeNaarCoordinaat(postcode);
     if (!origin) return null;
-    // Top 5 dichtstbijzijnde, puur gesorteerd op afstand.
-    // Dichtstbijzijnde bovenaan, ongeacht of het Duitsland of België is.
     return zoekDichtstbijzijnde(origin, type, 5);
   }, [postcode, type]);
 
@@ -58,9 +60,20 @@ export function LocatieKaartjes({
       <h2 className="text-sm font-bold text-gray-900 dark:text-white">
         {titel}
       </h2>
+      {onSelect && (
+        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+          Tik op een station om je besparing te berekenen
+        </p>
+      )}
       <div className="grid gap-2.5">
         {locaties.map((loc, i) => (
-          <LocatieKaart key={loc.id} locatie={loc} rank={i + 1} />
+          <LocatieKaart
+            key={loc.id}
+            locatie={loc}
+            rank={i + 1}
+            isGeselecteerd={geselecteerdId === loc.id}
+            onSelect={onSelect ? () => onSelect(loc) : undefined}
+          />
         ))}
       </div>
     </div>
@@ -68,9 +81,6 @@ export function LocatieKaartjes({
 }
 
 function bouwRouteUrl(locatie: LocatieMetAfstand): string {
-  // Google Maps open-in-app deeplink. Werkt in Google Maps, Apple Maps
-  // (via iOS redirect), en in desktop browser. Gebruiker's huidige locatie
-  // wordt automatisch als startpunt gebruikt als er geen origin is opgegeven.
   const bestemming = encodeURIComponent(`${locatie.adres}, ${locatie.land}`);
   return `https://www.google.com/maps/dir/?api=1&destination=${bestemming}&travelmode=driving`;
 }
@@ -78,37 +88,61 @@ function bouwRouteUrl(locatie: LocatieMetAfstand): string {
 function LocatieKaart({
   locatie,
   rank,
+  isGeselecteerd,
+  onSelect,
 }: {
   locatie: LocatieMetAfstand;
   rank: number;
+  isGeselecteerd?: boolean;
+  onSelect?: () => void;
 }) {
   const ketenKleur =
     KETEN_KLEUREN[locatie.keten] ??
     "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
 
   return (
-    <div className="group flex items-start gap-3.5 rounded-2xl border border-gray-100 bg-surface p-4 shadow-sm transition-all hover:shadow-md dark:border-gray-800">
+    <div
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect}
+      onKeyDown={onSelect ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } } : undefined}
+      className={`group flex items-start gap-3.5 rounded-2xl border p-4 shadow-sm transition-all ${
+        onSelect ? "cursor-pointer active:scale-[0.98]" : ""
+      } ${
+        isGeselecteerd
+          ? "border-accent bg-accent/5 shadow-accent/10 ring-2 ring-accent/30 dark:bg-accent/10"
+          : "border-gray-100 bg-surface hover:shadow-md dark:border-gray-800"
+      }`}
+    >
       {/* Rank + icoon */}
       <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-lg">
-        <svg
-          className="h-6 w-6 text-accent"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
-          />
-        </svg>
-        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+        {isGeselecteerd ? (
+          <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        ) : (
+          <svg
+            className="h-6 w-6 text-accent"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
+            />
+          </svg>
+        )}
+        <span className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${
+          isGeselecteerd ? "bg-accent" : "bg-primary"
+        }`}>
           {rank}
         </span>
       </div>
@@ -125,7 +159,7 @@ function LocatieKaart({
             {locatie.keten}
           </span>
           <span className="text-xs" aria-label={locatie.land}>
-            {locatie.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+            {locatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}"}
           </span>
         </div>
         <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
