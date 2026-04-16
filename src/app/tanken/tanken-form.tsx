@@ -644,6 +644,16 @@ export function TankenForm() {
         </p>
       </div>
 
+      {/* Extra liters meenemen — boven tankstations */}
+      {berekening && (
+        <ExtraLitersSlider
+          extraLiters={extraLiters}
+          onChange={setExtraLiters}
+          brandstofSoort={berekening.soort}
+          prijzen={prijzen}
+        />
+      )}
+
       {/* Dichtstbijzijnde tankstations */}
       {postcode && (
         <LocatieKaartjes
@@ -721,16 +731,6 @@ export function TankenForm() {
             </div>
           )}
         </div>
-      )}
-
-      {/* Extra liters meenemen */}
-      {berekening && (
-        <ExtraLitersSlider
-          extraLiters={extraLiters}
-          onChange={setExtraLiters}
-          brandstofSoort={berekening.soort}
-          prijzen={prijzen}
-        />
       )}
 
       {/* Sticky besparingsbalk — verschijnt bij stationselectie */}
