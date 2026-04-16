@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 
 type Vraag = {
   vraag: string;
@@ -77,11 +77,121 @@ function ZoWerktHet() {
   );
 }
 
+/* ─── Feedback formulier ─── */
+function FeedbackFormulier() {
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [form, setForm] = useState({ naam: "", email: "", telefoon: "", bericht: "" });
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!form.naam.trim() || !form.bericht.trim()) return;
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success && data.mailto) {
+        // Open mailto als fallback
+        window.location.href = data.mailto;
+      }
+      setStatus("sent");
+      setForm({ naam: "", email: "", telefoon: "", bericht: "" });
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  if (status === "sent") {
+    return (
+      <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 text-center">
+        <p className="text-sm font-bold text-accent">Bedankt voor je feedback! 🎉</p>
+        <p className="mt-1 text-xs text-gray-500">We nemen zo snel mogelijk contact op.</p>
+        <button
+          onClick={() => setStatus("idle")}
+          className="mt-3 text-xs font-bold text-accent underline"
+        >
+          Nog een bericht sturen
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
+          Naam <span className="text-red-400">*</span>
+        </label>
+        <input
+          type="text"
+          required
+          value={form.naam}
+          onChange={(e) => setForm({ ...form, naam: e.target.value })}
+          placeholder="Je naam"
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-navy outline-none focus:border-accent focus:ring-1 focus:ring-accent dark:border-white/10 dark:bg-white/5 dark:text-white"
+        />
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
+          E-mail
+        </label>
+        <input
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          placeholder="je@email.nl"
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-navy outline-none focus:border-accent focus:ring-1 focus:ring-accent dark:border-white/10 dark:bg-white/5 dark:text-white"
+        />
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
+          Telefoonnummer
+        </label>
+        <input
+          type="tel"
+          value={form.telefoon}
+          onChange={(e) => setForm({ ...form, telefoon: e.target.value })}
+          placeholder="06-12345678"
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-navy outline-none focus:border-accent focus:ring-1 focus:ring-accent dark:border-white/10 dark:bg-white/5 dark:text-white"
+        />
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
+          Bericht / Feedback <span className="text-red-400">*</span>
+        </label>
+        <textarea
+          required
+          rows={3}
+          value={form.bericht}
+          onChange={(e) => setForm({ ...form, bericht: e.target.value })}
+          placeholder="Wat wil je ons laten weten?"
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-navy outline-none focus:border-accent focus:ring-1 focus:ring-accent dark:border-white/10 dark:bg-white/5 dark:text-white resize-none"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={status === "sending"}
+        className="w-full rounded-xl bg-accent py-2.5 text-xs font-extrabold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+      >
+        {status === "sending" ? "Verzenden..." : "Verzenden"}
+      </button>
+      {status === "error" && (
+        <p className="text-[11px] text-red-500 text-center">
+          Er ging iets mis. Probeer het opnieuw.
+        </p>
+      )}
+    </form>
+  );
+}
+
 /* ─── FAQ vragen — kort en bondig ─── */
 const VRAGEN: Vraag[] = [
   {
     vraag: "Wat kost Grenspret?",
-    antwoord: "Helemaal gratis. Geen account nodig. We verdienen op termijn via partnerlinks, niet met je data.",
+    antwoord: "Helemaal gratis!",
   },
   {
     vraag: "Hoeveel brandstof mag ik meenemen?",
@@ -93,7 +203,7 @@ const VRAGEN: Vraag[] = [
   },
   {
     vraag: "Mijn kenteken wordt niet gevonden",
-    antwoord: "Voer het in zonder streepjes (bv. AB123C). Alle Nederlandse kentekens via RDW werken. Geïmporteerde auto? Vul tankgrootte en verbruik handmatig in.",
+    antwoord: "Voer het in zonder streepjes (bv. AB123C). Alle Nederlandse kentekens worden automatisch herkend via de RDW-database.",
   },
   {
     vraag: "Kan ik Grenspret als app installeren?",
@@ -123,6 +233,19 @@ const VRAGEN: Vraag[] = [
   {
     vraag: "Hoe deel ik mijn besparing?",
     antwoord: "Op de resultaat-pagina staan drie knoppen: WhatsApp, Afbeelding en Kopieer tekst.",
+  },
+  {
+    vraag: "Hoe nauwkeurig zijn de berekeningen?",
+    antwoord: "We gebruiken echte rijafstanden, actuele brandstofprijzen en officiële RDW-gegevens van je auto. Ons team werkt elke dag aan verbeteringen om de berekeningen nog nauwkeuriger te maken. Grenspret wordt steeds beter!",
+  },
+  {
+    vraag: "Kan ik feedback geven?",
+    antwoord: (
+      <div className="space-y-3">
+        <p>Jazeker! We horen graag wat je vindt van Grenspret.</p>
+        <FeedbackFormulier />
+      </div>
+    ),
   },
 ];
 
