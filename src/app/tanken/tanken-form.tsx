@@ -261,16 +261,7 @@ export function TankenForm() {
     return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   }
 
-  async function handleGeolocate() {
-    if (!navigator.geolocation) {
-      setGeoTip("Je browser ondersteunt geen locatiebepaling. Vul je postcode handmatig in.");
-      return;
-    }
-
-    setGeoLoading(true);
-    setError(null);
-    setGeoTip(null);
-
+  async function vraagLocatieOp() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
@@ -286,7 +277,7 @@ export function TankenForm() {
             setPostcode(formatted);
             setGeoTip(null);
           } else {
-            setGeoTip("Postcode niet gevonden. Vul je postcode handmatig in hieronder.");
+            setGeoTip("Postcode niet gevonden. Vul je postcode handmatig in.");
           }
         } catch {
           setGeoTip("Kon je locatie niet omzetten naar een postcode. Vul je postcode handmatig in.");
@@ -297,18 +288,61 @@ export function TankenForm() {
       (geoError) => {
         setGeoLoading(false);
         if (geoError.code === 1) {
-          // PERMISSION_DENIED
           setGeoTip("locatie_geweigerd");
         } else if (geoError.code === 2) {
-          // POSITION_UNAVAILABLE
           setGeoTip("Locatie kon niet bepaald worden. Vul je postcode handmatig in.");
         } else {
-          // TIMEOUT or unknown
           setGeoTip("Locatiebepaling duurde te lang. Vul je postcode handmatig in.");
         }
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
+  }
+
+  async function handleGeolocate() {
+    if (!navigator.geolocation) {
+      setGeoTip("Je browser ondersteunt geen locatiebepaling. Vul je postcode handmatig in.");
+      return;
+    }
+
+    setGeoLoading(true);
+    setError(null);
+    setGeoTip(null);
+
+    // Check eerst de permissie-status als de Permissions API beschikbaar is
+    if (navigator.permissions) {
+      try {
+        const status = await navigator.permissions.query({ name: "geolocation" });
+
+        if (status.state === "denied") {
+          // Gebruiker heeft eerder geweigerd — popup komt niet meer
+          setGeoLoading(false);
+          setGeoTip("locatie_geweigerd");
+          return;
+        }
+
+        if (status.state === "prompt") {
+          // Eerste keer: browser toont automatisch de popup
+          // We luisteren ook op verandering, zodat als de gebruiker alsnog toestaat, het werkt
+          status.addEventListener("change", () => {
+            if (status.state === "granted") {
+              setGeoLoading(true);
+              setGeoTip(null);
+              vraagLocatieOp();
+            }
+          }, { once: true });
+        }
+
+        // "granted" of "prompt" → gewoon doorgaan
+        vraagLocatieOp();
+      } catch {
+        // Permissions API niet ondersteund voor geolocation, gewoon proberen
+        vraagLocatieOp();
+      }
+    } else {
+      // Geen Permissions API (oudere browser), gewoon proberen
+      vraagLocatieOp();
+    }
   }
 
   return (
