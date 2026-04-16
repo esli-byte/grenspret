@@ -205,8 +205,7 @@ export function TankenForm() {
       }
     }
 
-    // Alleen tonen als de beste keuze daadwerkelijk een positieve besparing heeft
-    return besteNetto > 0 ? besteId : null;
+    return besteId;
   }, [berekening, postcode, prijzen]);
 
   useEffect(() => {
