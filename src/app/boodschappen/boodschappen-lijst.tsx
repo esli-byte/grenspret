@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PRODUCTEN,
   CATEGORIE_LABELS,
@@ -82,6 +82,7 @@ export function BoodschappenLijst() {
   const [merkFilter, setMerkFilter] = useState<MerkType | "alle">("alle");
   const [eigenProducten, setEigenProducten] = useState<EigenProduct[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const totaalRef = useRef<HTMLDivElement>(null);
 
   // Samen boodschappen state
   const [groepsmodus, setGroepsmodus] = useState(false);
@@ -427,43 +428,28 @@ export function BoodschappenLijst() {
         )}
       </div>
 
-      {/* Merk filter */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setMerkFilter("alle")}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-extrabold transition-all active:scale-95 ${
-            merkFilter === "alle"
-              ? "bg-accent text-white shadow-lg shadow-accent/25"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400"
-          }`}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
-          </svg>
-          Alles ({PRODUCTEN.length})
-        </button>
-        <button
-          onClick={() => setMerkFilter("a-merk")}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-extrabold transition-all active:scale-95 ${
-            merkFilter === "a-merk"
-              ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-              : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300"
-          }`}
-        >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[8px] font-black text-white">A</span>
-          A-merken ({aantalAMerk})
-        </button>
-        <button
-          onClick={() => setMerkFilter("huismerk")}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-extrabold transition-all active:scale-95 ${
-            merkFilter === "huismerk"
-              ? "bg-gray-600 text-white shadow-lg shadow-gray-600/25"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-          }`}
-        >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-500 text-[8px] font-black text-white">H</span>
-          Huismerken ({aantalHuismerk})
-        </button>
+      {/* Merk filter — segmented control */}
+      <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-navy/50">
+        {([
+          { key: "alle" as const, label: "Alles", count: PRODUCTEN.length },
+          { key: "a-merk" as const, label: "A-merk", count: aantalAMerk },
+          { key: "huismerk" as const, label: "Huismerk", count: aantalHuismerk },
+        ] as const).map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setMerkFilter(key)}
+            className={`rounded-lg px-4 py-2 text-xs font-extrabold transition-all active:scale-[0.97] ${
+              merkFilter === key
+                ? "bg-white text-navy shadow-sm dark:bg-gray-700 dark:text-white"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            }`}
+          >
+            {label}
+            <span className={`ml-1.5 tabular-nums ${merkFilter === key ? "text-accent" : "text-gray-400 dark:text-gray-500"}`}>
+              {count}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Categorie tabs */}
@@ -636,10 +622,26 @@ export function BoodschappenLijst() {
       )}
 
       {/* Volledig overzicht onderaan */}
-      <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
+      <div ref={totaalRef}>
+        <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
+      </div>
 
       {/* Volgende stap knop naar resultaat */}
       {totalAantalItems > 0 && <BoodschappenVolgendeStap />}
+
+      {/* Floating knop naar overzicht */}
+      {totalAantalItems > 0 && (
+        <button
+          onClick={() => totaalRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="fixed bottom-24 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-navy text-white shadow-lg shadow-navy/30 transition-all hover:scale-105 active:scale-95 dark:bg-white dark:text-navy dark:shadow-white/20"
+          title="Ga naar overzicht"
+          aria-label="Scroll naar overzicht"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
