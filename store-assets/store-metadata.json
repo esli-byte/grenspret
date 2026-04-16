@@ -1,0 +1,62 @@
+{
+  "_comment": "App Store & Play Store metadata voor Grenspret",
+  "_updated": "2026-04-16",
+
+  "app": {
+    "id": "nl.grenspret.app",
+    "name": "Grenspret",
+    "subtitle": "Bespaar op tanken & boodschappen",
+    "category": "Financiën",
+    "subcategory": "Besparingen",
+    "ageRating": "4+",
+    "price": "Gratis",
+    "privacyUrl": "https://grenspret.nl/privacy",
+    "supportUrl": "https://grenspret.nl/veelgestelde-vragen",
+    "contactEmail": "info@grenspret.nl"
+  },
+
+  "description": {
+    "short": "Bereken hoeveel je bespaart op tanken en boodschappen over de grens in Duitsland of België.",
+    "long": "Grenspret berekent of het voor jou loont om over de grens te tanken en boodschappen te doen in Duitsland of België.\n\nVul je kenteken en postcode in en Grenspret zoekt automatisch het dichtstbijzijnde tankstation en de goedkoopste supermarkt. Je ziet direct hoeveel je bespaart, inclusief reiskosten.\n\nWat kan Grenspret?\n• Vergelijk brandstofprijzen tussen Nederland, Duitsland en België\n• Bereken je besparing op boodschappen met actuele prijzen\n• Vind het dichtstbijzijnde tankstation over de grens\n• Neem extra brandstof mee in een jerrycan (tot 10L per persoon)\n• Combineer tanken en boodschappen voor maximale besparing\n• Deel je besparing via WhatsApp met vrienden en familie\n• Doe samen boodschappen met buren voor nog meer voordeel\n\nActuele prijzen\nGrenspret gebruikt live prijzen van CBS (Nederland), Tankerkönig (Duitsland) en FOD Economie (België). Prijzen worden elk uur bijgewerkt.\n\nPrivacy\nAlles blijft op jouw telefoon. We verzamelen geen persoonlijke gegevens, plaatsen geen cookies en tonen geen advertenties.\n\nGrenspret is gratis en wordt het altijd blijven."
+  },
+
+  "keywords": {
+    "nl": "tanken,boodschappen,grens,duitsland,belgie,besparen,brandstof,benzine,diesel,goedkoop,supermarkt,jerrycan,vergelijken,prijzen,grenswinkel",
+    "en": "fuel,groceries,border,germany,belgium,save,gasoline,diesel,cheap,supermarket,compare,prices"
+  },
+
+  "screenshots": {
+    "_note": "Minimaal 3 screenshots per apparaat. Maak ze in de app op een echte telefoon.",
+    "screens": [
+      {
+        "order": 1,
+        "page": "Home / keuze scherm",
+        "caption": "Kies: tanken, boodschappen of allebei"
+      },
+      {
+        "order": 2,
+        "page": "Tanken met geselecteerd station",
+        "caption": "Vind het goedkoopste tankstation over de grens"
+      },
+      {
+        "order": 3,
+        "page": "Boodschappenlijst met producten",
+        "caption": "Vergelijk boodschappenprijzen per product"
+      },
+      {
+        "order": 4,
+        "page": "Resultaat met besparing",
+        "caption": "Zie precies hoeveel je bespaart"
+      },
+      {
+        "order": 5,
+        "page": "Delen via WhatsApp",
+        "caption": "Deel je besparing met vrienden"
+      }
+    ]
+  },
+
+  "releaseNotes": {
+    "v1.0": "De eerste versie van Grenspret! Bereken je besparing op tanken en boodschappen over de grens. Met actuele brandstofprijzen, productprijzen en slimme routeberekening."
+  }
+}
