@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   postcodeNaarCoordinaat,
   zoekDichtstbijzijnde,
@@ -47,13 +47,57 @@ export function LocatieKaartjes({
   onSelect?: (locatie: LocatieMetAfstand) => void;
   besteKeuzeId?: string | null;
 }) {
-  const locaties = useMemo(() => {
+  // Stap 1: snelle hemelsbreed-schatting voor initieel tonen
+  const initLocaties = useMemo(() => {
     const cleaned = postcode.replace(/\s/g, "");
     if (cleaned.length < 4) return null;
     const origin = postcodeNaarCoordinaat(postcode);
     if (!origin) return null;
     return zoekDichtstbijzijnde(origin, type, 5);
   }, [postcode, type]);
+
+  // Stap 2: echte rijafstanden ophalen via OSRM
+  const [locaties, setLocaties] = useState<LocatieMetAfstand[] | null>(null);
+
+  useEffect(() => {
+    if (!initLocaties || initLocaties.length === 0) {
+      setLocaties(null);
+      return;
+    }
+
+    // Toon meteen de schattingen
+    setLocaties(initLocaties);
+
+    const origin = postcodeNaarCoordinaat(postcode);
+    if (!origin) return;
+
+    let cancelled = false;
+
+    async function fetchRoutes() {
+      try {
+        const destinations = initLocaties!.map((l) => `${l.coordinaat.lat},${l.coordinaat.lng}`).join(";");
+        const res = await fetch(`/api/route?origins=${origin!.lat},${origin!.lng}&destinations=${destinations}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+
+        if (data.routes && !cancelled) {
+          const bijgewerkt = initLocaties!.map((loc, i) => ({
+            ...loc,
+            afstandKm: data.routes[i].afstandKm,
+            rijtijdMin: data.routes[i].rijtijdMin,
+          }));
+          // Sorteer opnieuw op echte afstand
+          bijgewerkt.sort((a, b) => a.afstandKm - b.afstandKm);
+          setLocaties(bijgewerkt);
+        }
+      } catch {
+        // Fout bij ophalen, behoudt schattingen
+      }
+    }
+
+    fetchRoutes();
+    return () => { cancelled = true; };
+  }, [initLocaties, postcode]);
 
   if (!locaties || locaties.length === 0) return null;
 
