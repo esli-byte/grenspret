@@ -18,7 +18,7 @@ import {
 import { schattingVerbruikHybride } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
-import type { LocatieMetAfstand } from "@/lib/grenslocaties";
+import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, type LocatieMetAfstand } from "@/lib/grenslocaties";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 
 function euro(bedrag: number) {
@@ -177,6 +177,37 @@ export function TankenForm() {
       besparingen: berekenBesparingen(soort, tankGrootte, prijzen),
     };
   }, [voertuig, prijzen, brandstofOverride, elektrischPercentage]);
+
+  // Bereken welk station de beste netto besparing oplevert
+  const besteKeuzeId = useMemo(() => {
+    if (!berekening || !postcode) return null;
+    const cleaned = postcode.replace(/\s/g, "");
+    if (cleaned.length < 4) return null;
+    const origin = postcodeNaarCoordinaat(postcode);
+    if (!origin) return null;
+    const locaties = zoekDichtstbijzijnde(origin, "tankstation", 5);
+    if (!locaties || locaties.length === 0) return null;
+
+    const nlPrijs = prijzen[0][berekening.soort];
+    let besteId: string | null = null;
+    let besteNetto = -Infinity;
+
+    for (const loc of locaties) {
+      const besparing = berekening.besparingen.find((b) => b.land === loc.land);
+      if (!besparing) continue;
+      const buitenlandPrijs = besparing.prijsPerLiter;
+      const brandstofEnkel = (loc.afstandKm / 100) * berekening.verbruik;
+      const reiskosten = brandstofEnkel * nlPrijs + brandstofEnkel * buitenlandPrijs;
+      const netto = besparing.besparing - reiskosten;
+      if (netto > besteNetto) {
+        besteNetto = netto;
+        besteId = loc.id;
+      }
+    }
+
+    // Alleen tonen als de beste keuze daadwerkelijk een positieve besparing heeft
+    return besteNetto > 0 ? besteId : null;
+  }, [berekening, postcode, prijzen]);
 
   useEffect(() => {
     if (!voertuig || !berekening || !geselecteerdStation) return;
@@ -662,6 +693,7 @@ export function TankenForm() {
           titel="Kies je tanklocatie"
           geselecteerdId={geselecteerdStation?.id}
           onSelect={setGeselecteerdStation}
+          besteKeuzeId={besteKeuzeId}
         />
       )}
 
