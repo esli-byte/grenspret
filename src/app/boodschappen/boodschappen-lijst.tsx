@@ -17,6 +17,7 @@ import {
   leesVoorkeuren,
   slaaEigenProductenOp,
   leesEigenProducten,
+  leesFlow,
 } from "@/lib/opslag";
 import {
   MIJ_ID,
@@ -638,30 +639,40 @@ export function BoodschappenLijst() {
       <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
 
       {/* Volgende stap knop naar resultaat */}
-      {totalAantalItems > 0 && (
-        <Link
-          href="/resultaat"
-          className="group flex items-center justify-between rounded-3xl bg-gradient-to-br from-navy to-slate-800 p-5 shadow-lg shadow-navy/25 transition-all hover:shadow-xl active:scale-[0.98] dark:from-white dark:to-gray-100 dark:shadow-white/10"
-        >
-          <div className="text-left">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70 dark:text-navy/70">
-              Stap 3 van 3
-            </p>
-            <p className="mt-0.5 text-base font-extrabold text-white dark:text-navy">
-              Bekijk je totale besparing
-            </p>
-            <p className="mt-0.5 text-xs text-white/80 dark:text-navy/80">
-              Tanken en boodschappen bij elkaar
-            </p>
-          </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-1 dark:bg-navy/10 dark:text-navy">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-            </svg>
-          </div>
-        </Link>
-      )}
+      {totalAantalItems > 0 && <BoodschappenVolgendeStap />}
     </div>
+  );
+}
+
+function BoodschappenVolgendeStap() {
+  const flow = leesFlow();
+  const beschrijving =
+    flow === "beide"
+      ? "Tanken en boodschappen bij elkaar"
+      : "Bekijk je netto besparing op boodschappen";
+
+  return (
+    <Link
+      href="/resultaat"
+      className="group flex items-center justify-between rounded-3xl bg-gradient-to-br from-navy to-slate-800 p-5 shadow-lg shadow-navy/25 transition-all hover:shadow-xl active:scale-[0.98] dark:from-white dark:to-gray-100 dark:shadow-white/10"
+    >
+      <div className="text-left">
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70 dark:text-navy/70">
+          Bekijk resultaat
+        </p>
+        <p className="mt-0.5 text-base font-extrabold text-white dark:text-navy">
+          Bekijk je totale besparing
+        </p>
+        <p className="mt-0.5 text-xs text-white/80 dark:text-navy/80">
+          {beschrijving}
+        </p>
+      </div>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-1 dark:bg-navy/10 dark:text-navy">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+      </div>
+    </Link>
   );
 }
 

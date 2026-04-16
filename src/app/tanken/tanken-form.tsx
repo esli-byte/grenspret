@@ -17,7 +17,7 @@ import {
   schattingVerbruik,
   type RouteSchatting,
 } from "./afstand";
-import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp } from "@/lib/opslag";
+import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 
@@ -566,31 +566,57 @@ export function TankenForm() {
         <BrutoBesparingOverzicht berekening={berekening} extraLiters={extraLiters} prijzen={prijzen} isLeaseAuto={isLeaseAuto} />
       )}
 
-      {/* Volgende stap knop */}
-      {berekening && (
-        <Link
-          href="/boodschappen"
-          className="group flex items-center justify-between rounded-3xl bg-gradient-to-br from-accent to-emerald-500 p-5 shadow-lg shadow-accent/25 transition-all hover:shadow-xl hover:shadow-accent/30 active:scale-[0.98]"
-        >
-          <div className="text-left">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/70">
-              Stap 2 van 3
-            </p>
-            <p className="mt-0.5 text-base font-extrabold text-white">
-              Boodschappen toevoegen
-            </p>
-            <p className="mt-0.5 text-xs text-white/80">
-              Bereken ook je besparing op boodschappen
-            </p>
-          </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-1">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-            </svg>
-          </div>
-        </Link>
-      )}
+      {/* Volgende stap knop — dynamisch op basis van gekozen flow */}
+      {berekening && <VolgendeStapKnop />}
     </div>
+  );
+}
+
+function VolgendeStapKnop() {
+  const flow = leesFlow();
+
+  // Flow "tanken" → direct naar resultaat (skip boodschappen)
+  // Flow "beide" → naar boodschappen
+  const naarResultaat = flow === "tanken";
+
+  return (
+    <Link
+      href={naarResultaat ? "/resultaat" : "/boodschappen"}
+      className={`group flex items-center justify-between rounded-3xl p-5 shadow-lg transition-all hover:shadow-xl active:scale-[0.98] ${
+        naarResultaat
+          ? "bg-gradient-to-br from-navy to-slate-800 shadow-navy/25 dark:from-white dark:to-gray-100 dark:shadow-white/10"
+          : "bg-gradient-to-br from-accent to-emerald-500 shadow-accent/25 hover:shadow-accent/30"
+      }`}
+    >
+      <div className="text-left">
+        <p className={`text-[10px] font-extrabold uppercase tracking-widest ${
+          naarResultaat ? "text-white/70 dark:text-navy/70" : "text-white/70"
+        }`}>
+          {naarResultaat ? "Bekijk resultaat" : "Stap 2 van 2"}
+        </p>
+        <p className={`mt-0.5 text-base font-extrabold ${
+          naarResultaat ? "text-white dark:text-navy" : "text-white"
+        }`}>
+          {naarResultaat ? "Bekijk je besparing" : "Boodschappen toevoegen"}
+        </p>
+        <p className={`mt-0.5 text-xs ${
+          naarResultaat ? "text-white/80 dark:text-navy/80" : "text-white/80"
+        }`}>
+          {naarResultaat
+            ? "Bekijk je netto besparing op tanken"
+            : "Bereken ook je besparing op boodschappen"}
+        </p>
+      </div>
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-1 ${
+        naarResultaat
+          ? "bg-white/20 text-white dark:bg-navy/10 dark:text-navy"
+          : "bg-white/20 text-white"
+      }`}>
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+      </div>
+    </Link>
   );
 }
 

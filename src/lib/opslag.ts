@@ -46,6 +46,28 @@ export type BoodschappenSelectie = {
   producten: Record<string, number>; // productId -> quantity
 };
 
+export type BerekeningsFlow = "tanken" | "boodschappen" | "beide";
+
+const FLOW_KEY = "grensbesparing_flow";
+
+export function slaaFlowOp(flow: BerekeningsFlow) {
+  try {
+    localStorage.setItem(FLOW_KEY, flow);
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
+
+export function leesFlow(): BerekeningsFlow {
+  try {
+    const raw = localStorage.getItem(FLOW_KEY);
+    if (raw === "tanken" || raw === "boodschappen" || raw === "beide") return raw;
+    return "beide";
+  } catch {
+    return "beide";
+  }
+}
+
 const TANKEN_KEY = "grensbesparing_tanken";
 const BOODSCHAPPEN_KEY = "grensbesparing_boodschappen";
 const HUISHOUDENS_KEY = "grensbesparing_huishoudens";
