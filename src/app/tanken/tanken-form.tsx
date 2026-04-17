@@ -965,6 +965,7 @@ export function TankenForm() {
             prijzen={prijzen}
             extraLiters={extraLiters}
             isLeaseAuto={isLeaseAuto}
+            flow={flow}
           />
         </div>
       )}
@@ -1513,6 +1514,7 @@ function BesparingsBlok({
   prijzen,
   extraLiters,
   isLeaseAuto,
+  flow,
 }: {
   berekening: {
     soort: BrandstofSoort;
@@ -1522,6 +1524,7 @@ function BesparingsBlok({
     besparingen: Besparing[];
   };
   station: LocatieMetAfstand;
+  flow: string;
   prijzen: LandPrijzen[];
   extraLiters: number;
   isLeaseAuto: boolean;
@@ -1639,18 +1642,20 @@ function BesparingsBlok({
             </div>
           )}
 
-          {/* Navigeer knop */}
-          <a
-            href={routeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-sm font-extrabold text-white shadow-md shadow-accent/25 transition-all hover:shadow-lg hover:shadow-accent/30 active:scale-[0.98]"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-            </svg>
-            Navigeer naar {station.naam}
-          </a>
+          {/* Navigeer knop — niet bij combi-flow (je moet eerst nog boodschappen doen) */}
+          {flow !== "beide" && (
+            <a
+              href={routeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-sm font-extrabold text-white shadow-md shadow-accent/25 transition-all hover:shadow-lg hover:shadow-accent/30 active:scale-[0.98]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+              </svg>
+              Navigeer naar {station.naam}
+            </a>
+          )}
         </div>
       </div>
 
