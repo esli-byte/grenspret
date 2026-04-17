@@ -9,15 +9,114 @@ import {
   leesGekozenTankstation,
   leesGekozenSupermarkt,
   leesFlow,
+  leesVoorkeuren,
   type TankenOpslag,
   type BoodschappenOpslag,
   type GekozenTankstation,
   type GekozenSupermarkt,
 } from "@/lib/opslag";
+import {
+  postcodeNaarCoordinaat,
+  zoekSupermarktenBijTankstation,
+  haversineKm,
+  GRENSLOCATIES,
+  type Coordinaat,
+  type LocatieMetAfstand,
+} from "@/lib/grenslocaties";
 import { ShareCard } from "./share-card";
 
 function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
+}
+
+// === Slimme vergelijking: bereken alternatieve combinaties ===
+type CombiOptie = {
+  tankstation: string;
+  tankstationId: string;
+  supermarkt: string;
+  supermarktId: string;
+  land: "Duitsland" | "België";
+  besparingTanken: number;
+  besparingBoodschappen: number;
+  totalAfstandKm: number;
+  reiskosten: number;
+  netto: number;
+  isGekozen: boolean; // is dit de door de gebruiker gekozen combi?
+};
+
+function berekenAlleCombiRoutes(
+  tanken: TankenOpslag,
+  boodschappen: BoodschappenOpslag | null,
+  thuisCoord: Coordinaat,
+  aantalHuishoudens: number,
+  gekozenTankstationId?: string,
+  gekozenSupermarktId?: string
+): CombiOptie[] {
+  const verbruikPerKm = tanken.verbruik / 100; // l/km
+  // Gemiddelde brandstofprijs NL (ca. €2.15/l benzine, €1.80/l diesel)
+  const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
+
+  const resultaten: CombiOptie[] = [];
+
+  // Loop door alle tankstations in tanken.route (dit zijn de stations waarvoor we al data hebben)
+  for (const route of tanken.route) {
+    // Zoek het bijbehorende tankstation uit GRENSLOCATIES
+    const tsLocatie = GRENSLOCATIES.find(
+      (l) => l.type === "tankstation" && l.naam === route.bestemming
+    );
+    if (!tsLocatie) continue;
+
+    const land = route.land as "Duitsland" | "België";
+    const besparingTanken = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
+    // Brandstofbesparing verschilt per station — gebruik de netto + reiskosten om de bruto terug te krijgen
+    // Maar eigenlijk is de besparing per tank gelijk (landelijk gemiddelde), het verschil zit in reiskosten
+    // We nemen daarom de landelijke besparing en berekenen route-specifieke reiskosten
+
+    // Zoek supermarkten bij dit tankstation
+    const supermarkten = zoekSupermarktenBijTankstation(
+      tsLocatie.coordinaat,
+      land,
+      thuisCoord,
+      3
+    );
+
+    const besparingBoodschappenPerHH = boodschappen
+      ? (land === "Duitsland" ? boodschappen.besparingDE : boodschappen.besparingBE)
+      : 0;
+    const besparingBoodschappenTotaal = besparingBoodschappenPerHH * aantalHuishoudens;
+
+    for (const sm of supermarkten) {
+      // Route: thuis → tankstation → supermarkt → thuis
+      const afstandHuisNaarTS = Math.round(haversineKm(thuisCoord, tsLocatie.coordinaat) * 1.3);
+      const afstandTSNaarSM = sm.afstandKm; // al berekend met factor 1.3
+      const afstandSMNaarHuis = sm.afstandVanThuis ?? Math.round(haversineKm(thuisCoord, sm.coordinaat) * 1.3);
+      const totalAfstandKm = afstandHuisNaarTS + afstandTSNaarSM + afstandSMNaarHuis;
+      const reiskosten = Math.round(totalAfstandKm * verbruikPerKm * brandstofPrijsNL * 100) / 100;
+
+      const netto = besparingTanken + besparingBoodschappenTotaal - reiskosten;
+
+      const isGekozen =
+        tsLocatie.id === gekozenTankstationId &&
+        sm.id === gekozenSupermarktId;
+
+      resultaten.push({
+        tankstation: route.bestemming,
+        tankstationId: tsLocatie.id,
+        supermarkt: sm.naam,
+        supermarktId: sm.id,
+        land,
+        besparingTanken,
+        besparingBoodschappen: besparingBoodschappenTotaal,
+        totalAfstandKm,
+        reiskosten,
+        netto,
+        isGekozen,
+      });
+    }
+  }
+
+  // Sorteer op netto besparing (hoogste eerst)
+  return resultaten.sort((a, b) => b.netto - a.netto);
 }
 
 function formatRijtijd(minuten: number): string {
@@ -34,17 +133,41 @@ export function ResultaatOverzicht() {
   const [gekozenTankstation, setGekozenTankstation] = useState<GekozenTankstation | null>(null);
   const [gekozenSupermarkt, setGekozenSupermarkt] = useState<GekozenSupermarkt | null>(null);
   const [isCombiFlow, setIsCombiFlow] = useState(false);
+  const [combiOpties, setCombiOpties] = useState<CombiOptie[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setTanken(leesTanken());
-    setBoodschappen(leesBoodschappen());
-    setAantalHuishoudens(leesHuishoudens());
+    const t = leesTanken();
+    const b = leesBoodschappen();
+    const hh = leesHuishoudens();
+    setTanken(t);
+    setBoodschappen(b);
+    setAantalHuishoudens(hh);
     const flow = leesFlow();
     setIsCombiFlow(flow === "beide");
+
+    let gts: GekozenTankstation | null = null;
+    let gsm: GekozenSupermarkt | null = null;
+
     if (flow === "beide") {
-      setGekozenTankstation(leesGekozenTankstation());
-      setGekozenSupermarkt(leesGekozenSupermarkt());
+      gts = leesGekozenTankstation();
+      gsm = leesGekozenSupermarkt();
+      setGekozenTankstation(gts);
+      setGekozenSupermarkt(gsm);
+
+      // Bereken alle alternatieve combinaties
+      if (t && t.route.length > 0) {
+        const voorkeuren = leesVoorkeuren();
+        const pc = voorkeuren.postcode;
+        const thuisCoord = pc ? postcodeNaarCoordinaat(pc) : null;
+        if (thuisCoord) {
+          const opties = berekenAlleCombiRoutes(
+            t, b, thuisCoord, hh,
+            gts?.id, gsm?.id
+          );
+          setCombiOpties(opties);
+        }
+      }
     }
     setLoaded(true);
   }, []);
@@ -291,28 +414,13 @@ export function ResultaatOverzicht() {
         </div>
       )}
 
-      {/* Slimme tip: is er een betere combi? */}
-      {isCombiFlow && heeftTanken && heeftBoodschappen && netto > 0 && (
-        <div className="card-bold p-5 border-emerald-200 bg-emerald-50 dark:border-emerald-800/30 dark:bg-emerald-950/30">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg dark:bg-emerald-900/30">
-              🧠
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
-                Slimme analyse
-              </h3>
-              <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                Op basis van je keuzes is dit de beste combinatie van tanken en boodschappen. Je bespaart netto <span className="font-extrabold text-accent">{euro(netto)}</span> per trip.
-              </p>
-              {aantalHuishoudens > 1 && (
-                <p className="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  Met {aantalHuishoudens} huishoudens wordt dat <span className="text-accent">{euro(netto * aantalHuishoudens)}</span> per maand!
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Slimme vergelijking: alternatieve combinaties */}
+      {isCombiFlow && combiOpties.length > 0 && (
+        <SlimmeVergelijking
+          opties={combiOpties}
+          gekozenTankstationId={gekozenTankstation?.id}
+          gekozenSupermarktId={gekozenSupermarkt?.id}
+        />
       )}
 
       {/* Deel je besparing */}
@@ -387,6 +495,161 @@ export function ResultaatOverzicht() {
 // ==============================
 // Sub-componenten
 // ==============================
+
+function SlimmeVergelijking({
+  opties,
+  gekozenTankstationId,
+  gekozenSupermarktId,
+}: {
+  opties: CombiOptie[];
+  gekozenTankstationId?: string;
+  gekozenSupermarktId?: string;
+}) {
+  const [toonAlles, setToonAlles] = useState(false);
+
+  if (opties.length === 0) return null;
+
+  const beste = opties[0];
+  const gekozen = opties.find((o) => o.isGekozen);
+  const gekozenIndex = opties.findIndex((o) => o.isGekozen);
+  const jouwKeuzeIsBest = gekozenIndex === 0;
+
+  // Toon top 3 + de gekozen optie als die er niet bij zit
+  const zichtbaar = toonAlles ? opties : opties.slice(0, 3);
+  const verschilMetBeste = gekozen ? beste.netto - gekozen.netto : 0;
+
+  return (
+    <div className="card-bold overflow-hidden border-emerald-200 dark:border-emerald-800/30">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 dark:from-emerald-950/30 dark:to-teal-950/20">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg dark:bg-emerald-900/30">
+            🧠
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
+              Slimme vergelijking
+            </h3>
+            <p className="mt-0.5 text-xs text-emerald-600/80 dark:text-emerald-400/80">
+              {opties.length} combinatie{opties.length !== 1 ? "s" : ""} vergeleken
+            </p>
+          </div>
+        </div>
+
+        {/* Conclusie */}
+        {gekozen && (
+          <div className={`mt-3 rounded-xl px-3.5 py-2.5 text-xs font-bold ${
+            jouwKeuzeIsBest
+              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+              : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+          }`}>
+            {jouwKeuzeIsBest ? (
+              <span className="flex items-center gap-1.5">
+                <span>✅</span> Jouw keuze is de beste combinatie!
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <span>💡</span> Er is een combinatie die <span className="font-extrabold text-accent">{euro(verschilMetBeste)}</span> meer bespaart
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Ranking lijst */}
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        {zichtbaar.map((optie, i) => {
+          const isBeste = i === 0;
+          const isJouwKeuze = optie.isGekozen;
+          const vlag = optie.land === "Duitsland" ? "🇩🇪" : "🇧🇪";
+
+          return (
+            <div
+              key={`${optie.tankstationId}-${optie.supermarktId}`}
+              className={`px-5 py-3.5 transition-colors ${
+                isJouwKeuze
+                  ? "bg-accent/5 dark:bg-accent/10"
+                  : isBeste && !jouwKeuzeIsBest
+                    ? "bg-emerald-50/50 dark:bg-emerald-950/20"
+                    : ""
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {/* Ranking nummer */}
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold ${
+                  isBeste
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                }`}>
+                  #{i + 1}
+                </div>
+
+                {/* Details */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-extrabold text-navy dark:text-white">
+                      {vlag} {optie.tankstation}
+                    </span>
+                    {isJouwKeuze && (
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-extrabold text-accent">
+                        Jouw keuze
+                      </span>
+                    )}
+                    {isBeste && (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Beste
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    + {optie.supermarkt} · {optie.totalAfstandKm} km retour
+                  </div>
+
+                  {/* Breakdown mini */}
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+                    <span className="text-gray-400 dark:text-gray-500">
+                      ⛽ +{euro(optie.besparingTanken)}
+                    </span>
+                    {optie.besparingBoodschappen > 0 && (
+                      <span className="text-gray-400 dark:text-gray-500">
+                        🛒 +{euro(optie.besparingBoodschappen)}
+                      </span>
+                    )}
+                    <span className="text-gray-400 dark:text-gray-500">
+                      🚗 −{euro(optie.reiskosten)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Netto besparing */}
+                <div className="shrink-0 text-right">
+                  <div className={`text-base font-extrabold tabular-nums ${
+                    optie.netto > 0 ? "text-accent" : "text-red-500"
+                  }`}>
+                    {optie.netto > 0 ? "+" : ""}{euro(optie.netto)}
+                  </div>
+                  <div className="text-[10px] text-gray-400 dark:text-gray-500">netto</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Toon meer knop */}
+      {opties.length > 3 && (
+        <div className="border-t border-gray-100 px-5 py-3 dark:border-gray-800">
+          <button
+            onClick={() => setToonAlles(!toonAlles)}
+            className="w-full rounded-xl border border-gray-200 px-4 py-2 text-xs font-extrabold text-gray-500 transition-all hover:border-gray-300 hover:text-gray-700 active:scale-[0.98] dark:border-gray-700 dark:text-gray-400"
+          >
+            {toonAlles ? "Toon minder" : `Alle ${opties.length} combinaties bekijken`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
