@@ -77,6 +77,7 @@ export function TankenForm() {
   const [isLeaseAuto, setIsLeaseAuto] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoTip, setGeoTip] = useState<string | null>(null);
+  const [geoAdres, setGeoAdres] = useState<string | null>(null);
   const [brandstofOverride, setBrandstofOverride] = useState<BrandstofSoort | null>(null);
   const [elektrischPercentage, setElektrischPercentage] = useState(50);
   const [geselecteerdStation, setGeselecteerdStation] = useState<LocatieMetAfstand | null>(null);
@@ -267,7 +268,7 @@ export function TankenForm() {
         const { latitude, longitude } = position.coords;
         try {
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
           );
           const data = await response.json();
 
@@ -276,11 +277,24 @@ export function TankenForm() {
             const formatted = pc.replace(/\s/g, "").slice(0, 7);
             setPostcode(formatted);
             setGeoTip(null);
+
+            // Bouw volledig adres op
+            const a = data.address;
+            const straat = a.road || a.pedestrian || a.footway || "";
+            const huisnr = a.house_number || "";
+            const plaats = a.city || a.town || a.village || a.municipality || a.hamlet || "";
+            const adresDelen = [
+              straat && huisnr ? `${straat} ${huisnr}` : straat,
+              [formatted, plaats].filter(Boolean).join(" "),
+            ].filter(Boolean);
+            setGeoAdres(adresDelen.join(", "));
           } else {
             setGeoTip("Postcode niet gevonden. Vul je postcode handmatig in.");
+            setGeoAdres(null);
           }
         } catch {
           setGeoTip("Kon je locatie niet omzetten naar een postcode. Vul je postcode handmatig in.");
+          setGeoAdres(null);
         } finally {
           setGeoLoading(false);
         }
@@ -682,9 +696,10 @@ export function TankenForm() {
             type="text"
             placeholder="1234 AB"
             value={postcode}
-            onChange={(e) =>
-              setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
-            }
+            onChange={(e) => {
+              setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7));
+              if (geoAdres) setGeoAdres(null);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && postcode.replace(/\s/g, "").length >= 4) {
                 // Blur om keyboard te sluiten op mobiel
@@ -731,6 +746,23 @@ export function TankenForm() {
             </>
           )}
         </button>
+
+        {/* Gevonden adres tonen */}
+        {geoAdres && (
+          <div className="mt-2 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
+            <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            <div>
+              <p className="text-xs font-extrabold text-navy dark:text-white">
+                {geoAdres}
+              </p>
+              <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                Locatie bepaald via GPS
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Locatie geweigerd — vriendelijke uitleg */}
         {geoTip === "locatie_geweigerd" && (
