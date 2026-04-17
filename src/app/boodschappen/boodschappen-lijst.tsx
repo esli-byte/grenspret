@@ -725,8 +725,27 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Compacte sticky besparing balk */}
-      <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
+      {/* Compacte sticky besparing balk — alleen in boodschappen-only flow */}
+      {flow !== "beide" && (
+        <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
+      )}
+
+      {/* Simpel mandje-overzicht in combi-flow — besparingen staan op resultaat */}
+      {flow === "beide" && totalAantalItems > 0 && (
+        <div className="mx-4 mt-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🛒</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {totalAantalItems} {totalAantalItems === 1 ? "product" : "producten"} in je mandje
+              </span>
+            </div>
+            <span className="text-sm font-semibold text-navy dark:text-white">
+              €{totalen.nl.toFixed(2)} <span className="text-[10px] font-normal text-gray-400">(NL waarde)</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Verdeling dashboard (alleen als groepsmodus actief en items) */}
       {groepsmodus && totalAantalItems > 0 && (
@@ -738,10 +757,12 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Volledig overzicht onderaan */}
-      <div ref={totaalRef}>
-        <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
-      </div>
+      {/* Volledig overzicht onderaan — alleen in boodschappen-only flow */}
+      {flow !== "beide" && (
+        <div ref={totaalRef}>
+          <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
+        </div>
+      )}
 
       {/* Volgende stap knop naar resultaat */}
       {totalAantalItems > 0 && (
@@ -750,8 +771,8 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Floating knop naar overzicht — verdwijnt als overzicht in beeld is */}
-      {totalAantalItems > 0 && (
+      {/* Floating knop naar overzicht — alleen in boodschappen-only flow */}
+      {flow !== "beide" && totalAantalItems > 0 && (
         <ScrollNaarOverzichtKnop targetRef={totaalRef} />
       )}
     </div>
