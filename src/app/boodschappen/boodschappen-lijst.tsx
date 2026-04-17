@@ -416,8 +416,95 @@ export function BoodschappenLijst() {
     if (actievePersoon === id) setActievePersoon(MIJ_ID);
   }
 
+  // Boodschappen-only: geolocatie state
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoAdres, setGeoAdres] = useState<string | null>(null);
+  const [geoTip, setGeoTip] = useState<string | null>(null);
+
   // Boodschappen-only: selecteerbare supermarkten
   const [boodschappenSupermarkt, setBoodschappenSupermarkt] = useState<LocatieMetAfstand | null>(null);
+
+  async function vraagLocatieOp() {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          const data = await response.json();
+          if (data.address && data.address.postcode) {
+            const pc = data.address.postcode.toUpperCase();
+            const formatted = pc.replace(/\s/g, "").slice(0, 7);
+            setPostcode(formatted);
+            setGeoTip(null);
+            const a = data.address;
+            const straat = a.road || a.pedestrian || a.footway || "";
+            const huisnr = a.house_number || "";
+            const plaats = a.city || a.town || a.village || a.municipality || a.hamlet || "";
+            const adresDelen = [
+              straat && huisnr ? `${straat} ${huisnr}` : straat,
+              [formatted, plaats].filter(Boolean).join(" "),
+            ].filter(Boolean);
+            setGeoAdres(adresDelen.join(", "));
+          } else {
+            setGeoTip("Postcode niet gevonden. Vul je postcode handmatig in.");
+            setGeoAdres(null);
+          }
+        } catch {
+          setGeoTip("Kon je locatie niet omzetten naar een postcode.");
+          setGeoAdres(null);
+        } finally {
+          setGeoLoading(false);
+        }
+      },
+      (geoError) => {
+        setGeoLoading(false);
+        if (geoError.code === 1) {
+          setGeoTip("locatie_geweigerd");
+        } else if (geoError.code === 2) {
+          setGeoTip("Locatie kon niet bepaald worden. Vul je postcode handmatig in.");
+        } else {
+          setGeoTip("Locatiebepaling duurde te lang. Vul je postcode handmatig in.");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }
+
+  async function handleGeolocate() {
+    if (!navigator.geolocation) {
+      setGeoTip("Je browser ondersteunt geen locatiebepaling.");
+      return;
+    }
+    setGeoLoading(true);
+    setGeoTip(null);
+
+    if (navigator.permissions) {
+      try {
+        const status = await navigator.permissions.query({ name: "geolocation" });
+        if (status.state === "denied") {
+          setGeoLoading(false);
+          setGeoTip("locatie_geweigerd");
+          return;
+        }
+        if (status.state === "prompt") {
+          status.addEventListener("change", () => {
+            if (status.state === "granted") {
+              setGeoLoading(true);
+              setGeoTip(null);
+              vraagLocatieOp();
+            }
+          }, { once: true });
+        }
+        vraagLocatieOp();
+      } catch {
+        vraagLocatieOp();
+      }
+    } else {
+      vraagLocatieOp();
+    }
+  }
 
   function handleBoodschappenSupermarktSelect(sm: LocatieMetAfstand) {
     const isDeselect = boodschappenSupermarkt?.id === sm.id;
@@ -484,8 +571,61 @@ export function BoodschappenLijst() {
             </button>
           </div>
 
-          {/* Toon gevonden locatie als postcode geldig is */}
-          {postcode.replace(/\s/g, "").length >= 4 && postcodeNaarCoordinaat(postcode) && (
+          {/* Huidige locatie optie */}
+          <button
+            onClick={handleGeolocate}
+            disabled={geoLoading}
+            className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-gray-400 transition-all hover:text-accent disabled:opacity-50 dark:text-gray-500 dark:hover:text-accent"
+          >
+            {geoLoading ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span>Locatie bepalen...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                </svg>
+                <span>Of gebruik je huidige locatie</span>
+              </>
+            )}
+          </button>
+
+          {/* Geweigerd tip */}
+          {geoTip === "locatie_geweigerd" && (
+            <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+              Locatie is geblokkeerd. Ga naar je browserinstellingen om dit toe te staan, of vul je postcode handmatig in.
+            </div>
+          )}
+          {geoTip && geoTip !== "locatie_geweigerd" && (
+            <p className="mt-2 text-[11px] font-medium text-amber-600 dark:text-amber-400">{geoTip}</p>
+          )}
+
+          {/* Gevonden adres tonen */}
+          {geoAdres && (
+            <div className="mt-2 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
+              <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <div>
+                <p className="text-xs font-extrabold text-navy dark:text-white">
+                  {geoAdres}
+                </p>
+                <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                  We zoeken supermarkten bij deze locatie
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Postcode-indicator (zonder geo) */}
+          {!geoAdres && postcode.replace(/\s/g, "").length >= 4 && postcodeNaarCoordinaat(postcode) && (
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
               <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -493,10 +633,10 @@ export function BoodschappenLijst() {
               </svg>
               <div>
                 <p className="text-xs font-bold text-navy dark:text-white">
-                  📍 Jouw locatie
+                  📍 Postcode {postcode}
                 </p>
                 <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                  Postcode {postcode} — we zoeken de dichtstbijzijnde supermarkten over de grens
+                  We zoeken de dichtstbijzijnde supermarkten over de grens
                 </p>
               </div>
             </div>

@@ -102,6 +102,50 @@ input, select, textarea, button {
   animation: pulse-ring 3s ease-in-out infinite;
 }
 
+/* Magical floating orbs — slow drift + scale */
+@keyframes hero-orb-drift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  25%  { transform: translate(15px, -10px) scale(1.08); opacity: 1; }
+  50%  { transform: translate(-8px, 12px) scale(0.95); opacity: 0.6; }
+  75%  { transform: translate(10px, 5px) scale(1.05); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+}
+
+.hero-orb {
+  animation: hero-orb-drift 8s ease-in-out infinite;
+}
+
+/* Logo shimmer — subtle light sweep */
+@keyframes logo-shimmer {
+  0%   { background-position: -150% center; }
+  100% { background-position: 250% center; }
+}
+
+.logo-shimmer {
+  position: relative;
+  display: inline-block;
+}
+
+.logo-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(0, 210, 106, 0.12) 45%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(0, 210, 106, 0.12) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: logo-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   25% { transform: translateY(-8px) rotate(2deg); }

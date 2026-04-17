@@ -6,13 +6,21 @@ import { AccountKnop } from "@/components/AccountKnop";
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      {/* Hero — bold navy gradient with electric green accents */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy via-[#0F1F35] to-primary px-4 pb-14 pt-14">
-        {/* Animated background shapes */}
+      {/* Hero — fresh green-navy gradient with magical orbs */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0C2618] via-[#0F2D2A] to-[#0A1628] px-4 pb-14 pt-14">
+        {/* Animated magical orbs — larger, more visible */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="animate-pulse-ring absolute -right-20 -top-20 h-72 w-72 rounded-full bg-accent/10" />
-          <div className="animate-pulse-ring absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-cta/8" style={{ animationDelay: "1.5s" }} />
-          <div className="animate-pulse-ring absolute right-1/4 top-1/3 h-40 w-40 rounded-full bg-accent/5" style={{ animationDelay: "3s" }} />
+          {/* Grote groene orb rechtsboven */}
+          <div className="hero-orb absolute -right-16 -top-16 h-80 w-80 rounded-full bg-gradient-to-br from-accent/25 to-emerald-500/10 blur-2xl" />
+          {/* Groene orb linksonder */}
+          <div className="hero-orb absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-gradient-to-tr from-emerald-600/20 to-accent/8 blur-3xl" style={{ animationDelay: "2s" }} />
+          {/* Teal orb midden */}
+          <div className="hero-orb absolute left-1/3 top-1/4 h-56 w-56 rounded-full bg-gradient-to-r from-teal-400/15 to-accent/10 blur-2xl" style={{ animationDelay: "4s" }} />
+          {/* Subtiele accent ring */}
+          <div className="hero-orb absolute -right-8 bottom-1/4 h-44 w-44 rounded-full bg-accent/8 blur-xl" style={{ animationDelay: "1s" }} />
+          {/* Fijne lichtstrepen */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,210,106,0.06)_0%,_transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(16,185,129,0.05)_0%,_transparent_50%)]" />
         </div>
 
         {/* Account knop rechtsboven */}
@@ -21,19 +29,21 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto max-w-3xl text-center">
-          {/* Logo */}
+          {/* Logo — statisch met glim-effect */}
           <div className="mb-4 flex justify-center">
-            <img
-              src="/icons/logo-transparant.png"
-              alt="Grenspret logo"
-              className="h-40 w-auto animate-float drop-shadow-2xl"
-            />
+            <div className="logo-shimmer relative">
+              <img
+                src="/icons/logo-transparant.png"
+                alt="Grenspret logo"
+                className="h-40 w-auto drop-shadow-[0_0_30px_rgba(0,210,106,0.15)]"
+              />
+            </div>
           </div>
 
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             Grens<span className="text-accent">pret</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-base font-medium text-gray-300">
+          <p className="mx-auto mt-3 max-w-md text-base font-medium text-gray-300/90">
             Bereken in seconden of het loont om in Duitsland of België te tanken
             en boodschappen te doen.
           </p>
