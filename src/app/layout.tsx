@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import {
   ServiceWorkerRegistration,
-  InstallBanner,
 } from "@/components/ServiceWorkerRegistration";
 import { BottomNav } from "@/components/BottomNav";
 import { Providers } from "@/components/Providers";
@@ -59,7 +58,6 @@ export default function RootLayout({
         <Providers>
           <div className="animate-page flex flex-1 flex-col">{children}</div>
           <BottomNav />
-          <InstallBanner />
           <ServiceWorkerRegistration />
         </Providers>
       </body>
