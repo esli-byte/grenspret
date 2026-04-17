@@ -23,7 +23,7 @@ export default function Home() {
           {/* Logo */}
           <div className="mb-4 flex justify-center">
             <img
-              src="/icons/icon-512x512.png"
+              src="/icons/logo-transparant.png"
               alt="Grenspret logo"
               width={140}
               height={140}
