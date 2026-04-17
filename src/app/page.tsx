@@ -1,6 +1,6 @@
 import { FlowKiezer } from "./flow-kiezer";
 import { HoeWerktHet } from "./hoe-werkt-het";
-import { InstalleerSectie } from "./installeer-sectie";
+
 import { AccountKnop } from "@/components/AccountKnop";
 
 export default function Home() {
@@ -69,11 +69,6 @@ export default function Home() {
         </div>
 
         <FlowKiezer />
-
-        {/* Installeer als app */}
-        <div className="mt-6">
-          <InstalleerSectie />
-        </div>
 
         {/* Trust indicators — bolder, card-style */}
         <div className="mt-8">
