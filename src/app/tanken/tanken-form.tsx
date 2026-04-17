@@ -22,6 +22,7 @@ import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, GRENSLOCATIES, type Locat
 import { leesGekozenTankstation } from "@/lib/opslag";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 import { ShareCard } from "@/app/resultaat/share-card";
+import { GeldConfetti } from "@/components/GeldConfetti";
 
 function euro(bedrag: number) {
   return `€${bedrag.toFixed(2)}`;
@@ -1550,6 +1551,9 @@ function BesparingsBlok({
 
   return (
     <div className="animate-slide-in-bottom space-y-3">
+      {/* Geld confetti bij tanken-only als je bespaart */}
+      <GeldConfetti actief={loont} />
+
       <h2 className="text-sm font-extrabold text-navy dark:text-white">
         Jouw besparing
       </h2>

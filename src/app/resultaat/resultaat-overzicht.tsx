@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { GeldConfetti } from "@/components/GeldConfetti";
 import {
   leesTanken,
   leesBoodschappen,
@@ -251,6 +252,9 @@ export function ResultaatOverzicht() {
 
   return (
     <div className="space-y-5">
+      {/* Geld confetti als je bespaart! */}
+      <GeldConfetti actief={loont} />
+
       {/* Conclusie banner — altijd bovenaan */}
       <ConclusieBanner
         netto={netto}
