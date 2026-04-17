@@ -179,30 +179,54 @@ export function ResultaatOverzicht() {
   }
 
   // Bereken de beste optie over alle beschikbare data
+  const flow = leesFlow();
   const route = tanken?.route[0]; // Geselecteerd station
-  const land = route?.land ?? ((boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België");
+  const isBoodschappenOnly = flow === "boodschappen" && !tanken;
+
+  // Bepaal land: bij tanken/combi het land van het tankstation,
+  // bij boodschappen-only het land van de gekozen supermarkt of hoogste besparing
+  let land: string;
+  if (route?.land) {
+    land = route.land;
+  } else if (isBoodschappenOnly && gekozenSupermarkt?.land) {
+    land = gekozenSupermarkt.land;
+  } else {
+    land = (boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België";
+  }
   const vlag = land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
 
   const besparingTanken = land === "Duitsland" ? tanken?.besparingDE ?? 0 : tanken?.besparingBE ?? 0;
   const besparingBoodschappenPerHH = land === "Duitsland" ? boodschappen?.besparingDE ?? 0 : boodschappen?.besparingBE ?? 0;
   const besparingBoodschappen = besparingBoodschappenPerHH * aantalHuishoudens;
 
-  // Combi-flow: bereken reiskosten voor de driehoeks-route (thuis→tankstation→supermarkt→thuis)
-  // In plaats van de tanken-only retourrit (thuis→tankstation→thuis)
+  // Reiskosten berekenen — verschilt per flow:
+  // - Tanken-only: retourrit thuis→tankstation→thuis (uit tanken.route)
+  // - Combi: driehoeksroute thuis→tankstation→supermarkt→thuis
+  // - Boodschappen-only: retourrit thuis→supermarkt→thuis (geschat verbruik)
   let reiskosten = route?.reiskosten ?? 0;
+  let reiskostenAfstandKm = route ? route.afstandRetour : 0;
 
   if (isCombiFlow && gekozenTankstation && gekozenSupermarkt && tanken) {
-    // Zoek de gekozen combi in de berekende opties
+    // Combi-flow: driehoeksroute
     const gekozenCombi = combiOpties.find((o) => o.isGekozen);
     if (gekozenCombi) {
       reiskosten = gekozenCombi.reiskosten;
+      reiskostenAfstandKm = gekozenCombi.totalAfstandKm;
     } else {
-      // Fallback: bereken handmatig
       const verbruikPerKm = tanken.verbruik / 100;
       const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
       const totaalKm = gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis;
       reiskosten = Math.round(totaalKm * verbruikPerKm * brandstofPrijsNL * 100) / 100;
+      reiskostenAfstandKm = totaalKm;
     }
+  } else if (isBoodschappenOnly && gekozenSupermarkt) {
+    // Boodschappen-only: retourrit naar supermarkt met gemiddeld verbruik
+    const GEMIDDELD_VERBRUIK = 7.5; // l/100km (NL gemiddelde personenauto)
+    const GEMIDDELDE_NL_PRIJS = 2.15; // €/L benzine
+    const retourKm = gekozenSupermarkt.afstandVanThuis * 2;
+    const brandstofRetour = (retourKm / 100) * GEMIDDELD_VERBRUIK;
+    reiskosten = Math.round(brandstofRetour * GEMIDDELDE_NL_PRIJS * 100) / 100;
+    reiskostenAfstandKm = retourKm;
   }
 
   const netto = besparingTanken + besparingBoodschappen - reiskosten;
@@ -225,6 +249,10 @@ export function ResultaatOverzicht() {
           tankstation: gekozenTankstation.naam,
           supermarkt: gekozenSupermarkt.naam,
           totaalKm: gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis,
+        } : undefined}
+        boodschappenRoute={isBoodschappenOnly && gekozenSupermarkt ? {
+          supermarkt: gekozenSupermarkt.naam,
+          retourKm: reiskostenAfstandKm,
         } : undefined}
       />
 
@@ -264,12 +292,19 @@ export function ResultaatOverzicht() {
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <span className="w-5 text-center">🚗</span>
-                  {isCombiFlow && gekozenTankstation && gekozenSupermarkt
-                    ? `Route (${gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis} km)`
-                    : "Reiskosten retour"
+                  {reiskostenAfstandKm > 0
+                    ? `Reiskosten (${reiskostenAfstandKm} km${isBoodschappenOnly ? " retour" : ""})`
+                    : "Reiskosten"
                   }
                 </span>
                 <span className="tabular-nums font-extrabold text-red-500">{"\u2212"}{euro(reiskosten)}</span>
+              </div>
+            )}
+            {/* Geschat verbruik melding bij boodschappen-only */}
+            {isBoodschappenOnly && reiskosten > 0 && (
+              <div className="flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+                <span className="w-5" />
+                Geschat op gem. 7,5 l/100km · Vul je kenteken in bij tanken voor exact verbruik
               </div>
             )}
 
@@ -723,6 +758,7 @@ function ConclusieBanner({
   heeftBoodschappen,
   route,
   combiRoute,
+  boodschappenRoute,
 }: {
   netto: number;
   land: string;
@@ -731,6 +767,7 @@ function ConclusieBanner({
   heeftBoodschappen: boolean;
   route?: TankenOpslag["route"][number];
   combiRoute?: { tankstation: string; supermarkt: string; totaalKm: number };
+  boodschappenRoute?: { supermarkt: string; retourKm: number };
 }) {
   const loont = netto > 0;
 
@@ -765,6 +802,15 @@ function ConclusieBanner({
               </span>
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
                 {combiRoute.totaalKm} km route
+              </span>
+            </div>
+          ) : boodschappenRoute ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                🛒 {boodschappenRoute.supermarkt}
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                {boodschappenRoute.retourKm} km retour
               </span>
             </div>
           ) : route ? (

@@ -416,8 +416,70 @@ export function BoodschappenLijst() {
     if (actievePersoon === id) setActievePersoon(MIJ_ID);
   }
 
+  // Boodschappen-only: selecteerbare supermarkten
+  const [boodschappenSupermarkt, setBoodschappenSupermarkt] = useState<LocatieMetAfstand | null>(null);
+
+  function handleBoodschappenSupermarktSelect(sm: LocatieMetAfstand) {
+    const isDeselect = boodschappenSupermarkt?.id === sm.id;
+    setBoodschappenSupermarkt(isDeselect ? null : sm);
+    if (!isDeselect) {
+      // Sla op zodat resultaatpagina de reiskosten kan berekenen
+      slaaGekozenSupermarktOp({
+        id: sm.id,
+        naam: sm.naam,
+        land: sm.land,
+        adres: sm.adres,
+        coordinaat: sm.coordinaat,
+        afstandVanTankstation: 0, // niet relevant voor boodschappen-only
+        afstandVanThuis: sm.afstandKm, // afstand van thuis naar supermarkt
+      });
+    }
+  }
+
   return (
     <div className="space-y-5">
+      {/* Locatie-invoer bovenaan voor boodschappen-only flow */}
+      {flow === "boodschappen" && (
+        <div className="card-bold p-5">
+          <label
+            htmlFor="postcode-boodschappen-top"
+            className="block text-sm font-extrabold text-navy dark:text-white"
+          >
+            Jouw postcode
+          </label>
+          <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            Om de afstand tot supermarkten over de grens te berekenen
+          </p>
+          <input
+            id="postcode-boodschappen-top"
+            type="text"
+            placeholder="1234 AB"
+            value={postcode}
+            onChange={(e) =>
+              setPostcode(
+                e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9 ]/g, "")
+                  .slice(0, 7)
+              )
+            }
+            className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
+            autoComplete="postal-code"
+          />
+        </div>
+      )}
+
+      {/* Supermarkten selectie voor boodschappen-only flow (bovenaan, zodat gebruiker eerst kiest) */}
+      {flow === "boodschappen" && postcode && (
+        <LocatieKaartjes
+          postcode={postcode}
+          type="supermarkt"
+          titel="Kies je supermarkt over de grens"
+          geselecteerdId={boodschappenSupermarkt?.id}
+          onSelect={handleBoodschappenSupermarktSelect}
+        />
+      )}
+
       {/* Samen boodschappen beheer */}
       <PersonenBeheer
         personen={personen}
@@ -599,36 +661,38 @@ export function BoodschappenLijst() {
         </div>
       )}
 
-      {/* Postcode voor supermarkten */}
-      <div className="card-bold p-5">
-        <label
-          htmlFor="postcode-boodschappen"
-          className="block text-sm font-extrabold text-navy dark:text-white"
-        >
-          Jouw postcode
-        </label>
-        <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-          Toon dichtstbijzijnde supermarkten over de grens
-        </p>
-        <input
-          id="postcode-boodschappen"
-          type="text"
-          placeholder="1234 AB"
-          value={postcode}
-          onChange={(e) =>
-            setPostcode(
-              e.target.value
-                .toUpperCase()
-                .replace(/[^A-Z0-9 ]/g, "")
-                .slice(0, 7)
-            )
-          }
-          className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
-          autoComplete="postal-code"
-        />
-      </div>
+      {/* Postcode voor combi-flow (bij boodschappen-only staat dit al bovenaan) */}
+      {flow !== "boodschappen" && (
+        <div className="card-bold p-5">
+          <label
+            htmlFor="postcode-boodschappen"
+            className="block text-sm font-extrabold text-navy dark:text-white"
+          >
+            Jouw postcode
+          </label>
+          <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+            Toon dichtstbijzijnde supermarkten over de grens
+          </p>
+          <input
+            id="postcode-boodschappen"
+            type="text"
+            placeholder="1234 AB"
+            value={postcode}
+            onChange={(e) =>
+              setPostcode(
+                e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9 ]/g, "")
+                  .slice(0, 7)
+              )
+            }
+            className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
+            autoComplete="postal-code"
+          />
+        </div>
+      )}
 
-      {/* Supermarkten: bij combi-flow zoek bij tankstation, anders bij postcode */}
+      {/* Supermarkten: bij combi-flow zoek bij tankstation */}
       {flow === "beide" && gekozenTankstation ? (
         <CombiSupermarktKeuze
           tankstation={gekozenTankstation}
@@ -649,13 +713,8 @@ export function BoodschappenLijst() {
             }
           }}
         />
-      ) : postcode ? (
-        <LocatieKaartjes
-          postcode={postcode}
-          type="supermarkt"
-          titel="Dichtstbijzijnde supermarkten"
-        />
       ) : null}
+      {/* Boodschappen-only supermarkten staan al bovenaan de pagina */}
 
       {/* Route overzicht bij combi-flow */}
       {flow === "beide" && gekozenTankstation && geselecteerdeSupermarkt && postcode && (
@@ -685,7 +744,11 @@ export function BoodschappenLijst() {
       </div>
 
       {/* Volgende stap knop naar resultaat */}
-      {totalAantalItems > 0 && <BoodschappenVolgendeStap />}
+      {totalAantalItems > 0 && (
+        <BoodschappenVolgendeStap
+          supermarktGeselecteerd={flow !== "boodschappen" || !!boodschappenSupermarkt}
+        />
+      )}
 
       {/* Floating knop naar overzicht — verdwijnt als overzicht in beeld is */}
       {totalAantalItems > 0 && (
@@ -726,12 +789,43 @@ function ScrollNaarOverzichtKnop({ targetRef }: { targetRef: React.RefObject<HTM
   );
 }
 
-function BoodschappenVolgendeStap() {
+function BoodschappenVolgendeStap({ supermarktGeselecteerd }: { supermarktGeselecteerd: boolean }) {
   const flow = leesFlow();
   const beschrijving =
     flow === "beide"
       ? "Tanken en boodschappen bij elkaar"
-      : "Bekijk je netto besparing op boodschappen";
+      : "Inclusief reiskosten naar je gekozen supermarkt";
+
+  if (!supermarktGeselecteerd) {
+    return (
+      <div className="space-y-2">
+        <div
+          className="flex items-center justify-between rounded-3xl bg-gray-200 p-5 opacity-50 dark:bg-gray-800"
+          aria-disabled="true"
+        >
+          <div className="text-left">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              Bekijk resultaat
+            </p>
+            <p className="mt-0.5 text-base font-extrabold text-gray-400 dark:text-gray-500">
+              Bekijk je totale besparing
+            </p>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+              Selecteer eerst een supermarkt hierboven
+            </p>
+          </div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-300/50 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-center text-[11px] font-medium text-amber-600 dark:text-amber-400">
+          ☝️ Selecteer een supermarkt om je reiskosten te berekenen
+        </p>
+      </div>
+    );
+  }
 
   return (
     <Link

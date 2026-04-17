@@ -35,6 +35,8 @@ export function FlowKiezer() {
 
   function kies(optie: (typeof OPTIES)[number]) {
     slaaFlowOp(optie.flow);
+    // Dispatch custom event zodat BottomNav direct update (storage event werkt alleen cross-tab)
+    window.dispatchEvent(new Event("flowChanged"));
     router.push(optie.href);
   }
 

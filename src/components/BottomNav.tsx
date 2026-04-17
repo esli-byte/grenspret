@@ -2,12 +2,27 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { BerekeningsFlow } from "@/lib/opslag";
 
-const NAV_ITEMS = [
+/* ─── Tab-definities ─── */
+interface NavItem {
+  href: string;
+  label: string;
+  /** Stap-nummer badge (0 = geen badge) — wordt dynamisch berekend per flow */
+  icon: (active: boolean) => React.ReactNode;
+  /** In welke flows is deze tab zichtbaar? */
+  flows: BerekeningsFlow[];
+  /** Per flow: welk stapnummer krijgt de badge? 0 = geen badge */
+  stapPerFlow: Record<BerekeningsFlow, number>;
+}
+
+const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
     label: "Home",
-    stap: 0,
+    flows: ["beide", "tanken", "boodschappen"],
+    stapPerFlow: { beide: 0, tanken: 0, boodschappen: 0 },
     icon: (active: boolean) => (
       <svg className="h-5 w-5" fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={active ? 0 : 1.8} stroke="currentColor">
         {active ? (
@@ -21,7 +36,8 @@ const NAV_ITEMS = [
   {
     href: "/tanken",
     label: "Tanken",
-    stap: 1,
+    flows: ["beide", "tanken"],
+    stapPerFlow: { beide: 1, tanken: 1, boodschappen: 0 },
     icon: (active: boolean) => (
       <svg className="h-5 w-5" fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={active ? 0 : 1.8} stroke="currentColor">
         {active ? (
@@ -41,7 +57,8 @@ const NAV_ITEMS = [
   {
     href: "/boodschappen",
     label: "Boodschappen",
-    stap: 2,
+    flows: ["beide", "boodschappen"],
+    stapPerFlow: { beide: 2, tanken: 0, boodschappen: 1 },
     icon: (active: boolean) => (
       <svg className="h-5 w-5" fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={active ? 0 : 1.8} stroke="currentColor">
         {active ? (
@@ -55,7 +72,8 @@ const NAV_ITEMS = [
   {
     href: "/resultaat",
     label: "Resultaat",
-    stap: 3,
+    flows: ["beide", "tanken", "boodschappen"],
+    stapPerFlow: { beide: 3, tanken: 2, boodschappen: 2 },
     icon: (active: boolean) => (
       <svg className="h-5 w-5" fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={active ? 0 : 1.8} stroke="currentColor">
         {active ? (
@@ -69,7 +87,8 @@ const NAV_ITEMS = [
   {
     href: "/shop",
     label: "Shop",
-    stap: 0,
+    flows: ["beide", "tanken", "boodschappen"],
+    stapPerFlow: { beide: 0, tanken: 0, boodschappen: 0 },
     icon: (active: boolean) => (
       <svg className="h-5 w-5" fill={active ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={active ? 0 : 1.8} stroke="currentColor">
         {active ? (
@@ -84,15 +103,59 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [flow, setFlow] = useState<BerekeningsFlow>("beide");
+
+  // Lees flow uit localStorage (client-side only)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("grensbesparing_flow");
+      if (raw === "tanken" || raw === "boodschappen" || raw === "beide") {
+        setFlow(raw);
+      }
+    } catch {
+      // SSR of localStorage niet beschikbaar
+    }
+
+    // Luister naar storage changes (bijv. als flow op homepage wijzigt)
+    const onStorage = () => {
+      try {
+        const raw = localStorage.getItem("grensbesparing_flow");
+        if (raw === "tanken" || raw === "boodschappen" || raw === "beide") {
+          setFlow(raw);
+        }
+      } catch { /* noop */ }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // Luister ook naar custom event voor same-tab updates
+  useEffect(() => {
+    const onFlowChange = () => {
+      try {
+        const raw = localStorage.getItem("grensbesparing_flow");
+        if (raw === "tanken" || raw === "boodschappen" || raw === "beide") {
+          setFlow(raw);
+        }
+      } catch { /* noop */ }
+    };
+    window.addEventListener("flowChanged", onFlowChange);
+    return () => window.removeEventListener("flowChanged", onFlowChange);
+  }, []);
+
+  // Filter tabs op huidige flow
+  const visibleItems = NAV_ITEMS.filter((item) => item.flows.includes(flow));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-navy/5 bg-white/90 backdrop-blur-2xl dark:border-white/5 dark:bg-navy/90">
       <div className="mx-auto flex max-w-lg items-center justify-around">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
+
+          const stap = item.stapPerFlow[flow];
 
           return (
             <Link
@@ -107,13 +170,13 @@ export function BottomNav() {
               <div className={`relative transition-transform duration-200 ${active ? "scale-110" : ""}`}>
                 {item.icon(active)}
                 {/* Stap nummer badge voor wizard stappen */}
-                {item.stap > 0 && (
+                {stap > 0 && (
                   <span className={`absolute -right-2.5 -top-2 flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black ${
                     active
                       ? "bg-accent text-white shadow-sm shadow-accent/30"
                       : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                   }`}>
-                    {item.stap}
+                    {stap}
                   </span>
                 )}
               </div>
