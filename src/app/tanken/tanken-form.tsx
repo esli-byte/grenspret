@@ -1380,8 +1380,8 @@ function ExtraLitersSlider({
   return (
     <div className="card-bold p-5">
       <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl shadow-md">
-          🛢️
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-md">
+          <img src="/icons/icon-jerrycan.png" alt="Jerrycan" className="h-full w-full object-cover" />
         </div>
         <div className="flex-1">
           <h2 className="text-sm font-extrabold text-navy dark:text-white">

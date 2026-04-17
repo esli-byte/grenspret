@@ -3,31 +3,29 @@
 import { useRouter } from "next/navigation";
 import { slaaFlowOp, wisResultaatData, type BerekeningsFlow } from "@/lib/opslag";
 import { wisSamenBoodschappenData } from "@/lib/personen";
+import Image from "next/image";
 
-const OPTIES: { flow: BerekeningsFlow; icon: string; titel: string; beschrijving: string; href: string; gradient: string }[] = [
+const OPTIES: { flow: BerekeningsFlow; iconSrc: string; titel: string; beschrijving: string; href: string }[] = [
   {
     flow: "beide",
-    icon: "⛽🛒",
+    iconSrc: "/icons/icon-beide.png",
     titel: "Tanken + boodschappen",
     beschrijving: "Bereken je totale besparing op één trip",
     href: "/tanken",
-    gradient: "from-cta to-orange-600",
   },
   {
     flow: "tanken",
-    icon: "⛽",
+    iconSrc: "/icons/icon-tanken.png",
     titel: "Alleen tanken",
     beschrijving: "Bereken je besparing op brandstof over de grens",
     href: "/tanken",
-    gradient: "from-emerald-500 to-green-600",
   },
   {
     flow: "boodschappen",
-    icon: "🛒",
+    iconSrc: "/icons/icon-boodschappen.png",
     titel: "Alleen boodschappen",
     beschrijving: "Vergelijk 150+ producten in NL, DE en BE",
     href: "/boodschappen",
-    gradient: "from-teal-500 to-cyan-600",
   },
 ];
 
@@ -35,11 +33,9 @@ export function FlowKiezer() {
   const router = useRouter();
 
   function kies(optie: (typeof OPTIES)[number]) {
-    // Wis oude resultaten zodat data van een vorige flow niet doorlekt
     wisResultaatData();
     wisSamenBoodschappenData();
     slaaFlowOp(optie.flow);
-    // Dispatch custom event zodat BottomNav direct update (storage event werkt alleen cross-tab)
     window.dispatchEvent(new Event("flowChanged"));
     router.push(optie.href);
   }
@@ -52,14 +48,14 @@ export function FlowKiezer() {
           onClick={() => kies(optie)}
           className="card-bold group flex items-center gap-4 p-5 text-left"
         >
-          <div
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${optie.gradient} text-2xl shadow-lg transition-transform duration-200 group-hover:scale-110 group-active:scale-95`}
-          >
-            {optie.flow === "beide" ? (
-              <span className="text-lg">⛽🛒</span>
-            ) : (
-              optie.icon
-            )}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg transition-transform duration-200 group-hover:scale-110 group-active:scale-95">
+            <Image
+              src={optie.iconSrc}
+              alt={optie.titel}
+              width={56}
+              height={56}
+              className="h-full w-full object-cover"
+            />
           </div>
 
           <div className="flex-1 min-w-0">
