@@ -1,4 +1,4 @@
-const CACHE_NAME = "grensbesparing-v3";
+const CACHE_NAME = "grensbesparing-v4";
 const OFFLINE_URL = "/offline";
 
 const PRECACHE_ASSETS = [
