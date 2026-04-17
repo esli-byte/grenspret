@@ -744,11 +744,11 @@ export function BoodschappenLijst() {
       </div>
 
       {/* Volgende stap knop naar resultaat */}
-      {totalAantalItems > 0 && (
-        <BoodschappenVolgendeStap
-          supermarktGeselecteerd={flow !== "boodschappen" || !!boodschappenSupermarkt}
-        />
-      )}
+      <BoodschappenVolgendeStap
+        flow={flow}
+        supermarktGeselecteerd={flow === "beide" ? !!geselecteerdeSupermarkt : !!boodschappenSupermarkt}
+        aantalProducten={totalAantalItems}
+      />
 
       {/* Floating knop naar overzicht */}
       {totalAantalItems > 0 && (
@@ -789,14 +789,31 @@ function ScrollNaarOverzichtKnop({ targetRef }: { targetRef: React.RefObject<HTM
   );
 }
 
-function BoodschappenVolgendeStap({ supermarktGeselecteerd }: { supermarktGeselecteerd: boolean }) {
-  const flow = leesFlow();
+function BoodschappenVolgendeStap({
+  flow,
+  supermarktGeselecteerd,
+  aantalProducten,
+}: {
+  flow: string;
+  supermarktGeselecteerd: boolean;
+  aantalProducten: number;
+}) {
+  // Bepaal wat er nog mist
+  const ontbrekendeStappen: string[] = [];
+  if (!supermarktGeselecteerd) ontbrekendeStappen.push("een supermarkt kiezen");
+  if (aantalProducten === 0) ontbrekendeStappen.push("producten aan je mandje toevoegen");
+
+  const isKlaar = ontbrekendeStappen.length === 0;
+
   const beschrijving =
     flow === "beide"
       ? "Tanken en boodschappen bij elkaar"
       : "Inclusief reiskosten naar je gekozen supermarkt";
 
-  if (!supermarktGeselecteerd) {
+  if (!isKlaar) {
+    // Specifieke melding wat er nog mist
+    const ontbreektTekst = ontbrekendeStappen.join(" en ");
+
     return (
       <div className="space-y-2">
         <div
@@ -811,7 +828,7 @@ function BoodschappenVolgendeStap({ supermarktGeselecteerd }: { supermarktGesele
               Bekijk je totale besparing
             </p>
             <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-              Selecteer eerst een supermarkt hierboven
+              Vul eerst alles in om verder te gaan
             </p>
           </div>
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-300/50 text-gray-400 dark:bg-gray-700 dark:text-gray-500">
@@ -821,7 +838,7 @@ function BoodschappenVolgendeStap({ supermarktGeselecteerd }: { supermarktGesele
           </div>
         </div>
         <p className="text-center text-[11px] font-medium text-amber-600 dark:text-amber-400">
-          ☝️ Selecteer een supermarkt om je reiskosten te berekenen
+          ☝️ Je moet nog {ontbreektTekst}
         </p>
       </div>
     );
