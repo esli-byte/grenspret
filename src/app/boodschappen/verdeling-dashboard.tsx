@@ -179,7 +179,7 @@ export function VerdelingDashboard({ personen, mijnNaam, toewijzingen, producten
       `Vandaag voor jou meegenomen over de grens:\n${bestellingTekst}\n\n` +
       `Jouw deel komt op €${totaal}.${reiskostenRegel}\n\n` +
       `Je kunt het overmaken wanneer het je uitkomt.\n\n` +
-      `Berekend met Grenspret, grenspret.nl`;
+      `Berekend met Grenspret 🚀 Download de gratis app op grenspret.nl`;
 
     try {
       await navigator.clipboard.writeText(bericht);

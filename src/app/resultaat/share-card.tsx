@@ -232,10 +232,10 @@ export const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
       >
         <div>
           <div style={{ fontSize: "13px", fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>
-            Bereken je eigen besparing
+            Gratis app &middot; Bereken jouw besparing
           </div>
           <div style={{ fontSize: "18px", fontWeight: 800, color: "#00D26A" }}>
-            grenspret.nl
+            Grenspret
           </div>
         </div>
         <div
@@ -249,7 +249,7 @@ export const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
             color: "#00D26A",
           }}
         >
-          Samen besparen →
+          Download gratis →
         </div>
       </div>
     </div>

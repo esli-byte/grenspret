@@ -1074,7 +1074,7 @@ function TankenDeelBlok({
 
   function bouwTekst(): string {
     const regels: string[] = [
-      `Ik bespaar ${euro(netto)} door in ${station.land} te tanken!`,
+      `🎉 Ik bespaar ${euro(netto)} door in ${station.land} te tanken!`,
       "",
       `${vlag} ${station.naam} · ${station.afstandKm * 2} km retour`,
       `⛽ Volle tank (${berekening.tankGrootte}L): +${euro(besparing!.besparing)}`,
@@ -1087,7 +1087,8 @@ function TankenDeelBlok({
     }
     regels.push(`💰 Netto besparing: ${euro(netto)}`);
     regels.push("");
-    regels.push(`Bereken je eigen besparing op ${url}`);
+    regels.push(`Wil jij ook besparen? Download de gratis Grenspret app! 🚀`);
+    regels.push(`👉 ${url}`);
     return regels.join("\n");
   }
 

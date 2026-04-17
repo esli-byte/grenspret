@@ -856,7 +856,7 @@ function DeelKnoppen({
   const url = typeof window !== "undefined" ? window.location.origin : "grenspret.nl";
 
   function bouwTekst(): string {
-    const intro = `Ik bespaar ${bedrag} door over de grens te shoppen in ${land}`;
+    const intro = `🎉 Ik bespaar ${bedrag} door over de grens te shoppen in ${land}!`;
     const regels: string[] = [intro, ""];
     if (besparingTanken > 0) {
       regels.push(`${vlag} Tanken: +${euro(besparingTanken)}`);
@@ -869,7 +869,8 @@ function DeelKnoppen({
     }
     regels.push(`💰 Netto besparing: ${bedrag}`);
     regels.push("");
-    regels.push(`Bereken je eigen besparing op ${url}`);
+    regels.push(`Wil jij ook besparen? Download de gratis Grenspret app! 🚀`);
+    regels.push(`👉 ${url}`);
     return regels.join("\n");
   }
 
