@@ -20,11 +20,15 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto max-w-3xl text-center">
-          {/* Floating emoji with bounce */}
-          <div className="mb-6 flex items-center justify-center gap-5">
-            <span className="animate-float text-4xl drop-shadow-lg">⛽</span>
-            <span className="animate-float-delayed text-5xl drop-shadow-lg">💰</span>
-            <span className="animate-float-delayed-2 text-4xl drop-shadow-lg">🛒</span>
+          {/* Logo */}
+          <div className="mb-4 flex justify-center">
+            <img
+              src="/icons/icon-512x512.png"
+              alt="Grenspret logo"
+              width={140}
+              height={140}
+              className="animate-float drop-shadow-2xl"
+            />
           </div>
 
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
