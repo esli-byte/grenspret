@@ -146,15 +146,15 @@ export function ResultaatOverzicht() {
     const flow = leesFlow();
     setIsCombiFlow(flow === "beide");
 
-    let gts: GekozenTankstation | null = null;
-    let gsm: GekozenSupermarkt | null = null;
+    // Lees gekozen locaties voor ALLE flows (niet alleen combi)
+    // - tanken/beide: tankstation nodig voor route-info
+    // - boodschappen/beide: supermarkt nodig voor reiskosten + locatie-display
+    const gts = (flow === "beide" || flow === "tanken") ? leesGekozenTankstation() : null;
+    const gsm = (flow === "beide" || flow === "boodschappen") ? leesGekozenSupermarkt() : null;
+    setGekozenTankstation(gts);
+    setGekozenSupermarkt(gsm);
 
     if (flow === "beide") {
-      gts = leesGekozenTankstation();
-      gsm = leesGekozenSupermarkt();
-      setGekozenTankstation(gts);
-      setGekozenSupermarkt(gsm);
-
       // Bereken alle alternatieve combinaties
       if (t && t.route.length > 0) {
         const voorkeuren = leesVoorkeuren();
@@ -345,19 +345,39 @@ export function ResultaatOverzicht() {
           </div>
         )}
 
-        {/* Route */}
+        {/* Route — tanken (alleen/combi) */}
         {route && (
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-base">
-              📍
+              ⛽
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-bold text-navy dark:text-white">
                 {route.bestemming}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-0.5">
+                <Chip>{route.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {route.land}</Chip>
                 <Chip>{route.afstandRetour} km retour</Chip>
                 <Chip>{formatRijtijd(route.rijtijdMinuten)}</Chip>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Supermarkt — boodschappen-only */}
+        {isBoodschappenOnly && gekozenSupermarkt && (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-base">
+              📍
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-navy dark:text-white">
+                {gekozenSupermarkt.naam}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-0.5">
+                <Chip>{gekozenSupermarkt.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {gekozenSupermarkt.land}</Chip>
+                <Chip>{Math.round(gekozenSupermarkt.afstandVanThuis)} km enkele reis</Chip>
+                <Chip>{Math.round(gekozenSupermarkt.afstandVanThuis * 2)} km retour</Chip>
               </div>
             </div>
           </div>
@@ -415,8 +435,9 @@ export function ResultaatOverzicht() {
         </div>
       </div>
 
-      {/* Ontbrekende stap */}
-      {(!heeftTanken || !heeftBoodschappen) && (
+      {/* Ontbrekende stap — alleen tonen als de flow "beide" is maar een onderdeel mist,
+           NIET tonen bij tanken-only of boodschappen-only (daar is het bewust weggelaten) */}
+      {flow === "beide" && (!heeftTanken || !heeftBoodschappen) && (
         <div className="card-bold p-5 border-amber-200 bg-amber-50 dark:border-amber-800/30 dark:bg-amber-950/30">
           <div className="flex items-start gap-3">
             <span className="text-lg">💡</span>
