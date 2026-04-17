@@ -726,7 +726,7 @@ export function BoodschappenLijst() {
       )}
 
       {/* Compacte sticky besparing balk */}
-      <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} />
+      <CompactBesparingBar totalen={totalen} aantalProducten={totalAantalItems} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
 
       {/* Verdeling dashboard (alleen als groepsmodus actief en items) */}
       {groepsmodus && totalAantalItems > 0 && (
@@ -740,7 +740,7 @@ export function BoodschappenLijst() {
 
       {/* Volledig overzicht onderaan */}
       <div ref={totaalRef}>
-        <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} />
+        <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
       </div>
 
       {/* Volgende stap knop naar resultaat */}
@@ -1112,6 +1112,7 @@ function formatTijd(iso: string): string {
 function CompactBesparingBar({
   totalen,
   aantalProducten,
+  gekozenLand,
 }: {
   totalen: {
     nl: number;
@@ -1119,12 +1120,14 @@ function CompactBesparingBar({
     besparingBE: number;
   };
   aantalProducten: number;
+  gekozenLand?: string;
 }) {
   if (aantalProducten === 0) return null;
 
-  const besteBesparing = Math.max(totalen.besparingDE, totalen.besparingBE);
-  const besteLand =
-    totalen.besparingDE >= totalen.besparingBE ? "🇩🇪" : "🇧🇪";
+  // Als gebruiker een land heeft gekozen, toon dat land; anders het beste
+  const isBelgie = gekozenLand ? gekozenLand === "België" : totalen.besparingBE > totalen.besparingDE;
+  const besteBesparing = isBelgie ? totalen.besparingBE : totalen.besparingDE;
+  const besteLand = isBelgie ? "🇧🇪" : "🇩🇪";
 
   return (
     <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 bg-gradient-to-r from-accent to-emerald-500 px-4 py-3.5 shadow-[0_-4px_20px_rgba(0,210,106,0.2)] sm:static sm:mx-0 sm:rounded-2xl sm:shadow-lg sm:shadow-accent/15 animate-slide-up">
@@ -1156,6 +1159,7 @@ function TotaalOverzicht({
   aantalProducten,
   merkInfo,
   prijsStatus,
+  gekozenLand,
 }: {
   totalen: {
     nl: number;
@@ -1172,6 +1176,7 @@ function TotaalOverzicht({
     totaalHuismerkNL: number;
   };
   prijsStatus: PrijsStatus;
+  gekozenLand?: string;
 }) {
   if (aantalProducten === 0) {
     return (
@@ -1187,9 +1192,10 @@ function TotaalOverzicht({
     );
   }
 
-  const besteLand =
-    totalen.besparingDE >= totalen.besparingBE ? "Duitsland" : "België";
-  const besteBesparing = Math.max(totalen.besparingDE, totalen.besparingBE);
+  // Als gebruiker een land heeft gekozen, toon dat land; anders het beste
+  const isBelgie = gekozenLand ? gekozenLand === "België" : totalen.besparingBE > totalen.besparingDE;
+  const besteLand = isBelgie ? "België" : "Duitsland";
+  const besteBesparing = isBelgie ? totalen.besparingBE : totalen.besparingDE;
 
   return (
     <div className="card-bold p-5">
@@ -1240,7 +1246,7 @@ function TotaalOverzicht({
       <div className="mt-3 grid grid-cols-2 gap-2.5">
         <div
           className={`rounded-2xl p-3.5 ${
-            totalen.besparingDE >= totalen.besparingBE
+            !isBelgie
               ? "bg-accent/10 ring-2 ring-accent/30"
               : "bg-gray-50 dark:bg-gray-800/50"
           }`}
@@ -1259,7 +1265,7 @@ function TotaalOverzicht({
 
         <div
           className={`rounded-2xl p-3.5 ${
-            totalen.besparingBE > totalen.besparingDE
+            isBelgie
               ? "bg-accent/10 ring-2 ring-accent/30"
               : "bg-gray-50 dark:bg-gray-800/50"
           }`}
