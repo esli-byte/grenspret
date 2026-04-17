@@ -10,9 +10,9 @@ export type LandPrijzen = {
   bronUrl?: string;
 };
 
-/** Fallback prijzen als de API niet beschikbaar is — bijgewerkt 16 april 2026 */
+/** Fallback prijzen als de API niet beschikbaar is — bijgewerkt 17 april 2026 */
 export const FALLBACK_PRIJZEN: LandPrijzen[] = [
-  { land: "Nederland", vlag: "🇳🇱", euro95: 2.57, euro98: 2.73, diesel: 2.73, bron: "handmatig" },
+  { land: "Nederland", vlag: "🇳🇱", euro95: 1.76, euro98: 0, diesel: 2.08, bron: "handmatig" },
   { land: "Duitsland", vlag: "🇩🇪", euro95: 2.10, euro98: 2.22, diesel: 2.28, bron: "handmatig" },
   { land: "België", vlag: "🇧🇪", euro95: 1.26, euro98: 1.30, diesel: 1.68, bron: "handmatig" },
 ];
