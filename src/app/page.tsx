@@ -25,9 +25,7 @@ export default function Home() {
             <img
               src="/icons/logo-transparant.png"
               alt="Grenspret logo"
-              width={140}
-              height={140}
-              className="animate-float drop-shadow-2xl"
+              className="h-28 w-auto animate-float drop-shadow-2xl"
             />
           </div>
 
