@@ -180,13 +180,31 @@ export function ResultaatOverzicht() {
 
   // Bereken de beste optie over alle beschikbare data
   const route = tanken?.route[0]; // Geselecteerd station
-  const land = route?.land ?? (boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België";
+  const land = route?.land ?? ((boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België");
   const vlag = land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
 
   const besparingTanken = land === "Duitsland" ? tanken?.besparingDE ?? 0 : tanken?.besparingBE ?? 0;
   const besparingBoodschappenPerHH = land === "Duitsland" ? boodschappen?.besparingDE ?? 0 : boodschappen?.besparingBE ?? 0;
   const besparingBoodschappen = besparingBoodschappenPerHH * aantalHuishoudens;
-  const reiskosten = route?.reiskosten ?? 0;
+
+  // Combi-flow: bereken reiskosten voor de driehoeks-route (thuis→tankstation→supermarkt→thuis)
+  // In plaats van de tanken-only retourrit (thuis→tankstation→thuis)
+  let reiskosten = route?.reiskosten ?? 0;
+
+  if (isCombiFlow && gekozenTankstation && gekozenSupermarkt && tanken) {
+    // Zoek de gekozen combi in de berekende opties
+    const gekozenCombi = combiOpties.find((o) => o.isGekozen);
+    if (gekozenCombi) {
+      reiskosten = gekozenCombi.reiskosten;
+    } else {
+      // Fallback: bereken handmatig
+      const verbruikPerKm = tanken.verbruik / 100;
+      const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
+      const totaalKm = gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis;
+      reiskosten = Math.round(totaalKm * verbruikPerKm * brandstofPrijsNL * 100) / 100;
+    }
+  }
+
   const netto = besparingTanken + besparingBoodschappen - reiskosten;
   const loont = netto > 0;
 
@@ -203,6 +221,11 @@ export function ResultaatOverzicht() {
         heeftTanken={heeftTanken}
         heeftBoodschappen={heeftBoodschappen}
         route={route}
+        combiRoute={isCombiFlow && gekozenTankstation && gekozenSupermarkt ? {
+          tankstation: gekozenTankstation.naam,
+          supermarkt: gekozenSupermarkt.naam,
+          totaalKm: gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis,
+        } : undefined}
       />
 
       {/* Breakdown kaart */}
@@ -241,7 +264,10 @@ export function ResultaatOverzicht() {
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                   <span className="w-5 text-center">🚗</span>
-                  Reiskosten retour
+                  {isCombiFlow && gekozenTankstation && gekozenSupermarkt
+                    ? `Route (${gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis} km)`
+                    : "Reiskosten retour"
+                  }
                 </span>
                 <span className="tabular-nums font-extrabold text-red-500">{"\u2212"}{euro(reiskosten)}</span>
               </div>
@@ -696,6 +722,7 @@ function ConclusieBanner({
   heeftTanken,
   heeftBoodschappen,
   route,
+  combiRoute,
 }: {
   netto: number;
   land: string;
@@ -703,6 +730,7 @@ function ConclusieBanner({
   heeftTanken: boolean;
   heeftBoodschappen: boolean;
   route?: TankenOpslag["route"][number];
+  combiRoute?: { tankstation: string; supermarkt: string; totaalKm: number };
 }) {
   const loont = netto > 0;
 
@@ -725,9 +753,21 @@ function ConclusieBanner({
             Rijden naar {vlag} {land} bespaart jou {euro(netto)}
           </h2>
           <p className="mt-2 text-sm text-white/85">
-            Je bespaart {euro(netto)} {watTekst}, inclusief reiskosten heen en terug.
+            Je bespaart {euro(netto)} {watTekst}, inclusief reiskosten voor de hele route.
           </p>
-          {route && (
+          {combiRoute ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                ⛽ {combiRoute.tankstation}
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                🛒 {combiRoute.supermarkt}
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                {combiRoute.totaalKm} km route
+              </span>
+            </div>
+          ) : route ? (
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
                 {route.bestemming}
@@ -736,7 +776,7 @@ function ConclusieBanner({
                 {route.afstandRetour} km retour · {formatRijtijd(route.rijtijdMinuten)}
               </span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );
