@@ -450,31 +450,67 @@ export function BoodschappenLijst() {
           <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
             Om de afstand tot supermarkten over de grens te berekenen
           </p>
-          <input
-            id="postcode-boodschappen-top"
-            type="text"
-            placeholder="1234 AB"
-            value={postcode}
-            onChange={(e) =>
-              setPostcode(
-                e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9 ]/g, "")
-                  .slice(0, 7)
-              )
-            }
-            className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
-            autoComplete="postal-code"
-          />
+          <div className="mt-2.5 flex items-center gap-2.5">
+            <input
+              id="postcode-boodschappen-top"
+              type="text"
+              placeholder="1234 AB"
+              value={postcode}
+              onChange={(e) =>
+                setPostcode(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9 ]/g, "")
+                    .slice(0, 7)
+                )
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && postcode.replace(/\s/g, "").length >= 4) {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className="min-w-0 flex-1 rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white"
+              autoComplete="postal-code"
+            />
+            <button
+              onClick={() => {
+                const el = document.getElementById("postcode-boodschappen-top");
+                if (el) (el as HTMLInputElement).blur();
+              }}
+              disabled={postcode.replace(/\s/g, "").length < 4}
+              className="btn-pill btn-pill-accent px-6 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Zoek
+            </button>
+          </div>
+
+          {/* Toon gevonden locatie als postcode geldig is */}
+          {postcode.replace(/\s/g, "").length >= 4 && postcodeNaarCoordinaat(postcode) && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
+              <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <div>
+                <p className="text-xs font-bold text-navy dark:text-white">
+                  📍 Jouw locatie
+                </p>
+                <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                  Postcode {postcode} — we zoeken de dichtstbijzijnde supermarkten over de grens
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Supermarkten selectie voor boodschappen-only flow (bovenaan, zodat gebruiker eerst kiest) */}
-      {flow === "boodschappen" && postcode && (
+      {flow === "boodschappen" && postcode.replace(/\s/g, "").length >= 4 && (
         <LocatieKaartjes
           postcode={postcode}
           type="supermarkt"
-          titel="Kies je supermarkt over de grens"
+          titel="Kies je dichtstbijzijnde supermarkt"
+          subtitel="Tik op een supermarkt om deze te selecteren"
           geselecteerdId={boodschappenSupermarkt?.id}
           onSelect={handleBoodschappenSupermarktSelect}
         />

@@ -1498,9 +1498,9 @@ function ExtraLitersSlider({
         <div className="flex items-start gap-2.5 rounded-2xl bg-amber-50 border border-amber-200/50 p-3.5 dark:bg-amber-950/30 dark:border-amber-800/30">
           <span className="shrink-0 text-sm">⚠️</span>
           <p className="text-[11px] font-medium leading-relaxed text-amber-800 dark:text-amber-300">
-            Wettelijk toegestaan: <strong>10 liter per persoon</strong> in een
-            goedgekeurde (UN/metalen) jerrycan. Plastic jerrycans zijn niet
-            toegestaan voor benzine.
+            Tot <strong>10 liter per persoon</strong> mag je accijnsvrij meenemen
+            in een goedgekeurde (UN/metalen) jerrycan. Boven de 10 liter ben je
+            accijns verschuldigd. Plastic jerrycans zijn niet toegestaan voor benzine.
           </p>
         </div>
       </div>

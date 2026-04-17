@@ -36,6 +36,7 @@ export function LocatieKaartjes({
   postcode,
   type,
   titel,
+  subtitel,
   geselecteerdId,
   onSelect,
   besteKeuzeId,
@@ -43,6 +44,7 @@ export function LocatieKaartjes({
   postcode: string;
   type: "tankstation" | "supermarkt";
   titel: string;
+  subtitel?: string;
   geselecteerdId?: string | null;
   onSelect?: (locatie: LocatieMetAfstand) => void;
   besteKeuzeId?: string | null;
@@ -108,7 +110,7 @@ export function LocatieKaartjes({
       </h2>
       {onSelect && (
         <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
-          Tik op een station om je besparing te berekenen
+          {subtitel || "Tik op een locatie om deze te selecteren"}
         </p>
       )}
       <div className="grid gap-2.5">

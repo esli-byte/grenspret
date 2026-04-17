@@ -68,9 +68,11 @@ function berekenAlleCombiRoutes(
 
     const land = route.land as "Duitsland" | "België";
     const besparingTanken = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
-    // Brandstofbesparing verschilt per station — gebruik de netto + reiskosten om de bruto terug te krijgen
-    // Maar eigenlijk is de besparing per tank gelijk (landelijk gemiddelde), het verschil zit in reiskosten
-    // We nemen daarom de landelijke besparing en berekenen route-specifieke reiskosten
+    // Buitenlandse brandstofprijs afleiden uit de besparing:
+    // besparing = (nlPrijs - buitenlandPrijs) * tankGrootte
+    const buitenlandPrijs = tanken.tankGrootte > 0
+      ? brandstofPrijsNL - besparingTanken / tanken.tankGrootte
+      : brandstofPrijsNL;
 
     // Zoek supermarkten bij dit tankstation
     const supermarkten = zoekSupermarktenBijTankstation(
@@ -91,7 +93,10 @@ function berekenAlleCombiRoutes(
       const afstandTSNaarSM = sm.afstandKm; // al berekend met factor 1.3
       const afstandSMNaarHuis = sm.afstandVanThuis ?? Math.round(haversineKm(thuisCoord, sm.coordinaat) * 1.3);
       const totalAfstandKm = afstandHuisNaarTS + afstandTSNaarSM + afstandSMNaarHuis;
-      const reiskosten = Math.round(totalAfstandKm * verbruikPerKm * brandstofPrijsNL * 100) / 100;
+      // Reiskosten gesplitst: heen op dure NL-brandstof, na tankstation op goedkopere buitenlandse brandstof
+      const reiskostenHeen = afstandHuisNaarTS * verbruikPerKm * brandstofPrijsNL;
+      const reiskostenTerug = (afstandTSNaarSM + afstandSMNaarHuis) * verbruikPerKm * buitenlandPrijs;
+      const reiskosten = Math.round((reiskostenHeen + reiskostenTerug) * 100) / 100;
 
       const netto = besparingTanken + besparingBoodschappenTotaal - reiskosten;
 
@@ -215,8 +220,17 @@ export function ResultaatOverzicht() {
     } else {
       const verbruikPerKm = tanken.verbruik / 100;
       const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
-      const totaalKm = gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis;
-      reiskosten = Math.round(totaalKm * verbruikPerKm * brandstofPrijsNL * 100) / 100;
+      const besparingTankenFB = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
+      const buitenlandPrijs = tanken.tankGrootte > 0
+        ? brandstofPrijsNL - besparingTankenFB / tanken.tankGrootte
+        : brandstofPrijsNL;
+      const afstandHeen = gekozenTankstation.afstandKm;
+      const afstandNaTanken = gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis;
+      const totaalKm = afstandHeen + afstandNaTanken;
+      // Heen op NL-brandstof, na tankstation op goedkopere buitenlandse brandstof
+      const reiskostenHeen = afstandHeen * verbruikPerKm * brandstofPrijsNL;
+      const reiskostenNaTanken = afstandNaTanken * verbruikPerKm * buitenlandPrijs;
+      reiskosten = Math.round((reiskostenHeen + reiskostenNaTanken) * 100) / 100;
       reiskostenAfstandKm = totaalKm;
     }
   } else if (isBoodschappenOnly && gekozenSupermarkt) {
