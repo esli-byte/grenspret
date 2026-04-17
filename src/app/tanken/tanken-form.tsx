@@ -18,7 +18,8 @@ import {
 import { schattingVerbruikHybride } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow, slaaGekozenTankstationOp } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
-import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, type LocatieMetAfstand } from "@/lib/grenslocaties";
+import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, GRENSLOCATIES, type LocatieMetAfstand } from "@/lib/grenslocaties";
+import { leesGekozenTankstation } from "@/lib/opslag";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 import { ShareCard } from "@/app/resultaat/share-card";
 
@@ -103,14 +104,37 @@ export function TankenForm() {
     }
     if (voorkeuren.postcode) setPostcode(voorkeuren.postcode);
     if (voorkeuren.isLeaseAuto) setIsLeaseAuto(true);
+    if (typeof voorkeuren.extraLiters === "number") setExtraLiters(voorkeuren.extraLiters);
+    if (voorkeuren.brandstofOverride) setBrandstofOverride(voorkeuren.brandstofOverride as BrandstofSoort);
+    if (typeof voorkeuren.elektrischPercentage === "number") setElektrischPercentage(voorkeuren.elektrischPercentage);
+
+    // Herstel geselecteerd tankstation
+    const opgeslagenStation = leesGekozenTankstation();
+    if (opgeslagenStation) {
+      const bron = GRENSLOCATIES.find((l) => l.id === opgeslagenStation.id);
+      if (bron) {
+        setGeselecteerdStation({
+          ...bron,
+          afstandKm: opgeslagenStation.afstandKm,
+          rijtijdMin: opgeslagenStation.rijtijdMin,
+        });
+      }
+    }
   }, []);
 
   // Sla voorkeuren op bij wijziging
   useEffect(() => {
     if (kenteken || postcode) {
-      slaaVoorkeurenOp({ kenteken, postcode, isLeaseAuto });
+      slaaVoorkeurenOp({
+        kenteken,
+        postcode,
+        isLeaseAuto,
+        extraLiters,
+        brandstofOverride,
+        elektrischPercentage,
+      });
     }
-  }, [kenteken, postcode, isLeaseAuto]);
+  }, [kenteken, postcode, isLeaseAuto, extraLiters, brandstofOverride, elektrischPercentage]);
 
   // Fetch live prijzen bij mount
   useEffect(() => {

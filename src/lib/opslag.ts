@@ -39,6 +39,9 @@ export type GebruikerVoorkeuren = {
   kenteken?: string;
   postcode?: string;
   isLeaseAuto?: boolean;
+  extraLiters?: number;
+  brandstofOverride?: string | null;
+  elektrischPercentage?: number;
   laatsteBezoek?: string;
 };
 
