@@ -1197,21 +1197,33 @@ function ProductTegel({
       </span>
 
       {/* Prijs */}
-      <div className="mt-1 flex items-baseline gap-1">
-        <span className="text-[11px] tabular-nums font-medium text-gray-400 line-through dark:text-gray-500">
-          {euro(product.prijsNL)}
-        </span>
-        <span className="text-xs font-extrabold tabular-nums text-accent">
-          {euro(Math.min(product.prijsDE, product.prijsBE))}
-        </span>
-      </div>
+      {(() => {
+        const bestePrijs = Math.min(product.prijsDE, product.prijsBE);
+        const isDuurder = bestePrijs > product.prijsNL;
+        return (
+          <>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className={`text-[11px] tabular-nums font-medium ${isDuurder ? "text-gray-400 dark:text-gray-500" : "text-gray-400 line-through dark:text-gray-500"}`}>
+                {euro(product.prijsNL)}
+              </span>
+              <span className={`text-xs font-extrabold tabular-nums ${isDuurder ? "text-red-500 dark:text-red-400" : "text-accent"}`}>
+                {euro(bestePrijs)}
+              </span>
+            </div>
 
-      {/* Besparing badge */}
-      {besparing > 0.05 && (
-        <div className="mt-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-extrabold text-accent">
-          -{euro(besparing)}
-        </div>
-      )}
+            {/* Besparing badge of duurder badge */}
+            {isDuurder ? (
+              <div className="mt-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-500 dark:bg-red-900/30 dark:text-red-400">
+                +{euro(bestePrijs - product.prijsNL)}
+              </div>
+            ) : besparing > 0.05 ? (
+              <div className="mt-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-extrabold text-accent">
+                -{euro(besparing)}
+              </div>
+            ) : null}
+          </>
+        );
+      })()}
 
       {/* Persoon dots (alleen in groepsmodus) */}
       {personenDotsInfo && personenDotsInfo.length > 0 && (
