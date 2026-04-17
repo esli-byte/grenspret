@@ -1538,16 +1538,48 @@ function CombiSupermarktKeuze({
     );
   }
 
+  // Als er een supermarkt geselecteerd is, toon alleen die ene compact
+  if (geselecteerd) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-white">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-extrabold text-navy dark:text-white">
+              {geselecteerd.naam}
+            </span>
+            <span className="ml-1.5 text-xs">
+              {geselecteerd.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+            </span>
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+              {geselecteerd.afstandKm} km van tankstation
+            </span>
+          </div>
+          <button
+            onClick={() => onSelect(null)}
+            className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Wijzig
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* Header met tankstation context */}
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-500 text-lg shadow-md">
-          🛒
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-md">
+          <img src="/icons/icon-boodschappen.png" alt="Supermarkt" className="h-full w-full object-cover" />
         </div>
         <div>
           <h2 className="text-sm font-extrabold text-navy dark:text-white">
-            Supermarkten dichtbij je tanklocatie
+            Kies je supermarkt
           </h2>
           <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
             In de buurt van {tankstation.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {tankstation.naam}
@@ -1557,58 +1589,41 @@ function CombiSupermarktKeuze({
 
       {/* Supermarkt kaartjes */}
       <div className="grid gap-2.5">
-        {supermarkten.map((sm) => {
-          const isGeselecteerd = geselecteerd?.id === sm.id;
-          return (
-            <button
-              key={sm.id}
-              onClick={() => onSelect(isGeselecteerd ? null : sm)}
-              className={`card-bold flex items-center gap-3 p-4 text-left transition-all active:scale-[0.98] ${
-                isGeselecteerd
-                  ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
-                  : "hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-            >
-              {/* Selectie indicator */}
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all ${
-                isGeselecteerd
-                  ? "bg-accent text-white"
-                  : "border-2 border-gray-200 dark:border-gray-700"
-              }`}>
-                {isGeselecteerd && (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
+        {supermarkten.map((sm) => (
+          <button
+            key={sm.id}
+            onClick={() => onSelect(sm)}
+            className="card-bold flex items-center gap-3 p-4 text-left transition-all active:scale-[0.98] hover:border-gray-300 dark:hover:border-gray-600"
+          >
+            {/* Selectie indicator */}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-200 dark:border-gray-700" />
 
-              {/* Info */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-navy dark:text-white">
-                    {sm.naam}
-                  </span>
-                  <span className="text-xs">
-                    {sm.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
-                  </span>
-                </div>
-                <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                  {sm.adres}
-                </p>
+            {/* Info */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-navy dark:text-white">
+                  {sm.naam}
+                </span>
+                <span className="text-xs">
+                  {sm.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+                </span>
               </div>
+              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                {sm.adres}
+              </p>
+            </div>
 
-              {/* Afstand badge */}
-              <div className="shrink-0 text-right">
-                <div className="text-xs font-extrabold text-accent">
-                  {sm.afstandKm} km
-                </div>
-                <div className="text-[10px] text-gray-400 dark:text-gray-500">
-                  van tankstation
-                </div>
+            {/* Afstand badge */}
+            <div className="shrink-0 text-right">
+              <div className="text-xs font-extrabold text-accent">
+                {sm.afstandKm} km
               </div>
-            </button>
-          );
-        })}
+              <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                van tankstation
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
