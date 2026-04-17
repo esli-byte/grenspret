@@ -5,19 +5,19 @@ const config: CapacitorConfig = {
   appName: "Grenspret",
   webDir: "out",
   server: {
-    // In productie: gebruik de gehoste URL zodat updates direct live zijn
-    // zonder nieuwe app store review. Verwijder dit voor een volledig offline build.
-    url: "https://grenspret.nl",
+    // Laadt de live Vercel URL zodat updates direct zichtbaar zijn
+    // zonder nieuwe App Store review
+    url: "https://grenspret.vercel.app",
     cleartext: false,
   },
   ios: {
     contentInset: "automatic",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#0F172A",
     preferredContentMode: "mobile",
     scheme: "Grenspret",
   },
   android: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#0F172A",
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,
@@ -26,14 +26,14 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: "#ffffff",
+      backgroundColor: "#0F172A",
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,
       splashImmersive: true,
     },
     StatusBar: {
-      style: "DARK",
+      style: "LIGHT",
       backgroundColor: "#0F172A",
     },
   },
