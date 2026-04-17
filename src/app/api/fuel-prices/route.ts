@@ -48,10 +48,13 @@ export type FuelPricesResponse = {
   debug?: unknown;
 };
 
-// Handmatige fallbacks (bijgewerkt 16 april 2026) als een bron niet bereikbaar is
-const NL_FALLBACK = { euro95: 2.57, diesel: 2.73 };
-const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 };
-const BE_FALLBACK = { euro95: 1.26, diesel: 1.68 };
+// Handmatige fallbacks als een bron niet bereikbaar is
+// Bijgewerkt 17 april 2026 op basis van officiële bronnen
+const NL_FALLBACK = { euro95: 2.57, diesel: 2.73 }; // CBS
+const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 }; // Tankerkoenig
+// België: Euro 95 = E10 (standaard aan Belgische pompen, lage accijns)
+// Diesel = B7 (maximumprijs FOD Economie minus ~3ct)
+const BE_FALLBACK = { euro95: 1.30, diesel: 2.22 };
 
 export async function GET(request: NextRequest) {
   const timestamp = Date.now();

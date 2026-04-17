@@ -223,84 +223,190 @@ export async function haalNederlandsePrijzen(): Promise<PrijsBron | null> {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  BELGIË — FOD Economie maximumprijzen (JSON endpoint)
+//  BELGIË — Meerdere bronnen voor maximumprijzen
 //
-//  De FOD publiceert dagelijks officiële maximumprijzen. We
-//  trekken ~€0,03 af voor een realistische pompprijs.
+//  Bronnen (in volgorde van betrouwbaarheid):
+//  1. Energiafed.be — branchevereniging, publiceeert dagelijks maximumprijzen
+//  2. FOD Economie — officiële overheids-pagina (HTML scraping)
+//  3. Carbu.com — vergelijkingssite (backup)
+//
+//  Let op: België heeft twee soorten Euro 95:
+//  - E10 (10% ethanol): ~€1.30/L — standaard aan pompen, lage accijns
+//  - E5 (5% ethanol):   ~€1.84/L — duurdere oudere variant
+//  Wij gebruiken E10 omdat dat de standaard is in België.
+//
+//  Diesel B7: ~€2.22/L — veel duurder dan in NL verwacht
+//
+//  We trekken ~€0,03 af van maximumprijs voor realistische pompprijs.
 // ═══════════════════════════════════════════════════════════
 
-export async function haalBelgischePrijzen(): Promise<PrijsBron | null> {
-  // Probeer meerdere URLs — FOD wijzigt regelmatig
-  const urls = [
-    "https://economie.fgov.be/nl/themas/energie/energieprijzen/maximumprijzen",
-    "https://economie.fgov.be/sites/default/files/Files/Energy/Maximum-prices-petroleum-products.json",
-    "https://carbu.com/belgique//index.php/actualiteit/statistieken",
-  ];
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT),
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; GrensprtBot/1.0; +https://grenspret.nl)",
-          Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
-          "Accept-Language": "nl-BE,nl;q=0.9",
-        },
-      });
-
-      if (!res.ok) continue;
-
-      const text = await res.text();
-
-      // Zoek in HTML/JSON naar prijs patterns
-      // Euro95 ligt meestal tussen 1.50-2.30, Diesel tussen 1.50-2.30
-      const euro95Match =
-        text.match(/Euro\s*95[^0-9]{0,500}?(\d[,.]\d{2,3})/i) ||
-        text.match(/Benzine\s*95[^0-9]{0,500}?(\d[,.]\d{2,3})/i);
-      const dieselMatch =
-        text.match(/Diesel[^0-9]{0,500}?(\d[,.]\d{2,3})/i) ||
-        text.match(/Gasolie[^0-9]{0,500}?(\d[,.]\d{2,3})/i);
-
-      const euro95Max = euro95Match
-        ? parseFloat(euro95Match[1].replace(",", "."))
-        : null;
-      const dieselMax = dieselMatch
-        ? parseFloat(dieselMatch[1].replace(",", "."))
-        : null;
-
-      if (
-        (euro95Max === null || !isFinite(euro95Max) || euro95Max < 1 || euro95Max > 3) &&
-        (dieselMax === null || !isFinite(dieselMax) || dieselMax < 1 || dieselMax > 3)
-      ) {
-        continue;
+/**
+ * Zoek een prijs in tekst via meerdere regex-patronen.
+ * Retourneert de eerste match die binnen [min, max] valt, of null.
+ */
+function zoekPrijsInTekst(
+  tekst: string,
+  patronen: RegExp[],
+  min: number,
+  max: number,
+): number | null {
+  for (const patroon of patronen) {
+    const match = tekst.match(patroon);
+    if (match) {
+      const prijs = parseFloat(match[1].replace(",", "."));
+      if (isFinite(prijs) && prijs >= min && prijs <= max) {
+        return prijs;
       }
-
-      // Officiële max minus ~3ct voor realistische pompprijs
-      const afslag = 0.03;
-      return {
-        euro95: euro95Max !== null && euro95Max >= 1 && euro95Max <= 3
-          ? Math.round((euro95Max - afslag) * 1000) / 1000
-          : null,
-        diesel: dieselMax !== null && dieselMax >= 1 && dieselMax <= 3
-          ? Math.round((dieselMax - afslag) * 1000) / 1000
-          : null,
-        bron: "FOD Economie",
-        bronUrl: "https://economie.fgov.be",
-        debug: { url, httpStatus: res.status },
-      };
-    } catch {
-      continue;
     }
   }
+  return null;
+}
 
+export async function haalBelgischePrijzen(): Promise<PrijsBron | null> {
+  const debugErrors: string[] = [];
+
+  // ── Bron 1: Energiafed.be maximumprijzen ──
+  // Branchevereniging die dagelijks de officiële maximumprijzen publiceert
+  try {
+    const url = "https://www.energiafed.be/nl/maximumprijzen";
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
+        Accept: "text/html",
+        "Accept-Language": "nl-BE,nl;q=0.9",
+      },
+    });
+
+    if (res.ok) {
+      const tekst = await res.text();
+
+      // E10 prijs (de goedkope variant, standaard aan Belgische pompen)
+      const euro95 = zoekPrijsInTekst(tekst, [
+        /E10[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Super\s*95\s*(?:E10)?[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Benzine[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Euro\s*95[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+      ], 0.80, 2.50);
+
+      // Diesel B7
+      const diesel = zoekPrijsInTekst(tekst, [
+        /Diesel\s*(?:B7)?[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Gasolie[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+      ], 1.00, 3.50);
+
+      if (euro95 !== null || diesel !== null) {
+        const afslag = 0.03;
+        return {
+          euro95: euro95 !== null ? Math.round((euro95 - afslag) * 1000) / 1000 : null,
+          diesel: diesel !== null ? Math.round((diesel - afslag) * 1000) / 1000 : null,
+          bron: "Energiafed",
+          bronUrl: "https://www.energiafed.be/nl/maximumprijzen",
+          debug: { url, httpStatus: res.status, matched: { euro95: euro95?.toString(), diesel: diesel?.toString() } },
+        };
+      }
+      debugErrors.push(`energiafed: HTML geladen maar geen prijzen gevonden`);
+    } else {
+      debugErrors.push(`energiafed: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    debugErrors.push(`energiafed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // ── Bron 2: FOD Economie officiële pagina ──
+  try {
+    const url = "https://economie.fgov.be/nl/themas/energie/energieprijzen/maximumprijzen";
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
+        Accept: "text/html,application/json;q=0.9",
+        "Accept-Language": "nl-BE,nl;q=0.9",
+      },
+    });
+
+    if (res.ok) {
+      const tekst = await res.text();
+
+      // E10 prijs — specifiek zoeken naar E10 eerst (de goedkope variant)
+      const euro95 = zoekPrijsInTekst(tekst, [
+        /E10[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+        /Super\s*95[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+        /Euro\s*95[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+        /Benzine\s*95[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+      ], 0.80, 2.50);
+
+      const diesel = zoekPrijsInTekst(tekst, [
+        /Diesel[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+        /Gasolie[^0-9]{0,500}?(\d[,.]\d{2,4})/i,
+      ], 1.00, 3.50);
+
+      if (euro95 !== null || diesel !== null) {
+        const afslag = 0.03;
+        return {
+          euro95: euro95 !== null ? Math.round((euro95 - afslag) * 1000) / 1000 : null,
+          diesel: diesel !== null ? Math.round((diesel - afslag) * 1000) / 1000 : null,
+          bron: "FOD Economie",
+          bronUrl: "https://economie.fgov.be",
+          debug: { url, httpStatus: res.status, matched: { euro95: euro95?.toString(), diesel: diesel?.toString() } },
+        };
+      }
+      debugErrors.push(`FOD: HTML geladen maar geen prijzen gevonden`);
+    } else {
+      debugErrors.push(`FOD: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    debugErrors.push(`FOD: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // ── Bron 3: Carbu.com E10 pagina ──
+  try {
+    const url = "https://carbu.com/belgie/index.php/super95E10";
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
+        Accept: "text/html",
+        "Accept-Language": "nl-BE,nl;q=0.9",
+      },
+    });
+
+    if (res.ok) {
+      const tekst = await res.text();
+
+      const euro95 = zoekPrijsInTekst(tekst, [
+        /maximumprijs[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /E10[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Super\s*95[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /(\d[,.]\d{3,4})\s*€?\s*\/?\s*(?:liter|L)/i,
+      ], 0.80, 2.50);
+
+      if (euro95 !== null) {
+        const afslag = 0.03;
+        return {
+          euro95: Math.round((euro95 - afslag) * 1000) / 1000,
+          diesel: null, // Diesel apart ophalen zou een extra request kosten
+          bron: "Carbu.com",
+          bronUrl: "https://carbu.com/belgie",
+          debug: { url, httpStatus: res.status, matched: { euro95: euro95?.toString() } },
+        };
+      }
+      debugErrors.push(`carbu: HTML geladen maar geen prijzen gevonden`);
+    } else {
+      debugErrors.push(`carbu: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    debugErrors.push(`carbu: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Geen enkele bron leverde data → fallback wordt in route.ts gebruikt
   return {
     euro95: null,
     diesel: null,
     bron: "FOD Economie",
     debug: {
-      url: urls.join(", "),
-      error: "geen van de URLs leverde bruikbare data",
+      url: "energiafed + FOD + carbu",
+      error: `Alle bronnen gefaald: ${debugErrors.join("; ")}`,
     },
   };
 }
