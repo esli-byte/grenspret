@@ -71,6 +71,7 @@ export function wisResultaatData() {
     localStorage.removeItem(GEKOZEN_TANKSTATION_KEY);
     localStorage.removeItem(GEKOZEN_SUPERMARKT_KEY);
     localStorage.removeItem(BOODSCHAPPEN_SELECTIE_KEY);
+    localStorage.removeItem(EIGEN_PRODUCTEN_KEY);
   } catch {
     // localStorage niet beschikbaar
   }

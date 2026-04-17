@@ -172,3 +172,15 @@ export function verwijderProductToewijzing(
   delete nieuw[productId];
   return nieuw;
 }
+
+/** Wis alle samen-boodschappen data (personen, toewijzingen, groepsmodus) */
+export function wisSamenBoodschappenData() {
+  try {
+    localStorage.removeItem(PERSONEN_KEY);
+    localStorage.removeItem(TOEWIJZINGEN_KEY);
+    localStorage.removeItem(GROEPSMODUS_KEY);
+    localStorage.removeItem(ACTIEVE_PERSOON_KEY);
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
