@@ -77,22 +77,18 @@ export default function Home() {
           </p>
           <div className="grid grid-cols-2 gap-2.5 text-center sm:grid-cols-4">
             <TrustBadge
-              icon="🚗"
               label="RDW"
               sublabel="Voertuigdata"
             />
             <TrustBadge
-              icon="🗺️"
               label="Google Maps"
               sublabel="Route & navigatie"
             />
             <TrustBadge
-              icon="🛒"
               label="Marktprijzen"
               sublabel="NL, DE & BE"
             />
             <TrustBadge
-              icon="📦"
               label="150+"
               sublabel="Producten"
               highlight
@@ -105,20 +101,17 @@ export default function Home() {
 }
 
 function TrustBadge({
-  icon,
   label,
   sublabel,
   highlight,
 }: {
-  icon: string;
   label: string;
   sublabel: string;
   highlight?: boolean;
 }) {
   return (
     <div className={`card-bold flex flex-col items-center justify-center p-3 sm:p-3.5 ${highlight ? "border-accent/30 bg-accent/5" : ""}`}>
-      <span className="text-xl leading-none">{icon}</span>
-      <div className={`mt-1.5 text-sm font-extrabold ${highlight ? "text-accent" : "text-navy dark:text-white"}`}>
+      <div className={`text-sm font-extrabold ${highlight ? "text-accent" : "text-navy dark:text-white"}`}>
         {label}
       </div>
       <div className="mt-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
