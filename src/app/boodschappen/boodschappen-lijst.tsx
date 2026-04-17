@@ -1359,10 +1359,10 @@ function CombiSupermarktKeuze({
         </div>
         <div>
           <h2 className="text-sm font-extrabold text-navy dark:text-white">
-            Supermarkten bij {tankstation.naam}
+            Supermarkten dichtbij je tanklocatie
           </h2>
           <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-            Kies een supermarkt in de buurt van je tankstation
+            In de buurt van {tankstation.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {tankstation.naam}
           </p>
         </div>
       </div>
