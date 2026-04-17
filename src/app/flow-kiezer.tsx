@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { slaaFlowOp, type BerekeningsFlow } from "@/lib/opslag";
+import { slaaFlowOp, wisResultaatData, type BerekeningsFlow } from "@/lib/opslag";
 
 const OPTIES: { flow: BerekeningsFlow; icon: string; titel: string; beschrijving: string; href: string; gradient: string }[] = [
   {
@@ -34,6 +34,8 @@ export function FlowKiezer() {
   const router = useRouter();
 
   function kies(optie: (typeof OPTIES)[number]) {
+    // Wis oude resultaten zodat data van een vorige flow niet doorlekt
+    wisResultaatData();
     slaaFlowOp(optie.flow);
     // Dispatch custom event zodat BottomNav direct update (storage event werkt alleen cross-tab)
     window.dispatchEvent(new Event("flowChanged"));

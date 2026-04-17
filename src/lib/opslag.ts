@@ -61,6 +61,21 @@ export function slaaFlowOp(flow: BerekeningsFlow) {
   }
 }
 
+/** Wis berekende resultaten bij flow-wissel zodat oude data niet doorlekt.
+ *  Voorkeuren (kenteken, postcode, etc.) blijven behouden. */
+export function wisResultaatData() {
+  try {
+    localStorage.removeItem(TANKEN_KEY);
+    localStorage.removeItem(BOODSCHAPPEN_KEY);
+    localStorage.removeItem(HUISHOUDENS_KEY);
+    localStorage.removeItem(GEKOZEN_TANKSTATION_KEY);
+    localStorage.removeItem(GEKOZEN_SUPERMARKT_KEY);
+    localStorage.removeItem(BOODSCHAPPEN_SELECTIE_KEY);
+  } catch {
+    // localStorage niet beschikbaar
+  }
+}
+
 export function leesFlow(): BerekeningsFlow {
   try {
     const raw = localStorage.getItem(FLOW_KEY);
