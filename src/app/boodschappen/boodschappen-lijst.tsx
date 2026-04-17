@@ -661,8 +661,8 @@ export function BoodschappenLijst() {
         </div>
       )}
 
-      {/* Postcode voor combi-flow (bij boodschappen-only staat dit al bovenaan) */}
-      {flow !== "boodschappen" && (
+      {/* Postcode — alleen tonen als er nog geen postcode bekend is (bij combi-flow is die al ingevuld bij tanken) */}
+      {!postcode && flow !== "boodschappen" && (
         <div className="card-bold p-5">
           <label
             htmlFor="postcode-boodschappen"
