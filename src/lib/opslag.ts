@@ -74,6 +74,56 @@ const HUISHOUDENS_KEY = "grensbesparing_huishoudens";
 const VOORKEUREN_KEY = "grensbesparing_voorkeuren";
 const BOODSCHAPPEN_SELECTIE_KEY = "grensbesparing_boodschappen_selectie";
 const EIGEN_PRODUCTEN_KEY = "grensbesparing_eigen_producten";
+const GEKOZEN_TANKSTATION_KEY = "grensbesparing_gekozen_tankstation";
+const GEKOZEN_SUPERMARKT_KEY = "grensbesparing_gekozen_supermarkt";
+
+// === Gekozen tankstation (voor combi-flow) ===
+export type GekozenTankstation = {
+  id: string;
+  naam: string;
+  land: "Duitsland" | "België";
+  adres: string;
+  coordinaat: { lat: number; lng: number };
+  afstandKm: number;
+  rijtijdMin: number;
+};
+
+export function slaaGekozenTankstationOp(data: GekozenTankstation) {
+  try {
+    localStorage.setItem(GEKOZEN_TANKSTATION_KEY, JSON.stringify(data));
+  } catch { /* localStorage niet beschikbaar */ }
+}
+
+export function leesGekozenTankstation(): GekozenTankstation | null {
+  try {
+    const raw = localStorage.getItem(GEKOZEN_TANKSTATION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+// === Gekozen supermarkt (voor combi-flow) ===
+export type GekozenSupermarkt = {
+  id: string;
+  naam: string;
+  land: "Duitsland" | "België";
+  adres: string;
+  coordinaat: { lat: number; lng: number };
+  afstandVanTankstation: number;
+  afstandVanThuis: number;
+};
+
+export function slaaGekozenSupermarktOp(data: GekozenSupermarkt) {
+  try {
+    localStorage.setItem(GEKOZEN_SUPERMARKT_KEY, JSON.stringify(data));
+  } catch { /* localStorage niet beschikbaar */ }
+}
+
+export function leesGekozenSupermarkt(): GekozenSupermarkt | null {
+  try {
+    const raw = localStorage.getItem(GEKOZEN_SUPERMARKT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 // Minimal shape for stored custom products (import type comes from producten.ts)
 type OpgeslagenEigenProduct = {

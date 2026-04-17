@@ -18,6 +18,9 @@ import {
   slaaEigenProductenOp,
   leesEigenProducten,
   leesFlow,
+  leesGekozenTankstation,
+  slaaGekozenSupermarktOp,
+  type GekozenTankstation,
 } from "@/lib/opslag";
 import {
   MIJ_ID,
@@ -38,6 +41,7 @@ import {
 } from "@/lib/personen";
 import { useAuth } from "@/lib/AuthContext";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
+import { postcodeNaarCoordinaat, zoekSupermarktenBijTankstation, type LocatieMetAfstand } from "@/lib/grenslocaties";
 import { EigenProductModal } from "./eigen-product-modal";
 import { PersonenBeheer } from "./personen-beheer";
 import { VerdelingDashboard } from "./verdeling-dashboard";
@@ -83,6 +87,12 @@ export function BoodschappenLijst() {
   const [eigenProducten, setEigenProducten] = useState<EigenProduct[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const totaalRef = useRef<HTMLDivElement>(null);
+
+  // Combi-flow: tankstation info
+  const [gekozenTankstation, setGekozenTankstation] = useState<GekozenTankstation | null>(null);
+  const [combiSupermarkten, setCombiSupermarkten] = useState<LocatieMetAfstand[]>([]);
+  const [geselecteerdeSupermarkt, setGeselecteerdeSupermarkt] = useState<LocatieMetAfstand | null>(null);
+  const [flow, setFlow] = useState<"tanken" | "boodschappen" | "beide">("beide");
 
   // Samen boodschappen state
   const [groepsmodus, setGroepsmodus] = useState(false);
@@ -170,6 +180,26 @@ export function BoodschappenLijst() {
     setPersonen(leesPersonen());
     setToewijzingen(leesToewijzingen());
     setActievePersoon(leesActievePersoon());
+
+    // Combi-flow: laad gekozen tankstation en zoek supermarkten in de buurt
+    const currentFlow = leesFlow();
+    setFlow(currentFlow);
+    if (currentFlow === "beide") {
+      const tankstation = leesGekozenTankstation();
+      if (tankstation && voorkeuren.postcode) {
+        setGekozenTankstation(tankstation);
+        const thuis = postcodeNaarCoordinaat(voorkeuren.postcode);
+        if (thuis) {
+          const supermarkten = zoekSupermarktenBijTankstation(
+            tankstation.coordinaat,
+            tankstation.land,
+            thuis,
+            4
+          );
+          setCombiSupermarkten(supermarkten);
+        }
+      }
+    }
   }, []);
 
   // Sla eigen producten op bij wijziging
@@ -598,12 +628,41 @@ export function BoodschappenLijst() {
         />
       </div>
 
-      {/* Dichtstbijzijnde supermarkten */}
-      {postcode && (
+      {/* Supermarkten: bij combi-flow zoek bij tankstation, anders bij postcode */}
+      {flow === "beide" && gekozenTankstation ? (
+        <CombiSupermarktKeuze
+          tankstation={gekozenTankstation}
+          supermarkten={combiSupermarkten}
+          geselecteerd={geselecteerdeSupermarkt}
+          onSelect={(sm) => {
+            setGeselecteerdeSupermarkt(sm);
+            if (sm) {
+              slaaGekozenSupermarktOp({
+                id: sm.id,
+                naam: sm.naam,
+                land: sm.land,
+                adres: sm.adres,
+                coordinaat: sm.coordinaat,
+                afstandVanTankstation: sm.afstandKm,
+                afstandVanThuis: sm.afstandVanThuis ?? 0,
+              });
+            }
+          }}
+        />
+      ) : postcode ? (
         <LocatieKaartjes
           postcode={postcode}
           type="supermarkt"
           titel="Dichtstbijzijnde supermarkten"
+        />
+      ) : null}
+
+      {/* Route overzicht bij combi-flow */}
+      {flow === "beide" && gekozenTankstation && geselecteerdeSupermarkt && postcode && (
+        <RouteOverzicht
+          postcode={postcode}
+          tankstation={gekozenTankstation}
+          supermarkt={geselecteerdeSupermarkt}
         />
       )}
 
@@ -1148,6 +1207,204 @@ function TotaalOverzicht({
           {prijsStatus.bijgewerkt && ` &middot; ${formatTijd(prijsStatus.bijgewerkt)}`}
         </p>
       )}
+    </div>
+  );
+}
+
+// === Combi-flow: Supermarkt keuze bij tankstation ===
+function CombiSupermarktKeuze({
+  tankstation,
+  supermarkten,
+  geselecteerd,
+  onSelect,
+}: {
+  tankstation: GekozenTankstation;
+  supermarkten: LocatieMetAfstand[];
+  geselecteerd: LocatieMetAfstand | null;
+  onSelect: (sm: LocatieMetAfstand | null) => void;
+}) {
+  if (supermarkten.length === 0) {
+    return (
+      <div className="card-bold p-5">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Geen supermarkten gevonden in de buurt van {tankstation.naam}.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Header met tankstation context */}
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-500 text-lg shadow-md">
+          🛒
+        </div>
+        <div>
+          <h2 className="text-sm font-extrabold text-navy dark:text-white">
+            Supermarkten bij {tankstation.naam}
+          </h2>
+          <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+            Kies een supermarkt in de buurt van je tankstation
+          </p>
+        </div>
+      </div>
+
+      {/* Supermarkt kaartjes */}
+      <div className="grid gap-2.5">
+        {supermarkten.map((sm) => {
+          const isGeselecteerd = geselecteerd?.id === sm.id;
+          return (
+            <button
+              key={sm.id}
+              onClick={() => onSelect(isGeselecteerd ? null : sm)}
+              className={`card-bold flex items-center gap-3 p-4 text-left transition-all active:scale-[0.98] ${
+                isGeselecteerd
+                  ? "border-accent bg-accent/5 shadow-md shadow-accent/10"
+                  : "hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
+            >
+              {/* Selectie indicator */}
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all ${
+                isGeselecteerd
+                  ? "bg-accent text-white"
+                  : "border-2 border-gray-200 dark:border-gray-700"
+              }`}>
+                {isGeselecteerd && (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-navy dark:text-white">
+                    {sm.naam}
+                  </span>
+                  <span className="text-xs">
+                    {sm.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                  {sm.adres}
+                </p>
+              </div>
+
+              {/* Afstand badge */}
+              <div className="shrink-0 text-right">
+                <div className="text-xs font-extrabold text-accent">
+                  {sm.afstandKm} km
+                </div>
+                <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                  van tankstation
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// === Route overzicht bij combi-flow ===
+function RouteOverzicht({
+  postcode,
+  tankstation,
+  supermarkt,
+}: {
+  postcode: string;
+  tankstation: GekozenTankstation;
+  supermarkt: LocatieMetAfstand;
+}) {
+  const totaleAfstand = tankstation.afstandKm + supermarkt.afstandKm + (supermarkt.afstandVanThuis ?? tankstation.afstandKm);
+  const geschatteTijd = Math.round((totaleAfstand / 70) * 60); // ~70 km/h gemiddeld
+
+  return (
+    <div className="card-bold overflow-hidden">
+      <div className="bg-gradient-to-r from-navy to-slate-700 px-5 py-3.5 dark:from-slate-800 dark:to-slate-700">
+        <h3 className="flex items-center gap-2 text-sm font-extrabold text-white">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+          </svg>
+          Je route
+        </h3>
+      </div>
+      <div className="p-5">
+        {/* Route stappen */}
+        <div className="relative space-y-0">
+          {/* Verticale lijn */}
+          <div className="absolute left-[15px] top-6 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-700" />
+
+          {/* Stap 1: Thuis */}
+          <div className="relative flex items-start gap-3 pb-5">
+            <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-sm text-white dark:bg-white dark:text-navy">
+              🏠
+            </div>
+            <div className="pt-1">
+              <div className="text-sm font-extrabold text-navy dark:text-white">Thuis</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{postcode}</div>
+            </div>
+            <div className="ml-auto pt-1 text-right">
+              <div className="text-xs font-bold text-gray-400">{tankstation.afstandKm} km</div>
+            </div>
+          </div>
+
+          {/* Stap 2: Tankstation */}
+          <div className="relative flex items-start gap-3 pb-5">
+            <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm text-white">
+              ⛽
+            </div>
+            <div className="pt-1">
+              <div className="text-sm font-extrabold text-navy dark:text-white">{tankstation.naam}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{tankstation.adres}</div>
+            </div>
+            <div className="ml-auto pt-1 text-right">
+              <div className="text-xs font-bold text-gray-400">{supermarkt.afstandKm} km</div>
+            </div>
+          </div>
+
+          {/* Stap 3: Supermarkt */}
+          <div className="relative flex items-start gap-3 pb-5">
+            <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-sm text-white">
+              🛒
+            </div>
+            <div className="pt-1">
+              <div className="text-sm font-extrabold text-navy dark:text-white">{supermarkt.naam}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{supermarkt.adres}</div>
+            </div>
+            <div className="ml-auto pt-1 text-right">
+              <div className="text-xs font-bold text-gray-400">{supermarkt.afstandVanThuis ?? tankstation.afstandKm} km</div>
+            </div>
+          </div>
+
+          {/* Stap 4: Terug thuis */}
+          <div className="relative flex items-start gap-3">
+            <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-sm text-white dark:bg-white dark:text-navy">
+              🏠
+            </div>
+            <div className="pt-1">
+              <div className="text-sm font-extrabold text-navy dark:text-white">Thuis</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Samenvatting */}
+        <div className="mt-4 flex gap-3 border-t-2 border-gray-100 pt-4 dark:border-gray-800">
+          <div className="flex-1 rounded-xl bg-gray-50 p-3 text-center dark:bg-navy/30">
+            <div className="text-lg font-extrabold text-navy dark:text-white">{totaleAfstand} km</div>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">totaal</div>
+          </div>
+          <div className="flex-1 rounded-xl bg-gray-50 p-3 text-center dark:bg-navy/30">
+            <div className="text-lg font-extrabold text-navy dark:text-white">
+              {geschatteTijd >= 60 ? `${Math.floor(geschatteTijd / 60)}u ${geschatteTijd % 60}min` : `${geschatteTijd} min`}
+            </div>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">geschat</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

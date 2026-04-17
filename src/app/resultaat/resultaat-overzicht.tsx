@@ -6,8 +6,13 @@ import {
   leesTanken,
   leesBoodschappen,
   leesHuishoudens,
+  leesGekozenTankstation,
+  leesGekozenSupermarkt,
+  leesFlow,
   type TankenOpslag,
   type BoodschappenOpslag,
+  type GekozenTankstation,
+  type GekozenSupermarkt,
 } from "@/lib/opslag";
 import { ShareCard } from "./share-card";
 
@@ -26,12 +31,21 @@ export function ResultaatOverzicht() {
   const [tanken, setTanken] = useState<TankenOpslag | null>(null);
   const [boodschappen, setBoodschappen] = useState<BoodschappenOpslag | null>(null);
   const [aantalHuishoudens, setAantalHuishoudens] = useState(1);
+  const [gekozenTankstation, setGekozenTankstation] = useState<GekozenTankstation | null>(null);
+  const [gekozenSupermarkt, setGekozenSupermarkt] = useState<GekozenSupermarkt | null>(null);
+  const [isCombiFlow, setIsCombiFlow] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setTanken(leesTanken());
     setBoodschappen(leesBoodschappen());
     setAantalHuishoudens(leesHuishoudens());
+    const flow = leesFlow();
+    setIsCombiFlow(flow === "beide");
+    if (flow === "beide") {
+      setGekozenTankstation(leesGekozenTankstation());
+      setGekozenSupermarkt(leesGekozenSupermarkt());
+    }
     setLoaded(true);
   }, []);
 
@@ -240,6 +254,62 @@ export function ResultaatOverzicht() {
                 </svg>
                 {!heeftTanken ? "Tankbesparing berekenen" : "Boodschappen toevoegen"}
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Combi-flow: gekozen locaties */}
+      {isCombiFlow && gekozenTankstation && gekozenSupermarkt && (
+        <div className="card-bold p-5 border-accent/20 bg-gradient-to-br from-accent/5 to-emerald-50/30 dark:from-accent/10 dark:to-emerald-950/20">
+          <h3 className="flex items-center gap-2 text-sm font-extrabold text-navy dark:text-white">
+            <svg className="h-4 w-4 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+            </svg>
+            Je combi-route
+          </h3>
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2.5 text-sm">
+              <span className="text-base">⛽</span>
+              <span className="font-bold text-navy dark:text-white">{gekozenTankstation.naam}</span>
+              <span className="ml-auto text-xs text-gray-400">{gekozenTankstation.afstandKm} km</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-sm">
+              <span className="text-base">🛒</span>
+              <span className="font-bold text-navy dark:text-white">{gekozenSupermarkt.naam}</span>
+              <span className="ml-auto text-xs text-gray-400">{gekozenSupermarkt.afstandVanTankstation} km</span>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2 text-xs">
+            <span className="rounded-full bg-accent/10 px-2.5 py-1 font-bold text-accent">
+              {gekozenTankstation.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {gekozenTankstation.land}
+            </span>
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+              ~{gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis} km totaal
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Slimme tip: is er een betere combi? */}
+      {isCombiFlow && heeftTanken && heeftBoodschappen && netto > 0 && (
+        <div className="card-bold p-5 border-emerald-200 bg-emerald-50 dark:border-emerald-800/30 dark:bg-emerald-950/30">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg dark:bg-emerald-900/30">
+              🧠
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
+                Slimme analyse
+              </h3>
+              <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                Op basis van je keuzes is dit de beste combinatie van tanken en boodschappen. Je bespaart netto <span className="font-extrabold text-accent">{euro(netto)}</span> per trip.
+              </p>
+              {aantalHuishoudens > 1 && (
+                <p className="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  Met {aantalHuishoudens} huishoudens wordt dat <span className="text-accent">{euro(netto * aantalHuishoudens)}</span> per maand!
+                </p>
+              )}
             </div>
           </div>
         </div>

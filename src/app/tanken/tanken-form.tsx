@@ -16,7 +16,7 @@ import {
   type Besparing,
 } from "./brandstofprijzen";
 import { schattingVerbruikHybride } from "./afstand";
-import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow } from "@/lib/opslag";
+import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow, slaaGekozenTankstationOp } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, type LocatieMetAfstand } from "@/lib/grenslocaties";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
@@ -799,7 +799,21 @@ export function TankenForm() {
           type="tankstation"
           titel="Kies je tanklocatie"
           geselecteerdId={geselecteerdStation?.id}
-          onSelect={setGeselecteerdStation}
+          onSelect={(station) => {
+            setGeselecteerdStation(station);
+            // Sla tankstation op voor de combi-flow (boodschappen-pagina)
+            if (station) {
+              slaaGekozenTankstationOp({
+                id: station.id,
+                naam: station.naam,
+                land: station.land,
+                adres: station.adres,
+                coordinaat: station.coordinaat,
+                afstandKm: station.afstandKm,
+                rijtijdMin: station.rijtijdMin,
+              });
+            }
+          }}
           besteKeuzeId={besteKeuzeId}
         />
       )}

@@ -306,6 +306,7 @@ export function haversineKm(a: Coordinaat, b: Coordinaat): number {
 export type LocatieMetAfstand = GrensLocatie & {
   afstandKm: number;
   rijtijdMin: number;
+  afstandVanThuis?: number; // optioneel: afstand van thuis (voor combi-route)
 };
 
 /**
@@ -325,6 +326,36 @@ export function zoekDichtstbijzijnde(
     const afstandKm = Math.round(hemelsbreedte * 1.3);
     const rijtijdMin = Math.round((afstandKm / 80) * 60);
     return { ...l, afstandKm, rijtijdMin };
+  });
+
+  return metAfstand
+    .sort((a, b) => a.afstandKm - b.afstandKm)
+    .slice(0, aantal);
+}
+
+/**
+ * Zoek supermarkten in de buurt van een specifiek coördinaat (bijv. een tankstation).
+ * Filtert op hetzelfde land als het tankstation zodat de route logisch blijft.
+ * Geeft ook de afstand vanaf de origin (thuis) mee voor de totale route.
+ */
+export function zoekSupermarktenBijTankstation(
+  tankstationCoordinaat: Coordinaat,
+  tankstationLand: "Duitsland" | "België",
+  thuisCoordinaat: Coordinaat,
+  aantal: number = 4
+): LocatieMetAfstand[] {
+  const supermarkten = GRENSLOCATIES.filter(
+    (l) => l.type === "supermarkt" && l.land === tankstationLand
+  );
+
+  const metAfstand: LocatieMetAfstand[] = supermarkten.map((l) => {
+    // Afstand van tankstation naar supermarkt
+    const afstandVanTankstation = haversineKm(tankstationCoordinaat, l.coordinaat) * 1.3;
+    // Afstand van thuis naar deze supermarkt (voor totale route)
+    const afstandVanThuis = haversineKm(thuisCoordinaat, l.coordinaat) * 1.3;
+    const afstandKm = Math.round(afstandVanTankstation);
+    const rijtijdMin = Math.round((afstandKm / 60) * 60); // stadsverkeer ~60km/h
+    return { ...l, afstandKm, rijtijdMin, afstandVanThuis: Math.round(afstandVanThuis) };
   });
 
   return metAfstand
