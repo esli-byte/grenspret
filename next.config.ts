@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
-  // Geen image optimization bij static export
+  // Geen image optimization nodig (PWA met eigen assets)
   images: {
     unoptimized: true,
   },
