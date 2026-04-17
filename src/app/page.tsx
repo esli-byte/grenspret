@@ -33,7 +33,7 @@ export default function Home() {
           <div className="mb-4 flex justify-center">
             <div className="logo-shimmer relative">
               <img
-                src="/icons/logo-transparant.png"
+                src="/icons/logo-grens-v2.png"
                 alt="Grenspret logo"
                 className="h-40 w-auto drop-shadow-[0_0_30px_rgba(0,210,106,0.15)]"
               />
