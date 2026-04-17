@@ -394,30 +394,66 @@ input, select, textarea, button {
   animation: badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* ====== GELD CONFETTI ====== */
-@keyframes geld-vallen {
+/* ====== GELD CONFETTI — EXPLOSIE BURST ====== */
+@keyframes geld-burst {
+  /* Fase 1: LANCERING — schiet omhoog en opzij vanuit centrum */
   0% {
-    transform: translateY(-20vh) translateX(0) rotate(var(--rotation-start, 0deg));
+    transform:
+      translate(0, 0)
+      rotate(var(--rot-start, 0deg))
+      scale(0.3);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+    transform:
+      translate(
+        calc(var(--shoot-x, 100px) * 0.4),
+        calc(var(--shoot-y, -200px) * 0.5)
+      )
+      rotate(calc(var(--rot-start, 0deg) + 90deg))
+      scale(1.2);
+  }
+  /* Fase 2: PIEK — even zweven bovenaan */
+  25% {
+    transform:
+      translate(
+        var(--shoot-x, 100px),
+        var(--shoot-y, -200px)
+      )
+      rotate(calc(var(--rot-end, 360deg) * 0.4))
+      scale(1);
     opacity: 1;
   }
-  20% {
-    opacity: 1;
+  /* Fase 3: VALLEN — zwaartekracht trekt ze naar beneden met zigzag */
+  60% {
+    transform:
+      translate(
+        calc(var(--shoot-x, 100px) + var(--end-x, 30px) * 0.5),
+        calc(var(--shoot-y, -200px) + 60vh)
+      )
+      rotate(calc(var(--rot-end, 360deg) * 0.75))
+      scale(0.9);
+    opacity: 0.8;
   }
-  50% {
-    transform: translateY(40vh) translateX(var(--wobble, 30px)) rotate(var(--rotation-end, 360deg));
-    opacity: 0.9;
-  }
+  /* Fase 4: LANDEN + fade out */
   100% {
-    transform: translateY(105vh) translateX(calc(var(--wobble, 30px) * -0.5)) rotate(var(--rotation-end, 360deg));
+    transform:
+      translate(
+        calc(var(--shoot-x, 100px) + var(--end-x, 30px)),
+        calc(var(--shoot-y, -200px) + 110vh)
+      )
+      rotate(var(--rot-end, 360deg))
+      scale(0.6);
     opacity: 0;
   }
 }
 
-.geld-particle {
-  animation: geld-vallen var(--duration, 3s) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+.geld-burst {
+  animation: geld-burst 3.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   will-change: transform, opacity;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-  top: -5vh;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));
+  opacity: 0;
 }
 
 /* ====== INSTALL BANNER ====== */

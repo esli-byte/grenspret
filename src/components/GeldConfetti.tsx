@@ -7,27 +7,45 @@ const GELD_EMOJIS = ["💰", "🪙", "💵", "🤑", "💶", "🪙", "💰", "�
 type Particle = {
   id: number;
   emoji: string;
-  left: number;       // % van scherm
+  // Startpositie (centrum-explosie)
+  startX: number;     // % horizontaal vanuit het midden
+  startY: number;     // % verticaal
+  // Lanceerrichting
+  shootX: number;     // px horizontale kracht (links/rechts)
+  shootY: number;     // px omhoog-kracht
+  // Eindpositie (vallen)
+  endX: number;       // px drift tijdens vallen
+  // Timing
   delay: number;      // s
-  duration: number;    // s
-  size: number;        // rem
-  wobble: number;      // px amplitude
-  rotation: number;    // graden start
-  rotationSpeed: number;
+  // Stijl
+  size: number;       // rem
+  rotation: number;
+  rotationEnd: number;
+  wobbleFreq: number; // hoe snel het heen-en-weer zwaait
 };
 
 function maakParticles(aantal: number): Particle[] {
-  return Array.from({ length: aantal }, (_, i) => ({
-    id: i,
-    emoji: GELD_EMOJIS[Math.floor(Math.random() * GELD_EMOJIS.length)],
-    left: Math.random() * 100,
-    delay: Math.random() * 1.2,
-    duration: 2 + Math.random() * 1.5,
-    size: 1.2 + Math.random() * 1,
-    wobble: 20 + Math.random() * 40,
-    rotation: Math.random() * 360,
-    rotationSpeed: 180 + Math.random() * 360,
-  }));
+  return Array.from({ length: aantal }, (_, i) => {
+    // Hoek vanuit centrum: willekeurig rondom, maar meer naar boven gericht
+    const hoek = -20 - Math.random() * 140; // -20 tot -160 graden (boog omhoog)
+    const kracht = 200 + Math.random() * 350; // hoe ver ze vliegen
+    const rad = (hoek * Math.PI) / 180;
+
+    return {
+      id: i,
+      emoji: GELD_EMOJIS[Math.floor(Math.random() * GELD_EMOJIS.length)],
+      startX: 40 + Math.random() * 20, // 40-60% = rond het midden
+      startY: 45 + Math.random() * 15, // iets onder midden scherm
+      shootX: Math.cos(rad) * kracht,
+      shootY: Math.sin(rad) * kracht,
+      endX: (Math.random() - 0.5) * 120, // zijwaartse drift bij vallen
+      delay: Math.random() * 0.3, // snelle burst, kort na elkaar
+      size: 1.1 + Math.random() * 1.2,
+      rotation: Math.random() * 360,
+      rotationEnd: 360 + Math.random() * 720,
+      wobbleFreq: 2 + Math.random() * 3,
+    };
+  });
 }
 
 export function GeldConfetti({ actief }: { actief: boolean }) {
@@ -36,20 +54,17 @@ export function GeldConfetti({ actief }: { actief: boolean }) {
   const alGetriggerd = useRef(false);
 
   useEffect(() => {
-    // Trigger maar één keer per mount — niet bij elke re-render
     if (!actief || alGetriggerd.current) return;
     alGetriggerd.current = true;
 
-    // Kleine vertraging zodat de pagina eerst rendert
     const startTimer = setTimeout(() => {
-      setParticles(maakParticles(24));
+      setParticles(maakParticles(30));
       setZichtbaar(true);
-    }, 300);
+    }, 400);
 
-    // Verwijder na animatie klaar
     const endTimer = setTimeout(() => {
       setZichtbaar(false);
-    }, 4500);
+    }, 5000);
 
     return () => {
       clearTimeout(startTimer);
@@ -67,15 +82,18 @@ export function GeldConfetti({ actief }: { actief: boolean }) {
       {particles.map((p) => (
         <span
           key={p.id}
-          className="geld-particle absolute"
+          className="geld-burst absolute"
           style={{
-            left: `${p.left}%`,
+            left: `${p.startX}%`,
+            top: `${p.startY}%`,
             fontSize: `${p.size}rem`,
             animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-            "--wobble": `${p.wobble}px`,
-            "--rotation-start": `${p.rotation}deg`,
-            "--rotation-end": `${p.rotation + p.rotationSpeed}deg`,
+            "--shoot-x": `${p.shootX}px`,
+            "--shoot-y": `${p.shootY}px`,
+            "--end-x": `${p.endX}px`,
+            "--rot-start": `${p.rotation}deg`,
+            "--rot-end": `${p.rotationEnd}deg`,
+            "--wobble-freq": `${p.wobbleFreq}`,
           } as React.CSSProperties}
         >
           {p.emoji}
