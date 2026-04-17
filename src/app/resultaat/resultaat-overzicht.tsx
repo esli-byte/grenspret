@@ -41,6 +41,8 @@ type CombiOptie = {
   besparingBoodschappen: number;
   totalAfstandKm: number;
   reiskosten: number;
+  reiskostenOmgekeerd: number; // kosten als je EERST boodschappen doet
+  slimmeRouteBesparing: number; // hoeveel je bespaart door eerst te tanken
   netto: number;
   isGekozen: boolean; // is dit de door de gebruiker gekozen combi?
 };
@@ -94,10 +96,18 @@ function berekenAlleCombiRoutes(
       const afstandTSNaarSM = sm.afstandKm; // al berekend met factor 1.3
       const afstandSMNaarHuis = sm.afstandVanThuis ?? Math.round(haversineKm(thuisCoord, sm.coordinaat) * 1.3);
       const totalAfstandKm = afstandHuisNaarTS + afstandTSNaarSM + afstandSMNaarHuis;
-      // Reiskosten gesplitst: heen op dure NL-brandstof, na tankstation op goedkopere buitenlandse brandstof
+      // Route A (eerst tanken): heen op NL-brandstof, na tankstation op buitenlandse
       const reiskostenHeen = afstandHuisNaarTS * verbruikPerKm * brandstofPrijsNL;
       const reiskostenTerug = (afstandTSNaarSM + afstandSMNaarHuis) * verbruikPerKm * buitenlandPrijs;
       const reiskosten = Math.round((reiskostenHeen + reiskostenTerug) * 100) / 100;
+
+      // Route B (eerst boodschappen): thuis→SM en SM→TS op NL, TS→thuis op buitenlandse
+      const reiskostenBHeen = (afstandSMNaarHuis + afstandTSNaarSM) * verbruikPerKm * brandstofPrijsNL;
+      const reiskostenBTerug = afstandHuisNaarTS * verbruikPerKm * buitenlandPrijs;
+      const reiskostenOmgekeerd = Math.round((reiskostenBHeen + reiskostenBTerug) * 100) / 100;
+
+      // Hoeveel je bespaart door eerst te tanken
+      const slimmeRouteBesparing = Math.round((reiskostenOmgekeerd - reiskosten) * 100) / 100;
 
       const netto = besparingTanken + besparingBoodschappenTotaal - reiskosten;
 
@@ -115,6 +125,8 @@ function berekenAlleCombiRoutes(
         besparingBoodschappen: besparingBoodschappenTotaal,
         totalAfstandKm,
         reiskosten,
+        reiskostenOmgekeerd,
+        slimmeRouteBesparing,
         netto,
         isGekozen,
       });
@@ -247,6 +259,28 @@ export function ResultaatOverzicht() {
   const netto = besparingTanken + besparingBoodschappen - reiskosten;
   const loont = netto > 0;
 
+  // Slimme route besparing: hoeveel je bespaart door eerst te tanken ipv eerst boodschappen
+  let slimmeRouteBesparing = 0;
+  if (isCombiFlow && gekozenTankstation && gekozenSupermarkt) {
+    const gekozenCombi = combiOpties.find((o) => o.isGekozen);
+    if (gekozenCombi) {
+      slimmeRouteBesparing = gekozenCombi.slimmeRouteBesparing;
+    } else if (tanken) {
+      // Fallback berekening
+      const verbruikPerKmSR = tanken.verbruik / 100;
+      const brandstofPrijsNLSR = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
+      const besparingTankenSR = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
+      const buitenlandPrijsSR = tanken.tankGrootte > 0
+        ? brandstofPrijsNLSR - besparingTankenSR / tanken.tankGrootte
+        : brandstofPrijsNLSR;
+      const a = gekozenTankstation.afstandKm;
+      const b = gekozenSupermarkt.afstandVanTankstation;
+      const c = gekozenSupermarkt.afstandVanThuis;
+      // Verschil = (b + c - a) × verbruik × (NL - buitenland)
+      slimmeRouteBesparing = Math.round((b + c - a) * verbruikPerKmSR * (brandstofPrijsNLSR - buitenlandPrijsSR) * 100) / 100;
+    }
+  }
+
   const heeftTanken = !!tanken;
   const heeftBoodschappen = !!boodschappen;
 
@@ -326,6 +360,21 @@ export function ResultaatOverzicht() {
               <div className="flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
                 <span className="w-5" />
                 Geschat op gem. 7,5 l/100km · Vul je kenteken in bij tanken voor exact verbruik
+              </div>
+            )}
+
+            {/* Slimme route tip — alleen bij combi-flow als verschil significant */}
+            {isCombiFlow && slimmeRouteBesparing >= 0.50 && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200/50 px-3 py-2.5 dark:bg-emerald-950/20 dark:border-emerald-800/30">
+                <span className="shrink-0 text-sm mt-0.5">🧠</span>
+                <div>
+                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    Slimme route: eerst tanken bespaart {euro(slimmeRouteBesparing)} extra
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-emerald-700/70 dark:text-emerald-400/60">
+                    Door eerst te tanken rij je daarna op goedkopere {land === "Duitsland" ? "Duitse" : "Belgische"} brandstof naar de supermarkt en terug.
+                  </p>
+                </div>
               </div>
             )}
 
