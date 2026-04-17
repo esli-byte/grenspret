@@ -656,6 +656,29 @@ export function BoodschappenLijst() {
         />
       )}
 
+      {/* Supermarkten: bij combi-flow zoek bij tankstation — BOVENAAN de pagina */}
+      {flow === "beide" && gekozenTankstation && (
+        <CombiSupermarktKeuze
+          tankstation={gekozenTankstation}
+          supermarkten={combiSupermarkten}
+          geselecteerd={geselecteerdeSupermarkt}
+          onSelect={(sm) => {
+            setGeselecteerdeSupermarkt(sm);
+            if (sm) {
+              slaaGekozenSupermarktOp({
+                id: sm.id,
+                naam: sm.naam,
+                land: sm.land,
+                adres: sm.adres,
+                coordinaat: sm.coordinaat,
+                afstandVanTankstation: sm.afstandKm,
+                afstandVanThuis: sm.afstandVanThuis ?? 0,
+              });
+            }
+          }}
+        />
+      )}
+
       {/* Samen boodschappen beheer */}
       <PersonenBeheer
         personen={personen}
@@ -868,29 +891,7 @@ export function BoodschappenLijst() {
         </div>
       )}
 
-      {/* Supermarkten: bij combi-flow zoek bij tankstation */}
-      {flow === "beide" && gekozenTankstation ? (
-        <CombiSupermarktKeuze
-          tankstation={gekozenTankstation}
-          supermarkten={combiSupermarkten}
-          geselecteerd={geselecteerdeSupermarkt}
-          onSelect={(sm) => {
-            setGeselecteerdeSupermarkt(sm);
-            if (sm) {
-              slaaGekozenSupermarktOp({
-                id: sm.id,
-                naam: sm.naam,
-                land: sm.land,
-                adres: sm.adres,
-                coordinaat: sm.coordinaat,
-                afstandVanTankstation: sm.afstandKm,
-                afstandVanThuis: sm.afstandVanThuis ?? 0,
-              });
-            }
-          }}
-        />
-      ) : null}
-      {/* Boodschappen-only supermarkten staan al bovenaan de pagina */}
+      {/* Boodschappen-only en combi-flow supermarkten staan al bovenaan de pagina */}
 
       {/* Route overzicht bij combi-flow */}
       {flow === "beide" && gekozenTankstation && geselecteerdeSupermarkt && postcode && (
