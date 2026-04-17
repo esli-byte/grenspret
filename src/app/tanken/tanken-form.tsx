@@ -685,39 +685,52 @@ export function TankenForm() {
             onChange={(e) =>
               setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7))
             }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && postcode.replace(/\s/g, "").length >= 4) {
+                // Blur om keyboard te sluiten op mobiel
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             className="min-w-0 flex-1 rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white"
             autoComplete="postal-code"
           />
           <button
-            onClick={handleGeolocate}
-            disabled={geoLoading}
-            className="flex shrink-0 items-center gap-2 rounded-2xl border-2 border-accent/30 bg-accent/5 px-3 py-3.5 text-sm font-extrabold text-accent transition-all hover:bg-accent/10 hover:border-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-            title="Gebruik huidige locatie om postcode automatisch in te vullen"
+            onClick={() => {
+              // Blur input om keyboard te sluiten op mobiel
+              const el = document.getElementById("postcode");
+              if (el) (el as HTMLInputElement).blur();
+            }}
+            disabled={postcode.replace(/\s/g, "").length < 4}
+            className="btn-pill btn-pill-accent px-6 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {geoLoading ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span className="hidden sm:inline">Zoeken...</span>
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                </svg>
-                <span>Huidige locatie</span>
-              </>
-            )}
+            Zoek
           </button>
         </div>
-        {!geoTip && (
-          <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
-            Of tik op <span className="font-bold text-accent">Huidige locatie</span> om het automatisch in te vullen
-          </p>
-        )}
+
+        {/* Subtiele huidige locatie optie */}
+        <button
+          onClick={handleGeolocate}
+          disabled={geoLoading}
+          className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-gray-400 transition-all hover:text-accent disabled:opacity-50 dark:text-gray-500 dark:hover:text-accent"
+        >
+          {geoLoading ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span>Locatie bepalen...</span>
+            </>
+          ) : (
+            <>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              <span>Of gebruik je huidige locatie</span>
+            </>
+          )}
+        </button>
 
         {/* Locatie geweigerd — vriendelijke uitleg */}
         {geoTip === "locatie_geweigerd" && (
