@@ -884,7 +884,7 @@ export function TankenForm() {
                   <tr key={land.land}>
                     <td className="py-3.5 font-bold text-navy dark:text-white">{land.vlag} {land.land}</td>
                     <td className="py-3.5 text-right tabular-nums font-semibold text-gray-600 dark:text-gray-400">{euro(land.euro95)}</td>
-                    <td className="py-3.5 text-right tabular-nums text-xs font-medium text-gray-400 dark:text-gray-500">{land.euro98 ? euro(land.euro98) : "–"}</td>
+                    <td className="py-3.5 text-right tabular-nums text-xs font-medium text-gray-400 dark:text-gray-500">{euro(land.euro98)}</td>
                     <td className="py-3.5 text-right tabular-nums font-semibold text-gray-600 dark:text-gray-400">{euro(land.diesel)}</td>
                   </tr>
                 ))}

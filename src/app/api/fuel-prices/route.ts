@@ -54,7 +54,7 @@ const NL_FALLBACK = { euro95: 2.57, diesel: 2.73 }; // CBS
 const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 }; // Tankerkoenig
 // België: Euro 95 = E10 (standaard aan Belgische pompen, lage accijns)
 // Diesel = B7 (maximumprijs FOD Economie minus ~3ct)
-const BE_FALLBACK = { euro95: 1.30, diesel: 2.22 };
+const BE_FALLBACK = { euro95: 1.76, diesel: 2.08 }; // Handmatig 17 april 2026
 
 export async function GET(request: NextRequest) {
   const timestamp = Date.now();
