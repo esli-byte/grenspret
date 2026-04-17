@@ -738,12 +738,10 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Volledig overzicht onderaan — alleen in boodschappen-only flow */}
-      {flow !== "beide" && (
-        <div ref={totaalRef}>
-          <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
-        </div>
-      )}
+      {/* Volledig overzicht onderaan */}
+      <div ref={totaalRef}>
+        <TotaalOverzicht totalen={totalen} aantalProducten={totalAantalItems} merkInfo={merkVergelijking} prijsStatus={prijsStatus} gekozenLand={flow === "boodschappen" ? boodschappenSupermarkt?.land : gekozenTankstation?.land} />
+      </div>
 
       {/* Volgende stap knop naar resultaat */}
       {totalAantalItems > 0 && (
@@ -752,8 +750,8 @@ export function BoodschappenLijst() {
         />
       )}
 
-      {/* Floating knop naar overzicht — alleen in boodschappen-only flow */}
-      {flow !== "beide" && totalAantalItems > 0 && (
+      {/* Floating knop naar overzicht */}
+      {totalAantalItems > 0 && (
         <ScrollNaarOverzichtKnop targetRef={totaalRef} />
       )}
     </div>
