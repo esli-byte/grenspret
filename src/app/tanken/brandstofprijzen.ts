@@ -15,6 +15,7 @@ export const FALLBACK_PRIJZEN: LandPrijzen[] = [
   { land: "Nederland", vlag: "🇳🇱", euro95: 2.57, euro98: 2.71, diesel: 2.73, bron: "handmatig" },
   { land: "Duitsland", vlag: "🇩🇪", euro95: 2.10, euro98: 2.22, diesel: 2.28, bron: "handmatig" },
   { land: "België", vlag: "🇧🇪", euro95: 1.76, euro98: 1.88, diesel: 2.08, bron: "handmatig" },
+  { land: "Luxemburg", vlag: "🇱🇺", euro95: 1.50, euro98: 1.60, diesel: 1.45, bron: "handmatig" },
 ];
 
 /** Gemiddelde tankgrootte op basis van cilinderinhoud */
