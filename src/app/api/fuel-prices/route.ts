@@ -31,7 +31,7 @@ const EURO98_OPSLAG = {
   NL: 0.14, // ~14 cent duurder in Nederland
   DE: 0.14, // ~14 cent duurder in Duitsland
   BE: 0.12, // ~12 cent duurder in België
-  LU: 0.10, // ~10 cent duurder in Luxemburg (lage accijns)
+  LU: 0.13, // ~13 cent duurder in Luxemburg
 };
 
 type LandPrijs = {
@@ -58,7 +58,7 @@ const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 }; // Tankerkoenig
 // België: Euro 95 = E10 (standaard aan Belgische pompen, lage accijns)
 // Diesel = B7 (maximumprijs FOD Economie minus ~3ct)
 const BE_FALLBACK = { euro95: 1.76, diesel: 2.08 }; // Handmatig 17 april 2026
-const LU_FALLBACK = { euro95: 1.50, diesel: 1.45 }; // Handmatig 18 april 2026 (Petrol.lu)
+const LU_FALLBACK = { euro95: 1.72, diesel: 1.72 }; // Handmatig 18 april 2026
 
 export async function GET(request: NextRequest) {
   const timestamp = Date.now();
