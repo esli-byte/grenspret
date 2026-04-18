@@ -49,6 +49,9 @@ export function LocatieKaartjes({
   onSelect?: (locatie: LocatieMetAfstand) => void;
   besteKeuzeId?: string | null;
 }) {
+  // Inklapstatus: zodra een locatie is geselecteerd, klap in
+  const [ingeklapt, setIngeklapt] = useState(false);
+
   // Stap 1: snelle hemelsbreed-schatting voor initieel tonen
   const initLocaties = useMemo(() => {
     const cleaned = postcode.replace(/\s/g, "");
@@ -81,7 +84,6 @@ export function LocatieKaartjes({
         const res = await fetch(`/api/route?origins=${origin!.lat},${origin!.lng}&destinations=${destinations}`);
         if (!res.ok || cancelled) return;
         const data = await res.json();
-
         if (data.routes && !cancelled) {
           const bijgewerkt = initLocaties!.map((loc, i) => ({
             ...loc,
@@ -101,8 +103,67 @@ export function LocatieKaartjes({
     return () => { cancelled = true; };
   }, [initLocaties, postcode]);
 
+  // Auto-inklappen als een locatie geselecteerd wordt
+  useEffect(() => {
+    if (geselecteerdId) {
+      setIngeklapt(true);
+    }
+  }, [geselecteerdId]);
+
   if (!locaties || locaties.length === 0) return null;
 
+  // Vind de geselecteerde locatie voor ingeklapte weergave
+  const geselecteerdeLocatie = geselecteerdId
+    ? locaties.find((l) => l.id === geselecteerdId) ?? null
+    : null;
+
+  // === Ingeklapte weergave: alleen geselecteerde locatie + Wijzigen knop ===
+  if (ingeklapt && geselecteerdeLocatie) {
+    const ketenKleur = KETEN_KLEUREN[geselecteerdeLocatie.keten] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+    return (
+      <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm transition-all dark:bg-accent/10">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Icoon */}
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10">
+              <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            </div>
+            {/* Info */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {geselecteerdeLocatie.naam}
+                </span>
+                <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ketenKleur}`}>
+                  {geselecteerdeLocatie.keten}
+                </span>
+                <span className="text-xs">
+                  {geselecteerdeLocatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}"}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                {geselecteerdeLocatie.afstandKm} km &middot; {formatRijtijd(geselecteerdeLocatie.rijtijdMin)}
+              </p>
+            </div>
+          </div>
+          {/* Wijzigen knop */}
+          <button
+            onClick={() => setIngeklapt(false)}
+            className="flex items-center gap-1.5 shrink-0 rounded-full bg-accent/10 px-4 py-2 text-xs font-extrabold text-accent transition-all hover:bg-accent/20 active:scale-95"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+            </svg>
+            Wijzigen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // === Uitgeklapte weergave: alle locaties ===
   return (
     <div className="space-y-2.5">
       <h2 className="text-sm font-bold text-gray-900 dark:text-white">
@@ -113,6 +174,7 @@ export function LocatieKaartjes({
           {subtitel || "Tik op een locatie om deze te selecteren"}
         </p>
       )}
+
       <div className="grid gap-2.5">
         {locaties.map((loc, i) => (
           <LocatieKaart
@@ -121,7 +183,10 @@ export function LocatieKaartjes({
             rank={i + 1}
             isGeselecteerd={geselecteerdId === loc.id}
             isBeste={besteKeuzeId === loc.id}
-            onSelect={onSelect ? () => onSelect(loc) : undefined}
+            onSelect={onSelect ? () => {
+              onSelect(loc);
+              setIngeklapt(true);
+            } : undefined}
           />
         ))}
       </div>
@@ -147,16 +212,19 @@ function LocatieKaart({
   isBeste?: boolean;
   onSelect?: () => void;
 }) {
-  const ketenKleur =
-    KETEN_KLEUREN[locatie.keten] ??
-    "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+  const ketenKleur = KETEN_KLEUREN[locatie.keten] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
 
   return (
     <div
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : undefined}
       onClick={onSelect}
-      onKeyDown={onSelect ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } } : undefined}
+      onKeyDown={onSelect ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      } : undefined}
       className={`group flex items-start gap-3.5 rounded-2xl border p-4 shadow-sm transition-all ${
         onSelect ? "cursor-pointer active:scale-[0.98]" : ""
       } ${
@@ -172,23 +240,9 @@ function LocatieKaart({
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
         ) : (
-          <svg
-            className="h-6 w-6 text-accent"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
-            />
+          <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
           </svg>
         )}
         <span className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${
@@ -204,9 +258,7 @@ function LocatieKaart({
           <span className="text-sm font-bold text-gray-900 dark:text-white">
             {locatie.naam}
           </span>
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ketenKleur}`}
-          >
+          <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ketenKleur}`}>
             {locatie.keten}
           </span>
           <span className="text-xs" aria-label={locatie.land}>
@@ -229,36 +281,16 @@ function LocatieKaart({
         <div className="mt-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-xs">
-              <svg
-                className="h-3.5 w-3.5 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
-                />
+              <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
               </svg>
               <span className="font-semibold text-gray-700 dark:text-gray-300">
                 {locatie.afstandKm} km
               </span>
             </div>
             <div className="flex items-center gap-1 text-xs">
-              <svg
-                className="h-3.5 w-3.5 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
+              <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
               <span className="font-semibold text-gray-700 dark:text-gray-300">
                 {formatRijtijd(locatie.rijtijdMin)}
