@@ -343,6 +343,7 @@ export function BoodschappenLijst() {
     let nl = 0;
     let de = 0;
     let be = 0;
+    let lu = 0;
 
     for (const product of productenMetPrijzen) {
       const quantity = effectieveSelectie.get(product.id) ?? 0;
@@ -350,6 +351,7 @@ export function BoodschappenLijst() {
         nl += product.prijsNL * quantity;
         de += product.prijsDE * quantity;
         be += product.prijsBE * quantity;
+        lu += product.prijsLU * quantity;
       }
     }
 
@@ -357,8 +359,10 @@ export function BoodschappenLijst() {
       nl,
       de,
       be,
+      lu,
       besparingDE: nl - de,
       besparingBE: nl - be,
+      besparingLU: nl - lu,
     };
   }, [productenMetPrijzen, effectieveSelectie]);
 
@@ -390,8 +394,10 @@ export function BoodschappenLijst() {
       totaalNL: totalen.nl,
       totaalDE: totalen.de,
       totaalBE: totalen.be,
+      totaalLU: totalen.lu,
       besparingDE: totalen.besparingDE,
       besparingBE: totalen.besparingBE,
+      besparingLU: totalen.besparingLU,
     });
   }, [totalen, totalAantalItems]);
 
@@ -1366,6 +1372,7 @@ function CompactBesparingBar({
     nl: number;
     besparingDE: number;
     besparingBE: number;
+    besparingLU: number;
   };
   aantalProducten: number;
   gekozenLand?: string;
@@ -1373,9 +1380,15 @@ function CompactBesparingBar({
   if (aantalProducten === 0) return null;
 
   // Als gebruiker een land heeft gekozen, toon dat land; anders het beste
-  const isBelgie = gekozenLand ? gekozenLand === "België" : totalen.besparingBE > totalen.besparingDE;
-  const besteBesparing = isBelgie ? totalen.besparingBE : totalen.besparingDE;
-  const besteLand = isBelgie ? "🇧🇪" : "🇩🇪";
+  const besparingen = [
+    { land: "Duitsland", vlag: "🇩🇪", bedrag: totalen.besparingDE },
+    { land: "België", vlag: "🇧🇪", bedrag: totalen.besparingBE },
+    { land: "Luxemburg", vlag: "🇱🇺", bedrag: totalen.besparingLU },
+  ];
+  const gekozen = gekozenLand ? besparingen.find((b) => b.land === gekozenLand) : null;
+  const beste = gekozen ?? besparingen.reduce((a, b) => (b.bedrag > a.bedrag ? b : a));
+  const besteBesparing = beste.bedrag;
+  const besteLand = beste.vlag;
 
   return (
     <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 bg-gradient-to-r from-accent to-emerald-500 px-4 py-3.5 shadow-[0_-4px_20px_rgba(0,210,106,0.2)] sm:static sm:mx-0 sm:rounded-2xl sm:shadow-lg sm:shadow-accent/15 animate-slide-up">
@@ -1413,8 +1426,10 @@ function TotaalOverzicht({
     nl: number;
     de: number;
     be: number;
+    lu: number;
     besparingDE: number;
     besparingBE: number;
+    besparingLU: number;
   };
   aantalProducten: number;
   merkInfo: {
@@ -1441,9 +1456,15 @@ function TotaalOverzicht({
   }
 
   // Als gebruiker een land heeft gekozen, toon dat land; anders het beste
-  const isBelgie = gekozenLand ? gekozenLand === "België" : totalen.besparingBE > totalen.besparingDE;
-  const besteLand = isBelgie ? "België" : "Duitsland";
-  const besteBesparing = isBelgie ? totalen.besparingBE : totalen.besparingDE;
+  const besparingenLijst = [
+    { land: "Duitsland", vlag: "🇩🇪", bedrag: totalen.besparingDE, totaal: totalen.de },
+    { land: "België", vlag: "🇧🇪", bedrag: totalen.besparingBE, totaal: totalen.be },
+    { land: "Luxemburg", vlag: "🇱🇺", bedrag: totalen.besparingLU, totaal: totalen.lu },
+  ];
+  const gekozenItem = gekozenLand ? besparingenLijst.find((b) => b.land === gekozenLand) : null;
+  const besteItem = gekozenItem ?? besparingenLijst.reduce((a, b) => (b.bedrag > a.bedrag ? b : a));
+  const besteLand = besteItem.land;
+  const besteBesparing = besteItem.bedrag;
 
   return (
     <div className="card-bold p-5">
@@ -1491,44 +1512,28 @@ function TotaalOverzicht({
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2.5">
-        <div
-          className={`rounded-2xl p-3.5 ${
-            !isBelgie
-              ? "bg-accent/10 ring-2 ring-accent/30"
-              : "bg-gray-50 dark:bg-gray-800/50"
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">🇩🇪</span>
-            <span className="text-[11px] font-bold text-gray-500">Duitsland</span>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {besparingenLijst.map((item) => (
+          <div
+            key={item.land}
+            className={`rounded-2xl p-3 ${
+              item.land === besteLand
+                ? "bg-accent/10 ring-2 ring-accent/30"
+                : "bg-gray-50 dark:bg-gray-800/50"
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <span className="text-sm">{item.vlag}</span>
+              <span className="text-[10px] font-bold text-gray-500 truncate">{item.land}</span>
+            </div>
+            <div className="mt-1 text-base font-extrabold tabular-nums text-navy dark:text-white">
+              {euro(item.totaal)}
+            </div>
+            <div className="text-[11px] font-extrabold tabular-nums text-accent">
+              Bespaar {euro(item.bedrag)}
+            </div>
           </div>
-          <div className="mt-1 text-lg font-extrabold tabular-nums text-navy dark:text-white">
-            {euro(totalen.de)}
-          </div>
-          <div className="text-xs font-extrabold tabular-nums text-accent">
-            Bespaar {euro(totalen.besparingDE)}
-          </div>
-        </div>
-
-        <div
-          className={`rounded-2xl p-3.5 ${
-            isBelgie
-              ? "bg-accent/10 ring-2 ring-accent/30"
-              : "bg-gray-50 dark:bg-gray-800/50"
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">🇧🇪</span>
-            <span className="text-[11px] font-bold text-gray-500">België</span>
-          </div>
-          <div className="mt-1 text-lg font-extrabold tabular-nums text-navy dark:text-white">
-            {euro(totalen.be)}
-          </div>
-          <div className="text-xs font-extrabold tabular-nums text-accent">
-            Bespaar {euro(totalen.besparingBE)}
-          </div>
-        </div>
+        ))}
       </div>
 
       {besteBesparing > 0 && (

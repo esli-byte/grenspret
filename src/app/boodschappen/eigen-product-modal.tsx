@@ -63,7 +63,7 @@ export function EigenProductModal({ onSluiten, onToevoegen }: Props) {
       return;
     }
 
-    const { prijsDE, prijsBE } = schatBuitenlandPrijzen(prijs, categorie);
+    const { prijsDE, prijsBE, prijsLU } = schatBuitenlandPrijzen(prijs, categorie);
     const product: EigenProduct = {
       id: `eigen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       naam: naam.trim(),
@@ -74,6 +74,7 @@ export function EigenProductModal({ onSluiten, onToevoegen }: Props) {
       prijsNL: prijs,
       prijsDE,
       prijsBE,
+      prijsLU,
       isEigen: true,
     };
 

@@ -410,3 +410,120 @@ export async function haalBelgischePrijzen(): Promise<PrijsBron | null> {
     },
   };
 }
+
+// ═══════════════════════════════════════════════════════════
+//  LUXEMBURG — Officiële maximumprijzen
+//
+//  Luxemburg stelt wettelijke maximumprijzen vast voor brandstof.
+//  Deze worden gepubliceerd door het Groupement Pétrolier
+//  Luxembourgeois (GPL) op petrol.lu en door de overheid.
+//
+//  Bronnen (in volgorde):
+//  1. petrol.lu — branchevereniging, publiceert officiële maximumprijzen
+//  2. Carbu.com — vergelijkingssite met Luxemburg-sectie
+//
+//  Luxemburg heeft typisch de laagste brandstofprijzen in de Benelux
+//  door lagere accijnzen.
+// ═══════════════════════════════════════════════════════════
+
+export async function haalLuxemburgschePrijzen(): Promise<PrijsBron | null> {
+  const debugErrors: string[] = [];
+
+  // ── Bron 1: petrol.lu officiële maximumprijzen ──
+  try {
+    const url = "https://www.petrol.lu/en/official-prices/";
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
+        Accept: "text/html",
+        "Accept-Language": "en,fr;q=0.9",
+      },
+    });
+
+    if (res.ok) {
+      const tekst = await res.text();
+
+      // Euro 95 / Super 95 / E10 prijs
+      const euro95 = zoekPrijsInTekst(tekst, [
+        /Super\s*95[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /Euro\s*95[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /E10[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /Essence[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /Super\s*sans\s*plomb[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+      ], 0.80, 2.50);
+
+      // Diesel prijs
+      const diesel = zoekPrijsInTekst(tekst, [
+        /Diesel[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /Gasoil[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+        /Gazole[^0-9]{0,300}?(\d[,.]\d{3,4})/i,
+      ], 0.80, 3.00);
+
+      if (euro95 !== null || diesel !== null) {
+        return {
+          euro95,
+          diesel,
+          bron: "Petrol.lu",
+          bronUrl: "https://www.petrol.lu/en/official-prices/",
+          debug: { url, httpStatus: res.status, matched: { euro95: euro95?.toString(), diesel: diesel?.toString() } },
+        };
+      }
+      debugErrors.push(`petrol.lu: HTML geladen maar geen prijzen gevonden`);
+    } else {
+      debugErrors.push(`petrol.lu: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    debugErrors.push(`petrol.lu: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // ── Bron 2: Carbu.com Luxemburg ──
+  try {
+    const url = "https://carbu.com/luxembourg/index.php/super95";
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Grenspret/1.0)",
+        Accept: "text/html",
+        "Accept-Language": "fr-LU,fr;q=0.9",
+      },
+    });
+
+    if (res.ok) {
+      const tekst = await res.text();
+
+      const euro95 = zoekPrijsInTekst(tekst, [
+        /maximumprijs[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /prix\s*max[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /Super\s*95[^0-9]{0,200}?(\d[,.]\d{3,4})/i,
+        /(\d[,.]\d{3,4})\s*€?\s*\/?\s*(?:liter|L|litre)/i,
+      ], 0.80, 2.50);
+
+      if (euro95 !== null) {
+        return {
+          euro95,
+          diesel: null,
+          bron: "Carbu.com",
+          bronUrl: "https://carbu.com/luxembourg",
+          debug: { url, httpStatus: res.status, matched: { euro95: euro95?.toString() } },
+        };
+      }
+      debugErrors.push(`carbu-lu: HTML geladen maar geen prijzen gevonden`);
+    } else {
+      debugErrors.push(`carbu-lu: HTTP ${res.status}`);
+    }
+  } catch (err) {
+    debugErrors.push(`carbu-lu: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Geen bron leverde data
+  return {
+    euro95: null,
+    diesel: null,
+    bron: "Petrol.lu",
+    debug: {
+      url: "petrol.lu + carbu-lu",
+      error: `Alle LU-bronnen gefaald: ${debugErrors.join("; ")}`,
+    },
+  };
+}

@@ -15,6 +15,7 @@ export type TankenOpslag = {
   verbruik: number;
   besparingDE: number;
   besparingBE: number;
+  besparingLU?: number;
   route: {
     land: string;
     bestemming: string;
@@ -31,8 +32,10 @@ export type BoodschappenOpslag = {
   totaalNL: number;
   totaalDE: number;
   totaalBE: number;
+  totaalLU?: number;
   besparingDE: number;
   besparingBE: number;
+  besparingLU?: number;
 };
 
 export type GebruikerVoorkeuren = {
@@ -100,7 +103,7 @@ const GEKOZEN_SUPERMARKT_KEY = "grensbesparing_gekozen_supermarkt";
 export type GekozenTankstation = {
   id: string;
   naam: string;
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   adres: string;
   coordinaat: { lat: number; lng: number };
   afstandKm: number;
@@ -124,7 +127,7 @@ export function leesGekozenTankstation(): GekozenTankstation | null {
 export type GekozenSupermarkt = {
   id: string;
   naam: string;
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   adres: string;
   coordinaat: { lat: number; lng: number };
   afstandVanTankstation: number;

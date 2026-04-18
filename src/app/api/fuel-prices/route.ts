@@ -3,6 +3,7 @@ import {
   haalDuitsePrijzen,
   haalNederlandsePrijzen,
   haalBelgischePrijzen,
+  haalLuxemburgschePrijzen,
 } from "./sources";
 
 /**
@@ -12,6 +13,7 @@ import {
  * - 🇳🇱 Nederland: CBS Open Data (wekelijks officieel gemiddelde)
  * - 🇩🇪 Duitsland: Tankerkoenig API (live per station, grens-gebied)
  * - 🇧🇪 België: FOD Economie (dagelijks officieel max - 3ct)
+ * - 🇱🇺 Luxemburg: Petrol.lu (officiële maximumprijzen) / Carbu.com
  *
  * Euro 98 (Super Plus):
  * - CBS publiceert geen aparte Euro 98 prijs
@@ -29,6 +31,7 @@ const EURO98_OPSLAG = {
   NL: 0.14, // ~14 cent duurder in Nederland
   DE: 0.14, // ~14 cent duurder in Duitsland
   BE: 0.12, // ~12 cent duurder in België
+  LU: 0.10, // ~10 cent duurder in Luxemburg (lage accijns)
 };
 
 type LandPrijs = {
@@ -55,6 +58,7 @@ const DE_FALLBACK = { euro95: 2.10, diesel: 2.28 }; // Tankerkoenig
 // België: Euro 95 = E10 (standaard aan Belgische pompen, lage accijns)
 // Diesel = B7 (maximumprijs FOD Economie minus ~3ct)
 const BE_FALLBACK = { euro95: 1.76, diesel: 2.08 }; // Handmatig 17 april 2026
+const LU_FALLBACK = { euro95: 1.50, diesel: 1.45 }; // Handmatig 18 april 2026 (Petrol.lu)
 
 export async function GET(request: NextRequest) {
   const timestamp = Date.now();
@@ -62,16 +66,18 @@ export async function GET(request: NextRequest) {
 
   const apiKey = process.env.TANKERKOENIG_API_KEY;
 
-  // Alle drie bronnen parallel
-  const [nl, de, be] = await Promise.all([
+  // Alle vier bronnen parallel
+  const [nl, de, be, lu] = await Promise.all([
     haalNederlandsePrijzen(),
     apiKey ? haalDuitsePrijzen(apiKey) : Promise.resolve(null),
     haalBelgischePrijzen(),
+    haalLuxemburgschePrijzen(),
   ]);
 
   const nlE95 = nl?.euro95 ?? NL_FALLBACK.euro95;
   const deE95 = de?.euro95 ?? DE_FALLBACK.euro95;
   const beE95 = be?.euro95 ?? BE_FALLBACK.euro95;
+  const luE95 = lu?.euro95 ?? LU_FALLBACK.euro95;
 
   const prijzen: LandPrijs[] = [
     {
@@ -101,11 +107,20 @@ export async function GET(request: NextRequest) {
       bron: be && (be.euro95 !== null || be.diesel !== null) ? be.bron : "handmatig",
       bronUrl: be?.bronUrl,
     },
+    {
+      land: "Luxemburg",
+      vlag: "🇱🇺",
+      euro95: luE95,
+      euro98: Math.round((luE95 + EURO98_OPSLAG.LU) * 1000) / 1000,
+      diesel: lu?.diesel ?? LU_FALLBACK.diesel,
+      bron: lu && (lu.euro95 !== null || lu.diesel !== null) ? lu.bron : "handmatig",
+      bronUrl: lu?.bronUrl,
+    },
   ];
 
   const aantalLive = prijzen.filter((p) => p.bron !== "handmatig").length;
   const combi: FuelPricesResponse["bron"] =
-    aantalLive === 3 ? "live" : aantalLive > 0 ? "cache" : "fallback";
+    aantalLive === 4 ? "live" : aantalLive > 0 ? "cache" : "fallback";
 
   const response: FuelPricesResponse = {
     prijzen,
@@ -120,6 +135,7 @@ export async function GET(request: NextRequest) {
       nl: nl?.debug ?? "haalNederlandsePrijzen returned null",
       de: de?.debug ?? (apiKey ? "haalDuitsePrijzen returned null" : "geen API key"),
       be: be?.debug ?? "haalBelgischePrijzen returned null",
+      lu: lu?.debug ?? "haalLuxemburgschePrijzen returned null",
     };
   }
 

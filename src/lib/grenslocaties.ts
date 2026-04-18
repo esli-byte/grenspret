@@ -5,7 +5,7 @@ export type GrensLocatie = {
   naam: string;
   type: "tankstation" | "supermarkt";
   keten: string;
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   adres: string;
   coordinaat: Coordinaat;
 };
@@ -285,6 +285,118 @@ export const GRENSLOCATIES: GrensLocatie[] = [
     adres: "Rue de Maestricht 32, 4600 Visé",
     coordinaat: { lat: 50.74, lng: 5.69 },
   },
+
+  // === TANKSTATIONS LUXEMBURG ===
+  {
+    id: "ts-lu-aral-wasserbillig",
+    naam: "Aral Wasserbillig",
+    type: "tankstation",
+    keten: "Aral",
+    land: "Luxemburg",
+    adres: "Route de Trèves, 6601 Wasserbillig",
+    coordinaat: { lat: 49.72, lng: 6.50 },
+  },
+  {
+    id: "ts-lu-q8-wasserbillig",
+    naam: "Q8 Wasserbillig",
+    type: "tankstation",
+    keten: "Q8",
+    land: "Luxemburg",
+    adres: "Esplanade de la Moselle, 6601 Wasserbillig",
+    coordinaat: { lat: 49.71, lng: 6.50 },
+  },
+  {
+    id: "ts-lu-shell-remich",
+    naam: "Shell Remich",
+    type: "tankstation",
+    keten: "Shell",
+    land: "Luxemburg",
+    adres: "Route de l'Europe, 5765 Remich",
+    coordinaat: { lat: 49.55, lng: 6.37 },
+  },
+  {
+    id: "ts-lu-total-echternach",
+    naam: "TotalEnergies Echternach",
+    type: "tankstation",
+    keten: "TotalEnergies",
+    land: "Luxemburg",
+    adres: "Route de Luxembourg, 6450 Echternach",
+    coordinaat: { lat: 49.81, lng: 6.42 },
+  },
+  {
+    id: "ts-lu-gulf-esch",
+    naam: "Gulf Esch-sur-Alzette",
+    type: "tankstation",
+    keten: "Gulf",
+    land: "Luxemburg",
+    adres: "Boulevard J.F. Kennedy, 4170 Esch-sur-Alzette",
+    coordinaat: { lat: 49.50, lng: 5.98 },
+  },
+  {
+    id: "ts-lu-aral-mertert",
+    naam: "Aral Mertert",
+    type: "tankstation",
+    keten: "Aral",
+    land: "Luxemburg",
+    adres: "Route de Wasserbillig, 6686 Mertert",
+    coordinaat: { lat: 49.70, lng: 6.48 },
+  },
+
+  // === SUPERMARKTEN LUXEMBURG ===
+  {
+    id: "sm-lu-auchan-kirchberg",
+    naam: "Auchan Kirchberg",
+    type: "supermarkt",
+    keten: "Auchan",
+    land: "Luxemburg",
+    adres: "31 Rue du Puits Romain, 2956 Luxembourg",
+    coordinaat: { lat: 49.63, lng: 6.15 },
+  },
+  {
+    id: "sm-lu-cactus-wasserbillig",
+    naam: "Cactus Wasserbillig",
+    type: "supermarkt",
+    keten: "Cactus",
+    land: "Luxemburg",
+    adres: "Route de Luxembourg, 6645 Wasserbillig",
+    coordinaat: { lat: 49.72, lng: 6.49 },
+  },
+  {
+    id: "sm-lu-lidl-wasserbillig",
+    naam: "Lidl Wasserbillig",
+    type: "supermarkt",
+    keten: "Lidl",
+    land: "Luxemburg",
+    adres: "Zone Industrielle, 6601 Wasserbillig",
+    coordinaat: { lat: 49.72, lng: 6.50 },
+  },
+  {
+    id: "sm-lu-aldi-echternach",
+    naam: "ALDI Echternach",
+    type: "supermarkt",
+    keten: "ALDI",
+    land: "Luxemburg",
+    adres: "Zone Industrielle, 6450 Echternach",
+    coordinaat: { lat: 49.81, lng: 6.41 },
+  },
+  {
+    id: "sm-lu-colruyt-esch",
+    naam: "Colruyt Esch-sur-Alzette",
+    type: "supermarkt",
+    keten: "Colruyt",
+    land: "Luxemburg",
+    adres: "Rue de Luxembourg, 4221 Esch-sur-Alzette",
+    coordinaat: { lat: 49.50, lng: 5.99 },
+  },
+  {
+    id: "sm-lu-delhaize-remich",
+    naam: "Delhaize Remich",
+    type: "supermarkt",
+    keten: "Delhaize",
+    land: "Luxemburg",
+    adres: "Route de l'Europe, 5765 Remich",
+    coordinaat: { lat: 49.55, lng: 6.36 },
+  },
 ];
 
 /** Haversine afstand in km */
@@ -340,7 +452,7 @@ export function zoekDichtstbijzijnde(
  */
 export function zoekSupermarktenBijTankstation(
   tankstationCoordinaat: Coordinaat,
-  tankstationLand: "Duitsland" | "België",
+  tankstationLand: "Duitsland" | "België" | "Luxemburg",
   thuisCoordinaat: Coordinaat,
   aantal: number = 4
 ): LocatieMetAfstand[] {

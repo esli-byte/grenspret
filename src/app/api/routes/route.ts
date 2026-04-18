@@ -117,7 +117,7 @@ const POSTCODE_COORDINATEN: Record<string, Coordinaat> = {
 // ─── Grensbestemmingen ───
 
 type GrensBestemming = {
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   naam: string;
   coordinaat: Coordinaat;
 };
@@ -133,6 +133,8 @@ const GRENSBESTEMMINGEN: GrensBestemming[] = [
   { land: "België", naam: "Eijsden (A2)", coordinaat: { lat: 50.78, lng: 5.7 } },
   { land: "België", naam: "Zelzate (A11/N62)", coordinaat: { lat: 51.2, lng: 3.82 } },
   { land: "België", naam: "Lommel (A67/E34)", coordinaat: { lat: 51.23, lng: 5.31 } },
+  { land: "Luxemburg", naam: "Wasserbillig (A1/E44)", coordinaat: { lat: 49.72, lng: 6.50 } },
+  { land: "Luxemburg", naam: "Esch-sur-Alzette (A4/A13)", coordinaat: { lat: 49.50, lng: 5.98 } },
 ];
 
 // ─── Response type ───
@@ -143,7 +145,7 @@ export type RouteResponse = {
 };
 
 type RouteResultaat = {
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   bestemming: string;
   afstandEnkel: number;
   afstandRetour: number;

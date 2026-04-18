@@ -16,6 +16,9 @@ import path from "path";
  * België:
  *   1. Lidl.be            — publieke website data (vaak geblokkeerd)
  *
+ * Luxemburg:
+ *   1. Lidl.lu            — publieke website data (vaak geblokkeerd)
+ *
  * Cross-referentie (alle landen):
  *   - Open Food Facts     — open-source productdatabase
  *
@@ -31,56 +34,56 @@ const CACHE_DUUR_MS = 24 * 60 * 60 * 1000; // 24 uur
 // ===== Producten database met zoektermen per bron =====
 const PRODUCT_ZOEKOPDRACHTEN = [
   // Zuivel
-  { id: "melk-campina", zoekNL: "campina volle melk 1l", zoekJumbo: "campina volle melk 1l", zoekDE: "vollmilch 1l", zoekREWE: "vollmilch 1l", zoekBE: "volle melk 1l", zoekOFF: "milk whole", maxPrijs: 3 },
-  { id: "melk-huismerk", zoekNL: "ah volle melk 1l", zoekJumbo: "jumbo volle melk 1l", zoekDE: "milch frisch 1l", zoekREWE: "frische milch 1l", zoekBE: "volle melk 1l", zoekOFF: "whole milk", maxPrijs: 2 },
-  { id: "kaas-jong", zoekNL: "jonge kaas plak", zoekJumbo: "jonge kaas plakken", zoekDE: "gouda jung", zoekREWE: "gouda jung scheiben", zoekBE: "jonge kaas", zoekOFF: "gouda cheese", maxPrijs: 12 },
-  { id: "boter-campina", zoekNL: "campina botergoud 250g", zoekJumbo: "campina botergoud 250g", zoekDE: "butter markenbutter 250g", zoekREWE: "markenbutter 250g", zoekBE: "roomboter 250g", zoekOFF: "butter 250g", maxPrijs: 4 },
-  { id: "boter-huismerk", zoekNL: "ah roomboter 250g", zoekJumbo: "jumbo roomboter 250g", zoekDE: "deutsche markenbutter 250g", zoekREWE: "butter 250g", zoekBE: "roomboter 250g", zoekOFF: "butter", maxPrijs: 3 },
-  { id: "yoghurt-optimel", zoekNL: "optimel drinkyoghurt 1l", zoekJumbo: "optimel drinkyoghurt", zoekDE: "trinkjoghurt 1l", zoekREWE: "trinkjoghurt", zoekBE: "drinkyoghurt 1l", zoekOFF: "drinking yoghurt", maxPrijs: 3 },
-  { id: "yoghurt-huismerk", zoekNL: "ah yoghurt natuur 500g", zoekJumbo: "jumbo yoghurt natuur", zoekDE: "naturjoghurt 500g", zoekREWE: "naturjoghurt 500g", zoekBE: "yoghurt natuur", zoekOFF: "natural yoghurt", maxPrijs: 2 },
+  { id: "melk-campina", zoekNL: "campina volle melk 1l", zoekJumbo: "campina volle melk 1l", zoekDE: "vollmilch 1l", zoekREWE: "vollmilch 1l", zoekBE: "volle melk 1l", zoekLU: "volle melk 1l", zoekOFF: "milk whole", maxPrijs: 3 },
+  { id: "melk-huismerk", zoekNL: "ah volle melk 1l", zoekJumbo: "jumbo volle melk 1l", zoekDE: "milch frisch 1l", zoekREWE: "frische milch 1l", zoekBE: "volle melk 1l", zoekLU: "volle melk 1l", zoekOFF: "whole milk", maxPrijs: 2 },
+  { id: "kaas-jong", zoekNL: "jonge kaas plak", zoekJumbo: "jonge kaas plakken", zoekDE: "gouda jung", zoekREWE: "gouda jung scheiben", zoekBE: "jonge kaas", zoekLU: "jonge kaas", zoekOFF: "gouda cheese", maxPrijs: 12 },
+  { id: "boter-campina", zoekNL: "campina botergoud 250g", zoekJumbo: "campina botergoud 250g", zoekDE: "butter markenbutter 250g", zoekREWE: "markenbutter 250g", zoekBE: "roomboter 250g", zoekLU: "roomboter 250g", zoekOFF: "butter 250g", maxPrijs: 4 },
+  { id: "boter-huismerk", zoekNL: "ah roomboter 250g", zoekJumbo: "jumbo roomboter 250g", zoekDE: "deutsche markenbutter 250g", zoekREWE: "butter 250g", zoekBE: "roomboter 250g", zoekLU: "roomboter 250g", zoekOFF: "butter", maxPrijs: 3 },
+  { id: "yoghurt-optimel", zoekNL: "optimel drinkyoghurt 1l", zoekJumbo: "optimel drinkyoghurt", zoekDE: "trinkjoghurt 1l", zoekREWE: "trinkjoghurt", zoekBE: "drinkyoghurt 1l", zoekLU: "drinkyoghurt 1l", zoekOFF: "drinking yoghurt", maxPrijs: 3 },
+  { id: "yoghurt-huismerk", zoekNL: "ah yoghurt natuur 500g", zoekJumbo: "jumbo yoghurt natuur", zoekDE: "naturjoghurt 500g", zoekREWE: "naturjoghurt 500g", zoekBE: "yoghurt natuur", zoekLU: "yoghurt natuur", zoekOFF: "natural yoghurt", maxPrijs: 2 },
 
   // Vlees
-  { id: "gehakt", zoekNL: "half om half gehakt 500g", zoekJumbo: "half om half gehakt 500g", zoekDE: "hackfleisch gemischt 500g", zoekREWE: "hackfleisch gemischt 500g", zoekBE: "gehakt 500g", zoekOFF: "minced meat", maxPrijs: 7 },
-  { id: "kipfilet", zoekNL: "kipfilet 500g", zoekJumbo: "kipfilet", zoekDE: "hähnchenbrustfilet 500g", zoekREWE: "hähnchenbrustfilet", zoekBE: "kipfilet 500g", zoekOFF: "chicken breast", maxPrijs: 8 },
-  { id: "speklappen", zoekNL: "speklappen 500g", zoekJumbo: "speklappen", zoekDE: "schweinebauch 500g", zoekREWE: "schweinebauch", zoekBE: "speklappen", zoekOFF: "pork belly", maxPrijs: 7 },
-  { id: "rookworst-unox", zoekNL: "unox rookworst 275g", zoekJumbo: "unox rookworst", zoekDE: "bockwurst", zoekREWE: "bockwurst", zoekBE: "rookworst", zoekOFF: "rookworst", maxPrijs: 4 },
-  { id: "rookworst-huismerk", zoekNL: "ah rookworst 275g", zoekJumbo: "jumbo rookworst", zoekDE: "bockwurst", zoekREWE: "bockwurst", zoekBE: "rookworst", zoekOFF: "smoked sausage", maxPrijs: 3 },
+  { id: "gehakt", zoekNL: "half om half gehakt 500g", zoekJumbo: "half om half gehakt 500g", zoekDE: "hackfleisch gemischt 500g", zoekREWE: "hackfleisch gemischt 500g", zoekBE: "gehakt 500g", zoekLU: "gehakt 500g", zoekOFF: "minced meat", maxPrijs: 7 },
+  { id: "kipfilet", zoekNL: "kipfilet 500g", zoekJumbo: "kipfilet", zoekDE: "hähnchenbrustfilet 500g", zoekREWE: "hähnchenbrustfilet", zoekBE: "kipfilet 500g", zoekLU: "kipfilet 500g", zoekOFF: "chicken breast", maxPrijs: 8 },
+  { id: "speklappen", zoekNL: "speklappen 500g", zoekJumbo: "speklappen", zoekDE: "schweinebauch 500g", zoekREWE: "schweinebauch", zoekBE: "speklappen", zoekLU: "speklappen", zoekOFF: "pork belly", maxPrijs: 7 },
+  { id: "rookworst-unox", zoekNL: "unox rookworst 275g", zoekJumbo: "unox rookworst", zoekDE: "bockwurst", zoekREWE: "bockwurst", zoekBE: "rookworst", zoekLU: "rookworst", zoekOFF: "rookworst", maxPrijs: 4 },
+  { id: "rookworst-huismerk", zoekNL: "ah rookworst 275g", zoekJumbo: "jumbo rookworst", zoekDE: "bockwurst", zoekREWE: "bockwurst", zoekBE: "rookworst", zoekLU: "rookworst", zoekOFF: "smoked sausage", maxPrijs: 3 },
 
   // Dranken
-  { id: "cola-cocacola", zoekNL: "coca cola 1.5l fles", zoekJumbo: "coca cola 1.5l", zoekDE: "coca cola 1.5l", zoekREWE: "coca cola 1.5l", zoekBE: "coca cola 1.5l", zoekOFF: "coca cola 1.5l", maxPrijs: 3.5 },
-  { id: "cola-pepsi", zoekNL: "pepsi 1.5l fles", zoekJumbo: "pepsi 1.5l", zoekDE: "pepsi 1.5l", zoekREWE: "pepsi 1.5l", zoekBE: "pepsi 1.5l", zoekOFF: "pepsi 1.5l", maxPrijs: 3 },
-  { id: "cola-huismerk", zoekNL: "ah cola 1.5l fles", zoekJumbo: "jumbo cola 1.5l", zoekDE: "cola 1.5l freeway", zoekREWE: "cola 1.5l", zoekBE: "cola 1.5l", zoekOFF: "cola", maxPrijs: 2 },
-  { id: "bier-heineken", zoekNL: "heineken krat 24", zoekJumbo: "heineken krat", zoekDE: "heineken kasten", zoekREWE: "heineken kasten 24", zoekBE: "heineken bak", zoekOFF: "heineken beer", maxPrijs: 25 },
-  { id: "bier-huismerk", zoekNL: "ah pils krat 24", zoekJumbo: "jumbo pils krat", zoekDE: "perlenbacher pils kasten", zoekREWE: "pils kasten 24", zoekBE: "pils bak", zoekOFF: "pilsner beer", maxPrijs: 18 },
-  { id: "koffie-douwe", zoekNL: "douwe egberts aroma rood 500g", zoekJumbo: "douwe egberts aroma rood", zoekDE: "jacobs filterkaffee 500g", zoekREWE: "jacobs filterkaffee 500g", zoekBE: "douwe egberts 500g", zoekOFF: "filter coffee 500g", maxPrijs: 12 },
-  { id: "koffie-huismerk", zoekNL: "ah filterkoffie 500g", zoekJumbo: "jumbo filterkoffie", zoekDE: "bellarom kaffee 500g", zoekREWE: "filterkaffee 500g", zoekBE: "filterkoffie 500g", zoekOFF: "filter coffee", maxPrijs: 6 },
-  { id: "wijn", zoekNL: "rode wijn huiswijn", zoekJumbo: "rode wijn", zoekDE: "rotwein", zoekREWE: "rotwein trocken", zoekBE: "rode wijn", zoekOFF: "red wine", maxPrijs: 8 },
+  { id: "cola-cocacola", zoekNL: "coca cola 1.5l fles", zoekJumbo: "coca cola 1.5l", zoekDE: "coca cola 1.5l", zoekREWE: "coca cola 1.5l", zoekBE: "coca cola 1.5l", zoekLU: "coca cola 1.5l", zoekOFF: "coca cola 1.5l", maxPrijs: 3.5 },
+  { id: "cola-pepsi", zoekNL: "pepsi 1.5l fles", zoekJumbo: "pepsi 1.5l", zoekDE: "pepsi 1.5l", zoekREWE: "pepsi 1.5l", zoekBE: "pepsi 1.5l", zoekLU: "pepsi 1.5l", zoekOFF: "pepsi 1.5l", maxPrijs: 3 },
+  { id: "cola-huismerk", zoekNL: "ah cola 1.5l fles", zoekJumbo: "jumbo cola 1.5l", zoekDE: "cola 1.5l freeway", zoekREWE: "cola 1.5l", zoekBE: "cola 1.5l", zoekLU: "cola 1.5l", zoekOFF: "cola", maxPrijs: 2 },
+  { id: "bier-heineken", zoekNL: "heineken krat 24", zoekJumbo: "heineken krat", zoekDE: "heineken kasten", zoekREWE: "heineken kasten 24", zoekBE: "heineken bak", zoekLU: "heineken bak", zoekOFF: "heineken beer", maxPrijs: 25 },
+  { id: "bier-huismerk", zoekNL: "ah pils krat 24", zoekJumbo: "jumbo pils krat", zoekDE: "perlenbacher pils kasten", zoekREWE: "pils kasten 24", zoekBE: "pils bak", zoekLU: "pils bak", zoekOFF: "pilsner beer", maxPrijs: 18 },
+  { id: "koffie-douwe", zoekNL: "douwe egberts aroma rood 500g", zoekJumbo: "douwe egberts aroma rood", zoekDE: "jacobs filterkaffee 500g", zoekREWE: "jacobs filterkaffee 500g", zoekBE: "douwe egberts 500g", zoekLU: "douwe egberts 500g", zoekOFF: "filter coffee 500g", maxPrijs: 12 },
+  { id: "koffie-huismerk", zoekNL: "ah filterkoffie 500g", zoekJumbo: "jumbo filterkoffie", zoekDE: "bellarom kaffee 500g", zoekREWE: "filterkaffee 500g", zoekBE: "filterkoffie 500g", zoekLU: "filterkoffie 500g", zoekOFF: "filter coffee", maxPrijs: 6 },
+  { id: "wijn", zoekNL: "rode wijn huiswijn", zoekJumbo: "rode wijn", zoekDE: "rotwein", zoekREWE: "rotwein trocken", zoekBE: "rode wijn", zoekLU: "rode wijn", zoekOFF: "red wine", maxPrijs: 8 },
 
   // Verzorging
-  { id: "deo-dove", zoekNL: "dove deodorant spray 150ml", zoekJumbo: "dove deodorant spray", zoekDE: "dove deodorant 150ml", zoekREWE: "dove deodorant 150ml", zoekBE: "dove deodorant 150ml", zoekOFF: "dove deodorant", maxPrijs: 5 },
-  { id: "deo-axe", zoekNL: "axe deodorant spray 150ml", zoekJumbo: "axe deodorant spray", zoekDE: "axe deodorant 150ml", zoekREWE: "axe deodorant 150ml", zoekBE: "axe deodorant 150ml", zoekOFF: "axe deodorant", maxPrijs: 5 },
-  { id: "deo-huismerk", zoekNL: "ah deodorant spray", zoekJumbo: "jumbo deodorant spray", zoekDE: "deodorant spray", zoekREWE: "deodorant spray", zoekBE: "deodorant spray", zoekOFF: "deodorant spray", maxPrijs: 3 },
-  { id: "tandpasta-prodent", zoekNL: "prodent tandpasta 75ml", zoekJumbo: "prodent tandpasta", zoekDE: "zahnpasta 75ml", zoekREWE: "zahnpasta 75ml", zoekBE: "tandpasta 75ml", zoekOFF: "toothpaste", maxPrijs: 4 },
-  { id: "tandpasta-huismerk", zoekNL: "ah tandpasta 75ml", zoekJumbo: "jumbo tandpasta", zoekDE: "zahnpasta", zoekREWE: "zahnpasta", zoekBE: "tandpasta", zoekOFF: "toothpaste", maxPrijs: 2 },
-  { id: "shampoo-andrelon", zoekNL: "andrelon shampoo 300ml", zoekJumbo: "andrelon shampoo", zoekDE: "shampoo 300ml", zoekREWE: "shampoo 300ml", zoekBE: "shampoo 300ml", zoekOFF: "shampoo 300ml", maxPrijs: 6 },
-  { id: "shampoo-huismerk", zoekNL: "ah shampoo 250ml", zoekJumbo: "jumbo shampoo", zoekDE: "shampoo 250ml", zoekREWE: "shampoo 250ml", zoekBE: "shampoo 250ml", zoekOFF: "shampoo", maxPrijs: 3 },
-  { id: "afwasmiddel-dreft", zoekNL: "dreft afwasmiddel 890ml", zoekJumbo: "dreft afwasmiddel", zoekDE: "spülmittel", zoekREWE: "spülmittel pril", zoekBE: "afwasmiddel", zoekOFF: "dish soap", maxPrijs: 5 },
-  { id: "waspoeder-persil", zoekNL: "persil wasmiddel poeder", zoekJumbo: "persil wasmiddel", zoekDE: "persil waschmittel", zoekREWE: "persil waschmittel", zoekBE: "persil", zoekOFF: "persil washing powder", maxPrijs: 18 },
-  { id: "waspoeder-huismerk", zoekNL: "ah waspoeder", zoekJumbo: "jumbo waspoeder", zoekDE: "waschmittel", zoekREWE: "waschmittel pulver", zoekBE: "waspoeder", zoekOFF: "washing powder", maxPrijs: 8 },
-  { id: "wc-papier-page", zoekNL: "page toiletpapier 8 rollen", zoekJumbo: "page toiletpapier", zoekDE: "toilettenpapier 8 rollen", zoekREWE: "toilettenpapier 8 rollen", zoekBE: "toiletpapier 8 rollen", zoekOFF: "toilet paper", maxPrijs: 8 },
-  { id: "wc-papier-huismerk", zoekNL: "ah toiletpapier 8 rollen", zoekJumbo: "jumbo toiletpapier", zoekDE: "toilettenpapier 8 rollen", zoekREWE: "toilettenpapier", zoekBE: "toiletpapier 8 rollen", zoekOFF: "toilet paper", maxPrijs: 5 },
+  { id: "deo-dove", zoekNL: "dove deodorant spray 150ml", zoekJumbo: "dove deodorant spray", zoekDE: "dove deodorant 150ml", zoekREWE: "dove deodorant 150ml", zoekBE: "dove deodorant 150ml", zoekLU: "dove deodorant 150ml", zoekOFF: "dove deodorant", maxPrijs: 5 },
+  { id: "deo-axe", zoekNL: "axe deodorant spray 150ml", zoekJumbo: "axe deodorant spray", zoekDE: "axe deodorant 150ml", zoekREWE: "axe deodorant 150ml", zoekBE: "axe deodorant 150ml", zoekLU: "axe deodorant 150ml", zoekOFF: "axe deodorant", maxPrijs: 5 },
+  { id: "deo-huismerk", zoekNL: "ah deodorant spray", zoekJumbo: "jumbo deodorant spray", zoekDE: "deodorant spray", zoekREWE: "deodorant spray", zoekBE: "deodorant spray", zoekLU: "deodorant spray", zoekOFF: "deodorant spray", maxPrijs: 3 },
+  { id: "tandpasta-prodent", zoekNL: "prodent tandpasta 75ml", zoekJumbo: "prodent tandpasta", zoekDE: "zahnpasta 75ml", zoekREWE: "zahnpasta 75ml", zoekBE: "tandpasta 75ml", zoekLU: "tandpasta 75ml", zoekOFF: "toothpaste", maxPrijs: 4 },
+  { id: "tandpasta-huismerk", zoekNL: "ah tandpasta 75ml", zoekJumbo: "jumbo tandpasta", zoekDE: "zahnpasta", zoekREWE: "zahnpasta", zoekBE: "tandpasta", zoekLU: "tandpasta", zoekOFF: "toothpaste", maxPrijs: 2 },
+  { id: "shampoo-andrelon", zoekNL: "andrelon shampoo 300ml", zoekJumbo: "andrelon shampoo", zoekDE: "shampoo 300ml", zoekREWE: "shampoo 300ml", zoekBE: "shampoo 300ml", zoekLU: "shampoo 300ml", zoekOFF: "shampoo 300ml", maxPrijs: 6 },
+  { id: "shampoo-huismerk", zoekNL: "ah shampoo 250ml", zoekJumbo: "jumbo shampoo", zoekDE: "shampoo 250ml", zoekREWE: "shampoo 250ml", zoekBE: "shampoo 250ml", zoekLU: "shampoo 250ml", zoekOFF: "shampoo", maxPrijs: 3 },
+  { id: "afwasmiddel-dreft", zoekNL: "dreft afwasmiddel 890ml", zoekJumbo: "dreft afwasmiddel", zoekDE: "spülmittel", zoekREWE: "spülmittel pril", zoekBE: "afwasmiddel", zoekLU: "afwasmiddel", zoekOFF: "dish soap", maxPrijs: 5 },
+  { id: "waspoeder-persil", zoekNL: "persil wasmiddel poeder", zoekJumbo: "persil wasmiddel", zoekDE: "persil waschmittel", zoekREWE: "persil waschmittel", zoekBE: "persil", zoekLU: "persil", zoekOFF: "persil washing powder", maxPrijs: 18 },
+  { id: "waspoeder-huismerk", zoekNL: "ah waspoeder", zoekJumbo: "jumbo waspoeder", zoekDE: "waschmittel", zoekREWE: "waschmittel pulver", zoekBE: "waspoeder", zoekLU: "waspoeder", zoekOFF: "washing powder", maxPrijs: 8 },
+  { id: "wc-papier-page", zoekNL: "page toiletpapier 8 rollen", zoekJumbo: "page toiletpapier", zoekDE: "toilettenpapier 8 rollen", zoekREWE: "toilettenpapier 8 rollen", zoekBE: "toiletpapier 8 rollen", zoekLU: "toiletpapier 8 rollen", zoekOFF: "toilet paper", maxPrijs: 8 },
+  { id: "wc-papier-huismerk", zoekNL: "ah toiletpapier 8 rollen", zoekJumbo: "jumbo toiletpapier", zoekDE: "toilettenpapier 8 rollen", zoekREWE: "toilettenpapier", zoekBE: "toiletpapier 8 rollen", zoekLU: "toiletpapier 8 rollen", zoekOFF: "toilet paper", maxPrijs: 5 },
 
   // Basis
-  { id: "pindakaas-calve", zoekNL: "calve pindakaas 350g", zoekJumbo: "calve pindakaas", zoekDE: "erdnussbutter 350g", zoekREWE: "erdnussbutter", zoekBE: "pindakaas 350g", zoekOFF: "peanut butter", maxPrijs: 5 },
-  { id: "pindakaas-huismerk", zoekNL: "ah pindakaas 350g", zoekJumbo: "jumbo pindakaas", zoekDE: "erdnusscreme", zoekREWE: "erdnusscreme", zoekBE: "pindakaas", zoekOFF: "peanut butter", maxPrijs: 3 },
-  { id: "hagelslag-dehollandse", zoekNL: "de ruijter hagelslag", zoekJumbo: "de ruijter hagelslag", zoekDE: "schokostreusel", zoekREWE: "schokostreusel", zoekBE: "hagelslag", zoekOFF: "chocolate sprinkles", maxPrijs: 4 },
-  { id: "suiker", zoekNL: "witte suiker 1kg", zoekJumbo: "witte suiker 1kg", zoekDE: "zucker 1kg", zoekREWE: "zucker 1kg", zoekBE: "witte suiker 1kg", zoekOFF: "sugar 1kg", maxPrijs: 3 },
-  { id: "bloem", zoekNL: "tarwebloem 1kg", zoekJumbo: "tarwebloem 1kg", zoekDE: "weizenmehl 1kg", zoekREWE: "weizenmehl 1kg", zoekBE: "tarwebloem 1kg", zoekOFF: "wheat flour 1kg", maxPrijs: 2 },
-  { id: "pasta-barilla", zoekNL: "barilla spaghetti 500g", zoekJumbo: "barilla spaghetti", zoekDE: "barilla spaghetti 500g", zoekREWE: "barilla spaghetti 500g", zoekBE: "barilla spaghetti 500g", zoekOFF: "barilla spaghetti", maxPrijs: 3 },
-  { id: "pasta-huismerk", zoekNL: "ah spaghetti 500g", zoekJumbo: "jumbo spaghetti", zoekDE: "spaghetti 500g", zoekREWE: "spaghetti 500g", zoekBE: "spaghetti 500g", zoekOFF: "spaghetti", maxPrijs: 2 },
-  { id: "olijfolie-bertolli", zoekNL: "bertolli olijfolie 500ml", zoekJumbo: "bertolli olijfolie", zoekDE: "bertolli olivenöl 500ml", zoekREWE: "bertolli olivenöl", zoekBE: "bertolli olijfolie 500ml", zoekOFF: "bertolli olive oil", maxPrijs: 10 },
-  { id: "olijfolie-huismerk", zoekNL: "ah olijfolie 500ml", zoekJumbo: "jumbo olijfolie", zoekDE: "olivenöl 500ml", zoekREWE: "olivenöl nativ", zoekBE: "olijfolie 500ml", zoekOFF: "olive oil", maxPrijs: 6 },
-  { id: "nutella", zoekNL: "nutella 400g", zoekJumbo: "nutella 400g", zoekDE: "nutella 450g", zoekREWE: "nutella 450g", zoekBE: "nutella 400g", zoekOFF: "nutella", maxPrijs: 5 },
+  { id: "pindakaas-calve", zoekNL: "calve pindakaas 350g", zoekJumbo: "calve pindakaas", zoekDE: "erdnussbutter 350g", zoekREWE: "erdnussbutter", zoekBE: "pindakaas 350g", zoekLU: "pindakaas 350g", zoekOFF: "peanut butter", maxPrijs: 5 },
+  { id: "pindakaas-huismerk", zoekNL: "ah pindakaas 350g", zoekJumbo: "jumbo pindakaas", zoekDE: "erdnusscreme", zoekREWE: "erdnusscreme", zoekBE: "pindakaas", zoekLU: "pindakaas", zoekOFF: "peanut butter", maxPrijs: 3 },
+  { id: "hagelslag-dehollandse", zoekNL: "de ruijter hagelslag", zoekJumbo: "de ruijter hagelslag", zoekDE: "schokostreusel", zoekREWE: "schokostreusel", zoekBE: "hagelslag", zoekLU: "hagelslag", zoekOFF: "chocolate sprinkles", maxPrijs: 4 },
+  { id: "suiker", zoekNL: "witte suiker 1kg", zoekJumbo: "witte suiker 1kg", zoekDE: "zucker 1kg", zoekREWE: "zucker 1kg", zoekBE: "witte suiker 1kg", zoekLU: "witte suiker 1kg", zoekOFF: "sugar 1kg", maxPrijs: 3 },
+  { id: "bloem", zoekNL: "tarwebloem 1kg", zoekJumbo: "tarwebloem 1kg", zoekDE: "weizenmehl 1kg", zoekREWE: "weizenmehl 1kg", zoekBE: "tarwebloem 1kg", zoekLU: "tarwebloem 1kg", zoekOFF: "wheat flour 1kg", maxPrijs: 2 },
+  { id: "pasta-barilla", zoekNL: "barilla spaghetti 500g", zoekJumbo: "barilla spaghetti", zoekDE: "barilla spaghetti 500g", zoekREWE: "barilla spaghetti 500g", zoekBE: "barilla spaghetti 500g", zoekLU: "barilla spaghetti 500g", zoekOFF: "barilla spaghetti", maxPrijs: 3 },
+  { id: "pasta-huismerk", zoekNL: "ah spaghetti 500g", zoekJumbo: "jumbo spaghetti", zoekDE: "spaghetti 500g", zoekREWE: "spaghetti 500g", zoekBE: "spaghetti 500g", zoekLU: "spaghetti 500g", zoekOFF: "spaghetti", maxPrijs: 2 },
+  { id: "olijfolie-bertolli", zoekNL: "bertolli olijfolie 500ml", zoekJumbo: "bertolli olijfolie", zoekDE: "bertolli olivenöl 500ml", zoekREWE: "bertolli olivenöl", zoekBE: "bertolli olijfolie 500ml", zoekLU: "bertolli olijfolie 500ml", zoekOFF: "bertolli olive oil", maxPrijs: 10 },
+  { id: "olijfolie-huismerk", zoekNL: "ah olijfolie 500ml", zoekJumbo: "jumbo olijfolie", zoekDE: "olivenöl 500ml", zoekREWE: "olivenöl nativ", zoekBE: "olijfolie 500ml", zoekLU: "olijfolie 500ml", zoekOFF: "olive oil", maxPrijs: 6 },
+  { id: "nutella", zoekNL: "nutella 400g", zoekJumbo: "nutella 400g", zoekDE: "nutella 450g", zoekREWE: "nutella 450g", zoekBE: "nutella 400g", zoekLU: "nutella 400g", zoekOFF: "nutella", maxPrijs: 5 },
 ];
 
 // ===== Types =====
@@ -91,9 +94,11 @@ type PrijsData = {
   prijsNL: number | null;
   prijsDE: number | null;
   prijsBE: number | null;
+  prijsLU: number | null;
   bronNL: BronNaam;
   bronDE: BronNaam;
   bronBE: BronNaam;
+  bronLU: BronNaam;
 };
 
 type CacheData = {
@@ -155,10 +160,11 @@ function bepaalOverallBron(prijzen: PrijsData[]): "live" | "cache" | "fallback" 
   let live = 0;
   let totaal = 0;
   for (const p of prijzen) {
-    totaal += 3;
+    totaal += 4;
     if (p.bronNL !== "fallback") live++;
     if (p.bronDE !== "fallback") live++;
     if (p.bronBE !== "fallback") live++;
+    if (p.bronLU !== "fallback") live++;
   }
   if (live === totaal) return "live";
   if (live === 0) return "fallback";
@@ -435,7 +441,7 @@ async function zoekLidlPrijs(
  */
 async function zoekOFFPrijs(
   query: string,
-  land: string, // "netherlands", "germany", "belgium"
+  land: string, // "netherlands", "germany", "belgium", "luxembourg"
   maxPrijs: number,
 ): Promise<number | null> {
   try {
@@ -443,7 +449,8 @@ async function zoekOFFPrijs(
     const subdomain =
       land === "netherlands" ? "nl" :
       land === "germany" ? "de" :
-      land === "belgium" ? "be" : "world";
+      land === "belgium" ? "be" :
+      land === "luxembourg" ? "lu" : "world";
 
     const url = `https://${subdomain}.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=product_name,price,stores_tags,countries_tags`;
 
@@ -483,49 +490,49 @@ async function zoekOFFPrijs(
 // ║  FALLBACK PRIJZEN (handmatig onderzocht, april 2026)    ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const FALLBACK_PRIJZEN: Record<string, { nl: number; de: number; be: number }> = {
-  "melk-campina": { nl: 1.39, de: 1.15, be: 1.25 },
-  "melk-huismerk": { nl: 1.09, de: 0.85, be: 0.95 },
-  "kaas-jong": { nl: 10.99, de: 7.99, be: 8.49 },
-  "boter-campina": { nl: 2.79, de: 2.09, be: 2.29 },
-  "boter-huismerk": { nl: 2.19, de: 1.59, be: 1.79 },
-  "yoghurt-optimel": { nl: 2.29, de: 1.69, be: 1.89 },
-  "yoghurt-huismerk": { nl: 1.09, de: 0.79, be: 0.89 },
-  "gehakt": { nl: 4.49, de: 3.29, be: 3.69 },
-  "kipfilet": { nl: 4.99, de: 3.79, be: 4.19 },
-  "speklappen": { nl: 4.29, de: 3.19, be: 3.49 },
-  "rookworst-unox": { nl: 2.99, de: 2.49, be: 2.59 },
-  "rookworst-huismerk": { nl: 1.99, de: 1.49, be: 1.69 },
-  "cola-cocacola": { nl: 1.89, de: 1.29, be: 1.49 },
-  "cola-pepsi": { nl: 1.79, de: 1.19, be: 1.39 },
-  "cola-huismerk": { nl: 0.89, de: 0.49, be: 0.59 },
-  "bier-heineken": { nl: 15.99, de: 10.99, be: 12.49 },
-  "bier-huismerk": { nl: 9.99, de: 6.49, be: 7.99 },
-  "koffie-douwe": { nl: 6.49, de: 4.99, be: 5.49 },
-  "koffie-huismerk": { nl: 3.99, de: 2.79, be: 3.19 },
-  "wijn": { nl: 3.99, de: 2.49, be: 2.99 },
-  "deo-dove": { nl: 3.99, de: 2.49, be: 2.99 },
-  "deo-axe": { nl: 4.49, de: 2.79, be: 3.29 },
-  "deo-huismerk": { nl: 1.49, de: 0.89, be: 1.09 },
-  "tandpasta-prodent": { nl: 2.49, de: 1.59, be: 1.89 },
-  "tandpasta-huismerk": { nl: 0.99, de: 0.59, be: 0.75 },
-  "shampoo-andrelon": { nl: 3.49, de: 2.29, be: 2.79 },
-  "shampoo-huismerk": { nl: 1.49, de: 0.89, be: 1.09 },
-  "afwasmiddel-dreft": { nl: 3.29, de: 2.19, be: 2.59 },
-  "waspoeder-persil": { nl: 12.99, de: 8.49, be: 9.99 },
-  "waspoeder-huismerk": { nl: 5.99, de: 3.99, be: 4.49 },
-  "wc-papier-page": { nl: 5.99, de: 3.99, be: 4.69 },
-  "wc-papier-huismerk": { nl: 2.99, de: 1.79, be: 2.19 },
-  "pindakaas-calve": { nl: 3.29, de: 2.49, be: 2.79 },
-  "pindakaas-huismerk": { nl: 1.79, de: 1.19, be: 1.39 },
-  "hagelslag-dehollandse": { nl: 2.99, de: 2.49, be: 2.69 },
-  "suiker": { nl: 1.19, de: 0.85, be: 0.95 },
-  "bloem": { nl: 0.99, de: 0.59, be: 0.75 },
-  "pasta-barilla": { nl: 1.89, de: 1.19, be: 1.39 },
-  "pasta-huismerk": { nl: 0.89, de: 0.49, be: 0.59 },
-  "olijfolie-bertolli": { nl: 6.99, de: 4.99, be: 5.49 },
-  "olijfolie-huismerk": { nl: 3.99, de: 2.79, be: 3.19 },
-  "nutella": { nl: 3.69, de: 2.49, be: 2.89 },
+const FALLBACK_PRIJZEN: Record<string, { nl: number; de: number; be: number; lu: number }> = {
+  "melk-campina": { nl: 1.39, de: 1.15, be: 1.25, lu: 1.11 },
+  "melk-huismerk": { nl: 1.09, de: 0.85, be: 0.95, lu: 0.87 },
+  "kaas-jong": { nl: 10.99, de: 7.99, be: 8.49, lu: 8.79 },
+  "boter-campina": { nl: 2.79, de: 2.09, be: 2.29, lu: 2.23 },
+  "boter-huismerk": { nl: 2.19, de: 1.59, be: 1.79, lu: 1.75 },
+  "yoghurt-optimel": { nl: 2.29, de: 1.69, be: 1.89, lu: 1.83 },
+  "yoghurt-huismerk": { nl: 1.09, de: 0.79, be: 0.89, lu: 0.87 },
+  "gehakt": { nl: 4.49, de: 3.29, be: 3.69, lu: 3.59 },
+  "kipfilet": { nl: 4.99, de: 3.79, be: 4.19, lu: 3.99 },
+  "speklappen": { nl: 4.29, de: 3.19, be: 3.49, lu: 3.43 },
+  "rookworst-unox": { nl: 2.99, de: 2.49, be: 2.59, lu: 2.39 },
+  "rookworst-huismerk": { nl: 1.99, de: 1.49, be: 1.69, lu: 1.59 },
+  "cola-cocacola": { nl: 1.89, de: 1.29, be: 1.49, lu: 1.32 },
+  "cola-pepsi": { nl: 1.79, de: 1.19, be: 1.39, lu: 1.25 },
+  "cola-huismerk": { nl: 0.89, de: 0.49, be: 0.59, lu: 0.62 },
+  "bier-heineken": { nl: 15.99, de: 10.99, be: 12.49, lu: 11.19 },
+  "bier-huismerk": { nl: 9.99, de: 6.49, be: 7.99, lu: 6.99 },
+  "koffie-douwe": { nl: 6.49, de: 4.99, be: 5.49, lu: 4.54 },
+  "koffie-huismerk": { nl: 3.99, de: 2.79, be: 3.19, lu: 2.79 },
+  "wijn": { nl: 3.99, de: 2.49, be: 2.99, lu: 2.79 },
+  "deo-dove": { nl: 3.99, de: 2.49, be: 2.99, lu: 3.11 },
+  "deo-axe": { nl: 4.49, de: 2.79, be: 3.29, lu: 3.5 },
+  "deo-huismerk": { nl: 1.49, de: 0.89, be: 1.09, lu: 1.16 },
+  "tandpasta-prodent": { nl: 2.49, de: 1.59, be: 1.89, lu: 1.94 },
+  "tandpasta-huismerk": { nl: 0.99, de: 0.59, be: 0.75, lu: 0.77 },
+  "shampoo-andrelon": { nl: 3.49, de: 2.29, be: 2.79, lu: 2.72 },
+  "shampoo-huismerk": { nl: 1.49, de: 0.89, be: 1.09, lu: 1.16 },
+  "afwasmiddel-dreft": { nl: 3.29, de: 2.19, be: 2.59, lu: 2.57 },
+  "waspoeder-persil": { nl: 12.99, de: 8.49, be: 9.99, lu: 10.13 },
+  "waspoeder-huismerk": { nl: 5.99, de: 3.99, be: 4.49, lu: 4.67 },
+  "wc-papier-page": { nl: 5.99, de: 3.99, be: 4.69, lu: 4.67 },
+  "wc-papier-huismerk": { nl: 2.99, de: 1.79, be: 2.19, lu: 2.33 },
+  "pindakaas-calve": { nl: 3.29, de: 2.49, be: 2.79, lu: 2.76 },
+  "pindakaas-huismerk": { nl: 1.79, de: 1.19, be: 1.39, lu: 1.5 },
+  "hagelslag-dehollandse": { nl: 2.99, de: 2.49, be: 2.69, lu: 2.51 },
+  "suiker": { nl: 1.19, de: 0.85, be: 0.95, lu: 1 },
+  "bloem": { nl: 0.99, de: 0.59, be: 0.75, lu: 0.83 },
+  "pasta-barilla": { nl: 1.89, de: 1.19, be: 1.39, lu: 1.59 },
+  "pasta-huismerk": { nl: 0.89, de: 0.49, be: 0.59, lu: 0.75 },
+  "olijfolie-bertolli": { nl: 6.99, de: 4.99, be: 5.49, lu: 5.87 },
+  "olijfolie-huismerk": { nl: 3.99, de: 2.79, be: 3.19, lu: 3.35 },
+  "nutella": { nl: 3.69, de: 2.49, be: 2.89, lu: 3.1 },
 };
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -590,10 +597,17 @@ async function haalAllePrijzenOp(): Promise<CacheData> {
           zoekOFFPrijs(product.zoekOFF, "belgium", product.maxPrijs),
         ]);
 
+        // ── LUXEMBURG: Lidl + OFF parallel ophalen ──
+        const [lidlLUPrijs, offLUPrijs] = await Promise.all([
+          zoekLidlPrijs("https://www.lidl.lu", "LU", "fr", product.zoekLU, "lidlLu"),
+          zoekOFFPrijs(product.zoekOFF, "luxembourg", product.maxPrijs),
+        ]);
+
         // ── SAMENVOEGEN: meerdere bronnen → 1 prijs per land ──
         const nlBronnen = [ahPrijs, jumboPrijs, offNLPrijs].filter((p): p is number => p !== null);
         const deBronnen = [rewePrijs, lidlDEPrijs, offDEPrijs].filter((p): p is number => p !== null);
         const beBronnen = [lidlBEPrijs, offBEPrijs].filter((p): p is number => p !== null);
+        const luBronnen = [lidlLUPrijs, offLUPrijs].filter((p): p is number => p !== null);
 
         // Bepaal welke API-bron als label wordt getoond
         const bronNL = bepaalBronNaam([
@@ -610,15 +624,21 @@ async function haalAllePrijzenOp(): Promise<CacheData> {
           lidlBEPrijs ? "lidl-api" : null,
           offBEPrijs ? "off-api" : null,
         ]);
+        const bronLU = bepaalBronNaam([
+          lidlLUPrijs ? "lidl-api" : null,
+          offLUPrijs ? "off-api" : null,
+        ]);
 
         return {
           id: product.id,
           prijsNL: mergePrijzen(nlBronnen) ?? fallback?.nl ?? null,
           prijsDE: mergePrijzen(deBronnen) ?? fallback?.de ?? null,
           prijsBE: mergePrijzen(beBronnen) ?? fallback?.be ?? null,
+          prijsLU: mergePrijzen(luBronnen) ?? fallback?.lu ?? null,
           bronNL: nlBronnen.length > 0 ? bronNL : "fallback",
           bronDE: deBronnen.length > 0 ? bronDE : "fallback",
           bronBE: beBronnen.length > 0 ? bronBE : "fallback",
+          bronLU: luBronnen.length > 0 ? bronLU : "fallback",
         } as PrijsData;
       }),
     );
@@ -664,7 +684,7 @@ export async function GET(request: Request) {
       // Tel hoeveel prijzen per bron
       const bronTelling: Record<string, number> = {};
       for (const p of data.prijzen) {
-        for (const b of [p.bronNL, p.bronDE, p.bronBE]) {
+        for (const b of [p.bronNL, p.bronDE, p.bronBE, p.bronLU]) {
           bronTelling[b] = (bronTelling[b] || 0) + 1;
         }
       }
@@ -679,6 +699,7 @@ export async function GET(request: Request) {
           nl: ["Albert Heijn API", "Jumbo API", "Open Food Facts"],
           de: ["REWE API", "Lidl API", "Open Food Facts"],
           be: ["Lidl API", "Open Food Facts"],
+          lu: ["Lidl API", "Open Food Facts"],
         },
       };
     }
@@ -692,9 +713,11 @@ export async function GET(request: Request) {
         prijsNL: p.nl,
         prijsDE: p.de,
         prijsBE: p.be,
+        prijsLU: p.lu,
         bronNL: "fallback" as BronNaam,
         bronDE: "fallback" as BronNaam,
         bronBE: "fallback" as BronNaam,
+        bronLU: "fallback" as BronNaam,
       })),
       bijgewerkt: new Date().toISOString(),
       versie: 3,

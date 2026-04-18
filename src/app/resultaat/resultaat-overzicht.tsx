@@ -36,7 +36,7 @@ type CombiOptie = {
   tankstationId: string;
   supermarkt: string;
   supermarktId: string;
-  land: "Duitsland" | "België";
+  land: "Duitsland" | "België" | "Luxemburg";
   besparingTanken: number;
   besparingBoodschappen: number;
   totalAfstandKm: number;
@@ -69,8 +69,8 @@ function berekenAlleCombiRoutes(
     );
     if (!tsLocatie) continue;
 
-    const land = route.land as "Duitsland" | "België";
-    const besparingTanken = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
+    const land = route.land as "Duitsland" | "België" | "Luxemburg";
+    const besparingTanken = land === "Duitsland" ? tanken.besparingDE : land === "Luxemburg" ? (tanken.besparingLU ?? tanken.besparingBE) : tanken.besparingBE;
     // Buitenlandse brandstofprijs afleiden uit de besparing:
     // besparing = (nlPrijs - buitenlandPrijs) * tankGrootte
     const buitenlandPrijs = tanken.tankGrootte > 0
