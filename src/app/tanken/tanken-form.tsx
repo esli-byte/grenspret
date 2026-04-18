@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { zoekVoertuig, type VoertuigData } from "./actions";
@@ -444,8 +445,8 @@ export function TankenForm() {
       {/* Lease-auto toggle */}
       <div className="card-bold p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-500 text-xl shadow-md">
-            🚙
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-md">
+            <Image src="/icons/icon-lease-auto.png" alt="Lease auto" width={48} height={48} className="h-full w-full object-cover" />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-extrabold text-navy dark:text-white">
