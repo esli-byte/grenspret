@@ -400,27 +400,30 @@ export function TankenForm() {
         </label>
         <div className="mt-2.5 flex gap-3">
           <div className="relative flex-1">
-            {/* Dutch license plate styling */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex h-full items-center rounded-l-xl bg-[#003399] px-1.5">
-              <div className="flex flex-col items-center">
-                <div className="text-[10px] font-extrabold leading-none text-yellow-300 select-none">★★★</div>
-                <div className="text-xs font-extrabold text-yellow-300">NL</div>
-              </div>
+            {/* Dutch license plate with real plate image */}
+            <div className="relative overflow-hidden rounded-lg" style={{ aspectRatio: "4 / 1" }}>
+              <Image
+                src="/icons/kenteken-plaat.png"
+                alt="Kentekenplaat"
+                fill
+                className="object-cover pointer-events-none"
+                priority
+              />
+              <input
+                id="kenteken"
+                type="text"
+                placeholder="AB-123-C"
+                value={kenteken}
+                onChange={(e) => setKenteken(formatKenteken(e.target.value))}
+                onKeyDown={(e) => e.key === "Enter" && handleKentekenZoek()}
+                className="absolute inset-0 w-full h-full bg-transparent text-center text-2xl font-extrabold tracking-[0.25em] text-black placeholder:text-gray-500/60 placeholder:tracking-[0.15em] placeholder:font-bold focus:outline-none"
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                style={{ fontFamily: "'Kenteken', monospace", paddingLeft: "18%" }}
+              />
             </div>
-            <input
-              id="kenteken"
-              type="text"
-              placeholder="AB123C"
-              value={kenteken}
-              onChange={(e) => setKenteken(formatKenteken(e.target.value))}
-              onKeyDown={(e) => e.key === "Enter" && handleKentekenZoek()}
-              className="w-full rounded-xl border-2 border-gray-300 bg-[#F5C518] py-3.5 pl-16 pr-4 text-center text-lg font-extrabold tracking-widest text-black placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-500 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-[#F5C518] dark:text-black"
-              autoCapitalize="characters"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              style={{ fontFamily: "monospace" }}
-            />
           </div>
           <button
             onClick={handleKentekenZoek}
