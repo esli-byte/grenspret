@@ -24,6 +24,7 @@ import {
   type Coordinaat,
   type LocatieMetAfstand,
 } from "@/lib/grenslocaties";
+import { FALLBACK_PRIJZEN } from "@/app/tanken/brandstofprijzen";
 import { ShareCard } from "./share-card";
 
 function euro(bedrag: number) {
@@ -56,8 +57,10 @@ function berekenAlleCombiRoutes(
   gekozenSupermarktId?: string
 ): CombiOptie[] {
   const verbruikPerKm = tanken.verbruik / 100; // l/km
-  // Gemiddelde brandstofprijs NL (ca. €2.15/l benzine, €1.80/l diesel)
-  const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
+  // Gebruik echte NL-prijs uit FALLBACK_PRIJZEN (bijgewerkt bij elke update)
+  const nlPrijzen = FALLBACK_PRIJZEN[0]; // Nederland = index 0
+  const isDiesel = tanken.brandstofSoort.toLowerCase().includes("diesel");
+  const brandstofPrijsNL = isDiesel ? nlPrijzen.diesel : nlPrijzen.euro95;
 
   const resultaten: CombiOptie[] = [];
 

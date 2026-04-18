@@ -230,7 +230,10 @@ export function TankenForm() {
       if (!besparing) continue;
       const buitenlandPrijs = besparing.prijsPerLiter;
       const brandstofEnkel = (loc.afstandKm / 100) * berekening.verbruik;
-      const reiskosten = brandstofEnkel * nlPrijs + brandstofEnkel * buitenlandPrijs;
+      // Heen op NL-brandstof, terug op buitenlandse brandstof
+      const reiskostenHeen = brandstofEnkel * nlPrijs;
+      const reiskostenTerug = brandstofEnkel * buitenlandPrijs;
+      const reiskosten = reiskostenHeen + reiskostenTerug;
       const netto = besparing.besparing - reiskosten;
       if (netto > besteNetto) {
         besteNetto = netto;
