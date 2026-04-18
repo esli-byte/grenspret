@@ -42,6 +42,7 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import { postcodeNaarCoordinaat, zoekSupermarktenBijTankstation, type LocatieMetAfstand } from "@/lib/grenslocaties";
+import { zoekPostcode } from "@/lib/postcode";
 import { EigenProductModal } from "./eigen-product-modal";
 import { PersonenBeheer } from "./personen-beheer";
 import { VerdelingDashboard } from "./verdeling-dashboard";
@@ -81,6 +82,8 @@ export function BoodschappenLijst() {
 
   const [geselecteerd, setGeselecteerd] = useState<Map<string, number>>(new Map());
   const [postcode, setPostcode] = useState("");
+  const [postcodeLocatie, setPostcodeLocatie] = useState<string | null>(null);
+  const [postcodeZoeken, setPostcodeZoeken] = useState(false);
   const [zoekterm, setZoekterm] = useState("");
   const [actieveCategorie, setActieveCategorie] = useState<Categorie | "alle">("alle");
   const [merkFilter, setMerkFilter] = useState<MerkType | "alle">("alle");
@@ -543,14 +546,15 @@ export function BoodschappenLijst() {
               type="text"
               placeholder="1234 AB"
               value={postcode}
-              onChange={(e) =>
+              onChange={(e) => {
                 setPostcode(
                   e.target.value
                     .toUpperCase()
                     .replace(/[^A-Z0-9 ]/g, "")
                     .slice(0, 7)
-                )
-              }
+                );
+                if (postcodeLocatie) setPostcodeLocatie(null);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && postcode.replace(/\s/g, "").length >= 4) {
                   (e.target as HTMLInputElement).blur();
@@ -560,14 +564,34 @@ export function BoodschappenLijst() {
               autoComplete="postal-code"
             />
             <button
-              onClick={() => {
+              onClick={async () => {
                 const el = document.getElementById("postcode-boodschappen-top");
                 if (el) (el as HTMLInputElement).blur();
+                const cleaned = postcode.replace(/\s/g, "");
+                if (cleaned.length >= 6) {
+                  setPostcodeZoeken(true);
+                  setPostcodeLocatie(null);
+                  const result = await zoekPostcode(postcode);
+                  if (result.success) {
+                    setPostcodeLocatie(result.volledigAdres);
+                  }
+                  setPostcodeZoeken(false);
+                }
               }}
-              disabled={postcode.replace(/\s/g, "").length < 4}
+              disabled={postcodeZoeken || postcode.replace(/\s/g, "").length < 4}
               className="btn-pill btn-pill-accent px-6 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Zoek
+              {postcodeZoeken ? (
+                <span className="flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Zoeken
+                </span>
+              ) : (
+                "Zoek"
+              )}
             </button>
           </div>
 
@@ -624,8 +648,25 @@ export function BoodschappenLijst() {
             </div>
           )}
 
-          {/* Postcode-indicator (zonder geo) */}
-          {!geoAdres && postcode.replace(/\s/g, "").length >= 4 && postcodeNaarCoordinaat(postcode) && (
+          {/* Postcode bevestiging via PDOK */}
+          {postcodeLocatie && !geoAdres && (
+            <div className="mt-2 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
+              <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <div>
+                <p className="text-xs font-extrabold text-navy dark:text-white">
+                  {postcodeLocatie}
+                </p>
+                <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                  Postcode gevonden
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Postcode-indicator (zonder geo en zonder PDOK) */}
+          {!geoAdres && !postcodeLocatie && postcode.replace(/\s/g, "").length >= 4 && postcodeNaarCoordinaat(postcode) && (
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
               <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -877,14 +918,15 @@ export function BoodschappenLijst() {
             type="text"
             placeholder="1234 AB"
             value={postcode}
-            onChange={(e) =>
+            onChange={(e) => {
               setPostcode(
                 e.target.value
                   .toUpperCase()
                   .replace(/[^A-Z0-9 ]/g, "")
                   .slice(0, 7)
-              )
-            }
+              );
+              if (postcodeLocatie) setPostcodeLocatie(null);
+            }}
             className="mt-2.5 w-full rounded-2xl border-2 border-gray-200 px-4 py-3.5 font-bold text-navy placeholder:font-normal placeholder:text-gray-400 transition-all focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-700 dark:bg-navy/50 dark:text-white sm:w-48"
             autoComplete="postal-code"
           />
