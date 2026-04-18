@@ -140,7 +140,7 @@ export function LocatieKaartjes({
                   {geselecteerdeLocatie.keten}
                 </span>
                 <span className="text-xs">
-                  {geselecteerdeLocatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}"}
+                  {geselecteerdeLocatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : geselecteerdeLocatie.land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}"}
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
@@ -262,7 +262,7 @@ function LocatieKaart({
             {locatie.keten}
           </span>
           <span className="text-xs" aria-label={locatie.land}>
-            {locatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}"}
+            {locatie.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : locatie.land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}"}
           </span>
           {isBeste && (
             <span className="inline-flex items-center gap-0.5 rounded-full bg-accent px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">

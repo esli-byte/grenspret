@@ -1601,7 +1601,7 @@ function CombiSupermarktKeuze({
               {geselecteerd.naam}
             </span>
             <span className="ml-1.5 text-xs">
-              {geselecteerd.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+              {geselecteerd.land === "Duitsland" ? "🇩🇪" : geselecteerd.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"}
             </span>
             <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
               {geselecteerd.afstandKm} km van tankstation
@@ -1630,7 +1630,7 @@ function CombiSupermarktKeuze({
             Kies je supermarkt
           </h2>
           <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-            In de buurt van {tankstation.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {tankstation.naam}
+            In de buurt van {tankstation.land === "Duitsland" ? "🇩🇪" : tankstation.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"} {tankstation.naam}
           </p>
         </div>
       </div>
@@ -1653,7 +1653,7 @@ function CombiSupermarktKeuze({
                   {sm.naam}
                 </span>
                 <span className="text-xs">
-                  {sm.land === "Duitsland" ? "🇩🇪" : "🇧🇪"}
+                  {sm.land === "Duitsland" ? "🇩🇪" : sm.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"}
                 </span>
               </div>
               <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">

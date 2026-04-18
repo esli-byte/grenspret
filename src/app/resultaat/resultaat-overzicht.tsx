@@ -211,7 +211,7 @@ export function ResultaatOverzicht() {
   } else {
     land = (boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België";
   }
-  const vlag = land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
+  const vlag = land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}";
 
   const besparingTanken = land === "Duitsland" ? tanken?.besparingDE ?? 0 : tanken?.besparingBE ?? 0;
   const besparingBoodschappenPerHH = land === "Duitsland" ? boodschappen?.besparingDE ?? 0 : boodschappen?.besparingBE ?? 0;
@@ -426,7 +426,7 @@ export function ResultaatOverzicht() {
                 {route.bestemming}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-0.5">
-                <Chip>{route.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {route.land}</Chip>
+                <Chip>{route.land === "Duitsland" ? "🇩🇪" : route.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"} {route.land}</Chip>
                 <Chip>{route.afstandRetour} km retour</Chip>
                 <Chip>{formatRijtijd(route.rijtijdMinuten)}</Chip>
               </div>
@@ -445,7 +445,7 @@ export function ResultaatOverzicht() {
                 {gekozenSupermarkt.naam}
               </div>
               <div className="flex flex-wrap gap-1.5 mt-0.5">
-                <Chip>{gekozenSupermarkt.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {gekozenSupermarkt.land}</Chip>
+                <Chip>{gekozenSupermarkt.land === "Duitsland" ? "🇩🇪" : gekozenSupermarkt.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"} {gekozenSupermarkt.land}</Chip>
                 <Chip>{Math.round(gekozenSupermarkt.afstandVanThuis)} km enkele reis</Chip>
                 <Chip>{Math.round(gekozenSupermarkt.afstandVanThuis * 2)} km retour</Chip>
               </div>
@@ -557,7 +557,7 @@ export function ResultaatOverzicht() {
           </div>
           <div className="mt-3 flex gap-2 text-xs">
             <span className="rounded-full bg-accent/10 px-2.5 py-1 font-bold text-accent">
-              {gekozenTankstation.land === "Duitsland" ? "🇩🇪" : "🇧🇪"} {gekozenTankstation.land}
+              {gekozenTankstation.land === "Duitsland" ? "🇩🇪" : gekozenTankstation.land === "Luxemburg" ? "🇱🇺" : "🇧🇪"} {gekozenTankstation.land}
             </span>
             <span className="rounded-full bg-gray-100 px-2.5 py-1 font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
               ~{gekozenTankstation.afstandKm + gekozenSupermarkt.afstandVanTankstation + gekozenSupermarkt.afstandVanThuis} km totaal
@@ -670,7 +670,7 @@ function SlimmeVergelijking({
         {zichtbaar.map((optie, i) => {
           const isBeste = i === 0;
           const isJouwKeuze = optie.isGekozen;
-          const vlag = optie.land === "Duitsland" ? "🇩🇪" : "🇧🇪";
+          const vlag = optie.land === "Duitsland" ? "🇩🇪" : optie.land === "Luxemburg" ? "🇱🇺" : "🇧🇪";
 
           return (
             <div
