@@ -401,12 +401,12 @@ export function TankenForm() {
         <div className="mt-2.5 flex gap-3">
           <div className="relative flex-1">
             {/* Dutch license plate with real plate image */}
-            <div className="relative overflow-hidden rounded-lg" style={{ aspectRatio: "4 / 1" }}>
+            <div className="relative h-[52px] overflow-hidden rounded-md">
               <Image
                 src="/icons/kenteken-plaat.png"
                 alt="Kentekenplaat"
                 fill
-                className="object-cover pointer-events-none"
+                className="object-fill pointer-events-none"
                 priority
               />
               <input
@@ -416,12 +416,18 @@ export function TankenForm() {
                 value={kenteken}
                 onChange={(e) => setKenteken(formatKenteken(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && handleKentekenZoek()}
-                className="absolute inset-0 w-full h-full bg-transparent text-center text-2xl font-extrabold tracking-[0.25em] text-black placeholder:text-gray-500/60 placeholder:tracking-[0.15em] placeholder:font-bold focus:outline-none"
+                className="absolute inset-0 w-full h-full bg-transparent text-center font-extrabold tracking-[0.3em] text-black placeholder:text-gray-600/50 placeholder:tracking-[0.15em] placeholder:font-bold focus:outline-none"
                 autoCapitalize="characters"
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                style={{ fontFamily: "'Kenteken', monospace", paddingLeft: "18%" }}
+                style={{
+                  fontFamily: "monospace",
+                  paddingLeft: "15%",
+                  paddingRight: "3%",
+                  fontSize: "clamp(1.4rem, 5vw, 1.75rem)",
+                  lineHeight: "52px",
+                }}
               />
             </div>
           </div>
