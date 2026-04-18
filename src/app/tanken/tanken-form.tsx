@@ -19,6 +19,7 @@ import { schattingVerbruikHybride } from "./afstand";
 import { slaaTankenOp, leesVoorkeuren, slaaVoorkeurenOp, leesFlow, slaaGekozenTankstationOp } from "@/lib/opslag";
 import { LocatieKaartjes } from "@/components/LocatieKaartjes";
 import { postcodeNaarCoordinaat, zoekDichtstbijzijnde, GRENSLOCATIES, type LocatieMetAfstand } from "@/lib/grenslocaties";
+import { zoekPostcode } from "@/lib/postcode";
 import { leesGekozenTankstation } from "@/lib/opslag";
 import type { FuelPricesResponse } from "@/app/api/fuel-prices/route";
 import { ShareCard } from "@/app/resultaat/share-card";
@@ -73,6 +74,8 @@ function PrijzenSkeleton() {
 export function TankenForm() {
   const [kenteken, setKenteken] = useState("");
   const [postcode, setPostcode] = useState("");
+  const [postcodeLocatie, setPostcodeLocatie] = useState<string | null>(null);
+  const [postcodeZoeken, setPostcodeZoeken] = useState(false);
   const [voertuig, setVoertuig] = useState<VoertuigData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -726,6 +729,7 @@ export function TankenForm() {
             onChange={(e) => {
               setPostcode(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, "").slice(0, 7));
               if (geoAdres) setGeoAdres(null);
+              if (postcodeLocatie) setPostcodeLocatie(null);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && postcode.replace(/\s/g, "").length >= 4) {
@@ -737,15 +741,38 @@ export function TankenForm() {
             autoComplete="postal-code"
           />
           <button
-            onClick={() => {
+            onClick={async () => {
               // Blur input om keyboard te sluiten op mobiel
               const el = document.getElementById("postcode");
               if (el) (el as HTMLInputElement).blur();
+              // PDOK postcode lookup voor plaatsnaam bevestiging
+              const cleaned = postcode.replace(/\s/g, "");
+              if (cleaned.length >= 6) {
+                setPostcodeZoeken(true);
+                setPostcodeLocatie(null);
+                const result = await zoekPostcode(postcode);
+                if (result.success) {
+                  setPostcodeLocatie(result.volledigAdres);
+                } else {
+                  setPostcodeLocatie(null);
+                }
+                setPostcodeZoeken(false);
+              }
             }}
-            disabled={postcode.replace(/\s/g, "").length < 4}
+            disabled={postcodeZoeken || postcode.replace(/\s/g, "").length < 4}
             className="btn-pill btn-pill-accent px-6 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Zoek
+            {postcodeZoeken ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Zoeken
+              </span>
+            ) : (
+              "Zoek"
+            )}
           </button>
         </div>
 
@@ -773,6 +800,23 @@ export function TankenForm() {
             </>
           )}
         </button>
+
+        {/* Postcode bevestiging via PDOK */}
+        {postcodeLocatie && !geoAdres && (
+          <div className="mt-2 flex items-start gap-2 rounded-xl bg-accent/5 px-3 py-2.5 animate-slide-in-bottom">
+            <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <div>
+              <p className="text-xs font-extrabold text-navy dark:text-white">
+                {postcodeLocatie}
+              </p>
+              <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                Postcode gevonden
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Gevonden adres tonen */}
         {geoAdres && (
