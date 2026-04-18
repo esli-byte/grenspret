@@ -262,6 +262,7 @@ export function TankenForm() {
       verbruik: berekening.verbruik,
       besparingDE: berekening.besparingen.find((b) => b.land === "Duitsland")?.besparing ?? 0,
       besparingBE: berekening.besparingen.find((b) => b.land === "België")?.besparing ?? 0,
+            besparingLU: berekening.besparingen.find((b) => b.land === "Luxemburg")?.besparing ?? 0,
       route: [{
         land: geselecteerdStation.land,
         bestemming: geselecteerdStation.naam,
