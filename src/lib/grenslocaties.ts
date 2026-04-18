@@ -423,8 +423,9 @@ export type LocatieMetAfstand = GrensLocatie & {
 
 /**
  * Zoek de dichtstbijzijnde locaties van een bepaald type.
- * Returns top N over alle landen, puur gesorteerd op afstand —
- * dichtstbijzijnde bovenaan, ongeacht of het Duitsland of België is.
+ * Returns top N over alle landen, puur gesorteerd op afstand.
+ * Garandeert altijd dat de dichtstbijzijnde Luxemburg-locatie erbij zit
+ * (als 6e optie als LU niet al in de top N zit).
  */
 export function zoekDichtstbijzijnde(
   origin: Coordinaat,
@@ -440,9 +441,19 @@ export function zoekDichtstbijzijnde(
     return { ...l, afstandKm, rijtijdMin };
   });
 
-  return metAfstand
-    .sort((a, b) => a.afstandKm - b.afstandKm)
-    .slice(0, aantal);
+  const gesorteerd = metAfstand.sort((a, b) => a.afstandKm - b.afstandKm);
+  const topN = gesorteerd.slice(0, aantal);
+
+  // Garandeer altijd een Luxemburg-optie
+  const heeftLU = topN.some((l) => l.land === "Luxemburg");
+  if (!heeftLU) {
+    const dichtstbijLU = gesorteerd.find((l) => l.land === "Luxemburg");
+    if (dichtstbijLU) {
+      topN.push(dichtstbijLU);
+    }
+  }
+
+  return topN;
 }
 
 /**

@@ -86,7 +86,7 @@ function berekenAlleCombiRoutes(
     );
 
     const besparingBoodschappenPerHH = boodschappen
-      ? (land === "Duitsland" ? boodschappen.besparingDE : boodschappen.besparingBE)
+      ? (land === "Duitsland" ? boodschappen.besparingDE : land === "Luxemburg" ? (boodschappen.besparingLU ?? boodschappen.besparingBE) : boodschappen.besparingBE)
       : 0;
     const besparingBoodschappenTotaal = besparingBoodschappenPerHH * aantalHuishoudens;
 
