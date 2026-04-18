@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import {
   postcodeNaarCoordinaat,
   zoekDichtstbijzijnde,
+  haversineKm,
+  type Coordinaat,
   type LocatieMetAfstand,
 } from "@/lib/grenslocaties";
 
@@ -190,6 +192,203 @@ export function LocatieKaartjes({
           />
         ))}
       </div>
+
+      {/* Eigen bestemming zoeken */}
+      {onSelect && (
+        <EigenBestemmingZoek
+          postcode={postcode}
+          type={type}
+          geselecteerdId={geselecteerdId}
+          onSelect={(loc) => {
+            onSelect(loc);
+            setIngeklapt(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// === Eigen bestemming zoeken via Nominatim ===
+const LAND_MAP: Record<string, "Duitsland" | "België" | "Luxemburg"> = {
+  DE: "Duitsland", de: "Duitsland", germany: "Duitsland", deutschland: "Duitsland",
+  BE: "België", be: "België", belgium: "België", belgien: "België", belgique: "België",
+  LU: "Luxemburg", lu: "Luxemburg", luxembourg: "Luxemburg", luxemburg: "Luxemburg",
+};
+
+type NominatimResult = {
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: { country_code?: string; city?: string; town?: string; village?: string; road?: string; house_number?: string; state?: string; postcode?: string };
+};
+
+function EigenBestemmingZoek({
+  postcode,
+  type,
+  geselecteerdId,
+  onSelect,
+}: {
+  postcode: string;
+  type: "tankstation" | "supermarkt";
+  geselecteerdId?: string | null;
+  onSelect: (loc: LocatieMetAfstand) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [zoekterm, setZoekterm] = useState("");
+  const [resultaten, setResultaten] = useState<NominatimResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [gekozen, setGekozen] = useState<LocatieMetAfstand | null>(null);
+
+  const origin = useMemo(() => postcodeNaarCoordinaat(postcode), [postcode]);
+
+  const zoek = useCallback(async () => {
+    if (!zoekterm.trim() || zoekterm.trim().length < 2) return;
+    setLoading(true);
+    setResultaten([]);
+    try {
+      // Zoek in DE, BE, LU
+      const q = encodeURIComponent(zoekterm.trim());
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${q}&countrycodes=de,be,lu&addressdetails=1&limit=5`,
+        { headers: { "Accept-Language": "nl" } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setResultaten(data);
+      }
+    } catch {
+      // Fout bij zoeken
+    } finally {
+      setLoading(false);
+    }
+  }, [zoekterm]);
+
+  function selecteerResultaat(r: NominatimResult) {
+    if (!origin) return;
+    const coord: Coordinaat = { lat: parseFloat(r.lat), lng: parseFloat(r.lon) };
+    const cc = r.address?.country_code?.toLowerCase() ?? "";
+    const land = LAND_MAP[cc];
+    if (!land) return; // Niet DE/BE/LU
+
+    const hemelsbreedte = haversineKm(origin, coord);
+    const afstandKm = Math.round(hemelsbreedte * 1.3);
+    const rijtijdMin = Math.round((afstandKm / 80) * 60);
+
+    // Maak een mooie naam
+    const city = r.address?.city || r.address?.town || r.address?.village || "";
+    const road = r.address?.road || "";
+    const naam = city ? `${city}${road ? `, ${road}` : ""}` : r.display_name.split(",").slice(0, 2).join(",");
+
+    const loc: LocatieMetAfstand = {
+      id: `eigen-${Date.now()}`,
+      naam,
+      type,
+      keten: "Eigen keuze",
+      land,
+      adres: r.display_name.split(",").slice(0, 3).join(",").trim(),
+      coordinaat: coord,
+      afstandKm,
+      rijtijdMin,
+    };
+
+    setGekozen(loc);
+    onSelect(loc);
+    setOpen(false);
+    setResultaten([]);
+    setZoekterm("");
+  }
+
+  // Als er al een eigen bestemming geselecteerd is, toon die
+  if (gekozen && geselecteerdId === gekozen.id) {
+    return null; // Wordt al getoond via de ingeklapte weergave
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 py-3 text-xs font-bold text-gray-400 transition-all hover:border-accent hover:text-accent active:scale-[0.98] dark:border-gray-700 dark:text-gray-500 dark:hover:border-accent dark:hover:text-accent"
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        Of zoek je eigen bestemming
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1 space-y-2 rounded-2xl border border-accent/30 bg-accent/5 p-4 animate-slide-in-bottom dark:bg-accent/10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-extrabold text-accent">Eigen bestemming zoeken</h3>
+        <button
+          onClick={() => { setOpen(false); setResultaten([]); setZoekterm(""); }}
+          className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        >
+          Annuleren
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={zoekterm}
+          onChange={(e) => setZoekterm(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && zoek()}
+          placeholder="Bijv. Aachen, Wasserbillig, Antwerpen..."
+          className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm placeholder:text-gray-400 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-600"
+          autoFocus
+        />
+        <button
+          onClick={zoek}
+          disabled={loading || zoekterm.trim().length < 2}
+          className="rounded-xl bg-accent px-4 py-2.5 text-xs font-extrabold text-white transition-all hover:bg-accent/90 active:scale-95 disabled:opacity-50"
+        >
+          {loading ? "..." : "Zoek"}
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-400 dark:text-gray-500">
+        Zoek een stad, adres of locatie in Duitsland, België of Luxemburg
+      </p>
+
+      {/* Resultaten */}
+      {resultaten.length > 0 && (
+        <div className="space-y-1.5">
+          {resultaten.map((r, i) => {
+            const cc = r.address?.country_code?.toLowerCase() ?? "";
+            const land = LAND_MAP[cc];
+            if (!land) return null;
+            const vlag = land === "Duitsland" ? "🇩🇪" : land === "Luxemburg" ? "🇱🇺" : "🇧🇪";
+            const city = r.address?.city || r.address?.town || r.address?.village || "";
+            const label = city || r.display_name.split(",")[0];
+            const detail = r.display_name.split(",").slice(1, 3).join(",").trim();
+
+            return (
+              <button
+                key={i}
+                onClick={() => selecteerResultaat(r)}
+                className="flex w-full items-start gap-2.5 rounded-xl border border-gray-100 bg-white p-3 text-left transition-all hover:border-accent hover:shadow-sm active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 dark:hover:border-accent"
+              >
+                <span className="mt-0.5 text-sm">{vlag}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-gray-900 dark:text-white">{label}</div>
+                  <div className="truncate text-[11px] text-gray-400 dark:text-gray-500">{detail}</div>
+                </div>
+                {origin && (
+                  <span className="shrink-0 text-[11px] font-semibold text-gray-400">
+                    ~{Math.round(haversineKm(origin, { lat: parseFloat(r.lat), lng: parseFloat(r.lon) }) * 1.3)} km
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Geen resultaten */}
+      {!loading && resultaten.length === 0 && zoekterm.trim().length >= 2 && (
+        <p className="text-center text-xs text-gray-400">Geen resultaten gevonden</p>
+      )}
     </div>
   );
 }
