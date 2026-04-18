@@ -1070,7 +1070,7 @@ function StickyBesparingsBalk({
   const extraBesparing = extraLiters * (nlPrijs - buitenlandPrijs);
   const netto = besparing.besparing + extraBesparing - reiskosten;
   const loont = netto > 0;
-  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
+  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : station.land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}";
 
   return (
     <button
@@ -1140,7 +1140,7 @@ function TankenDeelBlok({
   const netto = besparing.besparing + extraBesparing - reiskosten;
   const loont = netto > 0;
 
-  const vlag = station.land === "Duitsland" ? "🇩🇪" : "🇧🇪";
+  const vlag = station.land === "Duitsland" ? "🇩🇪" : station.land === "Luxemburg" ? "🇱🇺" : "🇧🇪";
   const url = typeof window !== "undefined" ? window.location.origin : "grenspret.nl";
 
   function bouwTekst(): string {
@@ -1591,7 +1591,7 @@ function BesparingsBlok({
   const netto = besparing.besparing + extraBesparing - reiskosten;
   const loont = netto > 0;
 
-  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : "\u{1F1E7}\u{1F1EA}";
+  const vlag = station.land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : station.land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}";
   const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${station.adres}, ${station.land}`)}&travelmode=driving`;
 
   return (
