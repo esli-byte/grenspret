@@ -34,15 +34,18 @@ export function EigenProductModal({ onSluiten, onToevoegen }: Props) {
   const schatting = useMemo(() => {
     const prijs = parseFloat(prijsNL.replace(",", "."));
     if (!prijs || prijs <= 0) return null;
-    const { prijsDE, prijsBE } = schatBuitenlandPrijzen(prijs, categorie);
+    const { prijsDE, prijsBE, prijsLU } = schatBuitenlandPrijzen(prijs, categorie);
     const korting = CATEGORIE_KORTING[categorie];
     return {
       prijsDE,
       prijsBE,
+      prijsLU,
       besparingDE: prijs - prijsDE,
       besparingBE: prijs - prijsBE,
+      besparingLU: prijs - prijsLU,
       kortingDE: korting.DE,
       kortingBE: korting.BE,
+      kortingLU: korting.LU,
     };
   }, [prijsNL, categorie]);
 
@@ -248,6 +251,14 @@ export function EigenProductModal({ onSluiten, onToevoegen }: Props) {
                   </span>
                   <span className="font-extrabold tabular-nums text-accent">
                     €{schatting.prijsBE.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    🇱🇺 Luxemburg <span className="text-[10px] opacity-60">(−{Math.round(schatting.kortingLU * 100)}%)</span>
+                  </span>
+                  <span className="font-extrabold tabular-nums text-accent">
+                    €{schatting.prijsLU.toFixed(2)}
                   </span>
                 </div>
               </div>

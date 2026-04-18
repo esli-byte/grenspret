@@ -158,6 +158,7 @@ type OpgeslagenEigenProduct = {
   prijsNL: number;
   prijsDE: number;
   prijsBE: number;
+  prijsLU: number;
   isEigen: true;
 };
 
@@ -247,7 +248,12 @@ export function leesEigenProducten(): OpgeslagenEigenProduct[] {
     const raw = localStorage.getItem(EIGEN_PRODUCTEN_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // Backward compatibility: schat prijsLU als die ontbreekt (~20% korting op NL)
+    return parsed.map((p: Record<string, unknown>) => ({
+      ...p,
+      prijsLU: p.prijsLU ?? Math.round(((p.prijsNL as number) ?? 0) * 0.80 * 100) / 100,
+    })) as OpgeslagenEigenProduct[];
   } catch {
     return [];
   }

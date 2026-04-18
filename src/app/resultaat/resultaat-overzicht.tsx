@@ -212,12 +212,18 @@ export function ResultaatOverzicht() {
   } else if (isBoodschappenOnly && gekozenSupermarkt?.land) {
     land = gekozenSupermarkt.land;
   } else {
-    land = (boodschappen?.besparingDE ?? 0) >= (boodschappen?.besparingBE ?? 0) ? "Duitsland" : "België";
+    // Kies het land met de hoogste besparing (inclusief Luxemburg)
+    const savDE = boodschappen?.besparingDE ?? 0;
+    const savBE = boodschappen?.besparingBE ?? 0;
+    const savLU = boodschappen?.besparingLU ?? 0;
+    if (savLU >= savDE && savLU >= savBE) land = "Luxemburg";
+    else if (savDE >= savBE) land = "Duitsland";
+    else land = "België";
   }
   const vlag = land === "Duitsland" ? "\u{1F1E9}\u{1F1EA}" : land === "Luxemburg" ? "\u{1F1F1}\u{1F1FA}" : "\u{1F1E7}\u{1F1EA}";
 
-  const besparingTanken = land === "Duitsland" ? tanken?.besparingDE ?? 0 : tanken?.besparingBE ?? 0;
-  const besparingBoodschappenPerHH = land === "Duitsland" ? boodschappen?.besparingDE ?? 0 : boodschappen?.besparingBE ?? 0;
+  const besparingTanken = land === "Duitsland" ? tanken?.besparingDE ?? 0 : land === "Luxemburg" ? tanken?.besparingLU ?? 0 : tanken?.besparingBE ?? 0;
+  const besparingBoodschappenPerHH = land === "Duitsland" ? boodschappen?.besparingDE ?? 0 : land === "Luxemburg" ? boodschappen?.besparingLU ?? 0 : boodschappen?.besparingBE ?? 0;
   const besparingBoodschappen = besparingBoodschappenPerHH * aantalHuishoudens;
 
   // Reiskosten berekenen — verschilt per flow:
@@ -235,8 +241,9 @@ export function ResultaatOverzicht() {
       reiskostenAfstandKm = gekozenCombi.totalAfstandKm;
     } else {
       const verbruikPerKm = tanken.verbruik / 100;
-      const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? 1.80 : 2.15;
-      const besparingTankenFB = land === "Duitsland" ? tanken.besparingDE : tanken.besparingBE;
+      const nlFB = FALLBACK_PRIJZEN[0];
+      const brandstofPrijsNL = tanken.brandstofSoort.toLowerCase().includes("diesel") ? nlFB.diesel : nlFB.euro95;
+      const besparingTankenFB = land === "Duitsland" ? tanken.besparingDE : land === "Luxemburg" ? (tanken.besparingLU ?? tanken.besparingBE) : tanken.besparingBE;
       const buitenlandPrijs = tanken.tankGrootte > 0
         ? brandstofPrijsNL - besparingTankenFB / tanken.tankGrootte
         : brandstofPrijsNL;
@@ -252,7 +259,7 @@ export function ResultaatOverzicht() {
   } else if (isBoodschappenOnly && gekozenSupermarkt) {
     // Boodschappen-only: retourrit naar supermarkt met gemiddeld verbruik
     const GEMIDDELD_VERBRUIK = 7.5; // l/100km (NL gemiddelde personenauto)
-    const GEMIDDELDE_NL_PRIJS = 2.15; // €/L benzine
+    const GEMIDDELDE_NL_PRIJS = FALLBACK_PRIJZEN[0].euro95; // Actuele NL-prijs
     const retourKm = gekozenSupermarkt.afstandVanThuis * 2;
     const brandstofRetour = (retourKm / 100) * GEMIDDELD_VERBRUIK;
     reiskosten = Math.round(brandstofRetour * GEMIDDELDE_NL_PRIJS * 100) / 100;
